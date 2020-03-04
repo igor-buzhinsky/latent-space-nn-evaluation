@@ -151,7 +151,7 @@ elif args.command == "generate_bounded":
         adversary = NopAdversary()
     else:
         # search from different points until an adversarial example is found
-        adversary = PGDAdversary(args.bounded_search_rho, 50, 0.05, True, 0, verbose=args.pgd_verbosity, n_repeat=2, repeat_mode="any",
+        adversary = PGDAdversary(args.bounded_search_rho, 50, 0.05, True, 0, verbose=args.pgd_verbosity, n_repeat=12, repeat_mode="any",
                                  unit_sphere_normalization=args.unit_sphere_normalization)
     advgen_experiments(adversary, args.no_images)
 else:

@@ -4,7 +4,7 @@ This toolset implements a framework to measure the performance of feed-forward a
 This implementation only concerns image classification.
 The framework is described in the following arXiv preprint:
 
-* TODO
+* Igor Buzhinsky, Arseny Nerinovsky, Stavros Tripakis. Metrics and methods for robustness evaluation of neural networks with generative models
 
 Currently supported datasets: [MNIST](http://yann.lecun.com/exdb/mnist/), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) (gender classification), [LSUN](https://www.yf.io/p/lsun) (scene type classification: bedrooms vs. church outdoors). For CelebA and LSUN, here are some examples of approximately minimum adversarial perturbations in latent spaces for a non-robust (NR) and a robust (R) classifier:
 
@@ -26,13 +26,13 @@ The starting point is to run the toolset on MNIST, as all trained models are sma
 
 You can work with the following command-line scripts and Jupyter notebooks:
 
-* Adversarial.py: calculation of latent space performance metrics, including the search of latent adversarial perturbations.
-* Adversarial.ipynb: this notebook shows some features supported by Adversarial.py in a more user-friendly form. The target dataset is specified in one of the top cells.
-* ClassifierTraining.py: auxiliary script that implements classifier training and evaluation of their robustness in the original space.
-* ClassifierTraining.ipynb: this notebook shows some features supported by ClassifierTraining.py in a more user-friendly form. The target dataset is specified in one of the top cells (CelebA and LSUN only). In addition, this notebook shows image generation with robust classifiers, which is post visible on MNIST and CelebA.
-* MNIST.ipynb: this notebook is the adaptation of ClassifierTraining.ipynb for MNIST. In addition, it contains code to train class-specific MNIST WGANs.
+* [Adversarial.py](Adversarial.py): calculation of latent space performance metrics, including the search of latent adversarial perturbations.
+* [Adversarial.ipynb](Adversarial.ipynb): this notebook shows some features supported by Adversarial.py in a more user-friendly form. The target dataset is specified in one of the top cells.
+* [ClassifierTraining.py](ClassifierTraining.py): auxiliary script that implements classifier training and evaluation of their robustness in the original space.
+* [ClassifierTraining.ipynb](ClassifierTraining.ipynb): this notebook shows some features supported by ClassifierTraining.py in a more user-friendly form. The target dataset is specified in one of the top cells (CelebA and LSUN only). In addition, this notebook shows image generation with robust classifiers, which is post visible on MNIST and CelebA.
+* [MNIST.ipynb](MNIST.ipynb): this notebook is the adaptation of ClassifierTraining.ipynb for MNIST. In addition, it contains code to train class-specific MNIST WGANs.
 
-Some examples of running .py scripts are given in files ClassifierTraining.sh, ClassifierEvaluation.sh, Adversarial.sh.
+Some examples of running .py scripts are given in files [ClassifierTraining.sh](ClassifierTraining.sh), [ClassifierEvaluation.sh](ClassifierEvaluation.sh), [Adversarial.sh](Adversarial.sh).
 
 ## Running (CelebA and LSUN)
 
