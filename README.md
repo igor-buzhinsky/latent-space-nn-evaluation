@@ -32,7 +32,7 @@ You can work with the following command-line scripts and Jupyter notebooks:
 * ClassifierTraining.ipynb: this notebook shows some features supported by ClassifierTraining.py in a more user-friendly form. The target dataset is specified in one of the top cells (CelebA and LSUN only). In addition, this notebook shows image generation with robust classifiers, which is post visible on MNIST and CelebA.
 * MNIST.ipynb: this notebook is the adaptation of ClassifierTraining.ipynb for MNIST. In addition, it contains code to train class-specific MNIST WGANs.
 
-Some examples of running .py scripts are given in files ClassifierTraining.sh, ClassifierEvaluation.sh, Adversarial.sh (IPython is also required).
+Some examples of running .py scripts are given in files ClassifierTraining.sh, ClassifierEvaluation.sh, Adversarial.sh.
 
 ## Running (CelebA and LSUN)
 
