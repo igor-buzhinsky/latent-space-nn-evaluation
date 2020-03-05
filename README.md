@@ -4,7 +4,7 @@ This toolset implements a framework to measure the performance of feed-forward a
 This implementation only concerns image classification.
 The framework is described in the following arXiv preprint:
 
-* Igor Buzhinsky, Arseny Nerinovsky, Stavros Tripakis. Metrics and methods for robustness evaluation of neural networks with generative models
+* [Igor Buzhinsky, Arseny Nerinovsky, Stavros Tripakis. Metrics and methods for robustness evaluation of neural networks with generative models. arXiv preprint arXiv:2003.01993 (2020)](https://arxiv.org/abs/2003.01993)
 
 Currently supported datasets: [MNIST](http://yann.lecun.com/exdb/mnist/), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) (gender classification), [LSUN](https://www.yf.io/p/lsun) (scene type classification: bedrooms vs. church outdoors). For CelebA and LSUN, here are some examples of approximately minimum adversarial perturbations in latent spaces for a non-robust (NR) and a robust (R) classifier:
 
