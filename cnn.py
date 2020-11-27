@@ -201,7 +201,7 @@ class Trainer:
         """
         self.misclassification_gradients = value
         
-    def predict_with_gradient(self, x: torch.tensor, true_labels: List[int]) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+    def predict_with_gradient(self, x: torch.Tensor, true_labels: List[int]) -> Tuple[torch.LongTensor, torch.FloatTensor]:
         """
         Predicts, computes loss and gradient.
         If self.misclassification_gradients is True, the gradient points in the direction of a
@@ -232,7 +232,7 @@ class Trainer:
         return Util.conditional_to_cuda(torch.LongTensor(predictions)), Util.conditional_to_cuda(torch.FloatTensor(losses))
     
     @torch.no_grad()
-    def predict(self, x: torch.tensor) -> torch.LongTensor:
+    def predict(self, x: torch.Tensor) -> torch.LongTensor:
         """
         Predict on a batch of input images.
         :param x: batch of input images.
@@ -244,7 +244,7 @@ class Trainer:
         return Util.conditional_to_cuda(torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1) for i in range(x.shape[0])]))
 
     @torch.no_grad()
-    def predict_probs(self, x: torch.tensor) -> torch.FloatTensor:
+    def predict_probs(self, x: torch.Tensor) -> torch.FloatTensor:
         """
         Returns soft predictions for a batch of input images.
         :param x: batch of input images.
@@ -283,7 +283,7 @@ class Trainer:
         writer = SummaryWriter("cnn_training" if noise_sigma == 0 else "cnn_training_noise")
 
         class EvaluatedPrediction:
-            def __init__(self, trainer: Trainer, image: torch.tensor, label: torch.tensor):
+            def __init__(self, trainer: Trainer, image: torch.Tensor, label: torch.Tensor):
                 if noise_sigma > 0:
                     # augmentation with noise for robust optimization
                     image += Util.conditional_to_cuda(torch.randn(*image.shape)) * noise_sigma

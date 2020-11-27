@@ -81,7 +81,7 @@ def get_get_gradient(classifier: cnn.Trainer, label: int, vector_transform_1: Ca
     :param vector_transform_2: vector transformation used to parameterize get_gradient (best to explain with code below).
     :param grad_transform: vector transformation used to parameterize get_gradient (best to explain with code below).
     """
-    def get_gradient(vector: torch.tensor) -> Tuple[torch.tensor, float]:
+    def get_gradient(vector: torch.Tensor) -> Tuple[torch.Tensor, float]:
         vector_g = Util.optimizable_clone(vector_transform_1(vector))
         image = vector_transform_2(vector_g)
         _, loss = classifier.predict_with_gradient(image, [label])
@@ -97,7 +97,7 @@ def get_conventional_perturb(classifier: cnn.Trainer, adversary: Adversary):
     :param adversary: Adversary that will be used by the resulting function.
     :return: a "perturb" function as described above.
     """
-    def perturb(image: torch.tensor, true_label: int) -> torch.tensor:
+    def perturb(image: torch.Tensor, true_label: int) -> torch.Tensor:
         get_gradient = get_get_gradient(classifier, true_label, lambda x: x.view(1, *image.shape),
                                         lambda x: x, lambda x: x.view(1, -1))
         return adversary.perturb(image.view(1, -1), get_gradient).view(*image.shape)
@@ -150,7 +150,7 @@ class AdversarialGenerator:
         self.recorded_decayed_successes = create()
         self.recorded_modified_successes = create()
     
-    def join_predictions_(self, img: torch.tensor, classifiers: List[cnn.Trainer]):
+    def join_predictions_(self, img: torch.Tensor, classifiers: List[cnn.Trainer]):
         """
         Convenience function.
         """
@@ -158,13 +158,13 @@ class AdversarialGenerator:
         str_classes = [self.gm.ds.prediction_indices_to_printed_classes(p)[0] for p in predictions]
         return "\n".join(str_classes), [x.item() for x in predictions]
     
-    def l2_norm_(self, x: torch.tensor):
+    def l2_norm_(self, x: torch.Tensor) -> torch.Tensor:
         """
         Scaled L2 norm of x.
         """
         return x.norm() / np.sqrt(x.numel())
     
-    def l1_norm_(self, x: torch.tensor):
+    def l1_norm_(self, x: torch.Tensor) -> torch.Tensor:
         """
         Scaled L1 norm of x.
         """

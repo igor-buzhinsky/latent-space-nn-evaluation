@@ -237,7 +237,7 @@ class GAN:
         self.generator.apply(Util.init_weights)
         self.discriminator.apply(Util.init_weights)
     
-    def decode(self, x: torch.tensor) -> torch.tensor:
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Decodes latent vectors into images.
         :param x: batch of latent vectors.
@@ -246,7 +246,7 @@ class GAN:
         return self.generator(x)
     
     @torch.no_grad()
-    def generate(self, no_samples: int) -> torch.tensor:
+    def generate(self, no_samples: int) -> torch.Tensor:
         """
         Generated new images.
         :param no_samples: nimber of images to generate.

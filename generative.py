@@ -44,7 +44,7 @@ class GenerativeModel(ABC):
         pass
     
     @abstractmethod
-    def generate(self, no_img: int) -> torch.tensor:
+    def generate(self, no_img: int) -> torch.Tensor:
         """
         Generate random images.
         :param no_img: number of images to generate.
@@ -53,7 +53,7 @@ class GenerativeModel(ABC):
         pass
     
     @abstractmethod
-    def encode(self, img: torch.tensor) -> torch.tensor:
+    def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
         Encode given images into latent codes.
         :param img: batch of images to encode.
@@ -62,7 +62,7 @@ class GenerativeModel(ABC):
         pass
     
     @abstractmethod
-    def decode(self, latent_code: torch.tensor, detach: bool = True) -> torch.tensor:
+    def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         """
         Decode given latent codes into images.
         :param latent_code: batch of latent codes to decode.
@@ -101,11 +101,11 @@ class WGAN(GenerativeModel):
         # self.g.warm_spectral_norms(ds.get_unaugmented_train_loader)
         super().__init__(28, self.g.latent_dim, unique_label, ds)
         
-    def generate(self, no_img: int = 1) -> torch.tensor:
+    def generate(self, no_img: int = 1) -> torch.Tensor:
         return self.g.generate(no_img)
     
     @torch.enable_grad()
-    def encode(self, img: torch.tensor) -> torch.tensor:
+    def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
         Implements WGAN.encode with a gradient-based approach (4 restarts of Adam).
         """
@@ -133,7 +133,7 @@ class WGAN(GenerativeModel):
         #print(f"{best_loss:.3f}")
         return all_latent
     
-    def decode(self, latent_code: torch.tensor, detach: bool = True) -> torch.tensor:
+    def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         decoded = self.g.decode(latent_code)
         return decoded.detach() if detach else decoded
     
@@ -250,7 +250,7 @@ class PIONEER(GenerativeModel):
         self.session = None
         gc.collect()
     
-    def generate_plain(self, no_img: int = 1) -> torch.tensor:
+    def generate_plain(self, no_img: int = 1) -> torch.Tensor:
         """
         Originally, PIONEER generates images from normalized (divided by L2 norm) latent vectors.
         In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
@@ -258,10 +258,10 @@ class PIONEER(GenerativeModel):
         """
         return self.decode_plain(self.utils.normalize(torch.randn(no_img, self.latent_dim)))
     
-    def generate(self, no_img: int = 1) -> torch.tensor:
+    def generate(self, no_img: int = 1) -> torch.Tensor:
         return self.generate_plain(no_img)
     
-    def encode_plain(self, img: torch.tensor) -> torch.tensor:
+    def encode_plain(self, img: torch.Tensor) -> torch.Tensor:
         """
         PIONEER encoder always generates a normalized vector (scaled L2 norm == 1).
         This is not very important in a multidimensional space, since N(0, sigma^2 I)-distributed
@@ -270,10 +270,10 @@ class PIONEER(GenerativeModel):
         ex = self.session.encoder(img, self.session.phase, self.session.alpha, self.data.args.use_ALQ).detach()
         return self.utils.split_labels_out_of_latent(ex)[0]
     
-    def encode(self, img: torch.tensor) -> torch.tensor:
+    def encode(self, img: torch.Tensor) -> torch.Tensor:
         return self.encode_plain(img) * np.sqrt(self.latent_dim)
     
-    def decode_plain(self, latent_code: torch.tensor, detach: bool = True) -> torch.tensor:
+    def decode_plain(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         """
         Originally, PIONEER decodes images from normalized (divided by L2 norm) latent vectors.
         In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
@@ -283,6 +283,6 @@ class PIONEER(GenerativeModel):
         generated = self.session.generator(latent_code, label, self.session.phase, self.session.alpha)
         return generated.detach() if detach else generated
     
-    def decode(self, latent_code: torch.tensor, detach: bool = True) -> torch.tensor:
+    def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         return self.decode_plain(latent_code / np.sqrt(self.latent_dim), detach)
     

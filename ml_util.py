@@ -36,12 +36,12 @@ class NopLayer(torch.nn.Module):
     
 
 class Flatten(torch.nn.Module):
-    def forward(self, x: torch.tensor):
+    def forward(self, x: torch.Tensor):
         return x.view(x.shape[0], -1)
     
 
 class Upsample(torch.nn.Module):
-    def forward(self, x: torch.tensor):
+    def forward(self, x: torch.Tensor):
         return torch.nn.functional.interpolate(x, size=None, scale_factor=2, mode='bilinear', align_corners=False)
 
 
@@ -52,8 +52,8 @@ class Adversary(ABC):
     """
     
     @abstractmethod
-    def perturb(self, initial_vector: torch.tensor,
-                get_gradient: Callable[[torch.tensor], Tuple[torch.tensor, float]]) -> torch.tensor:
+    def perturb(self, initial_vector: torch.Tensor,
+                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         """
         Perturb the given vector. 
         :param initial_vector: initial vector. If this is the original image representation, it must be flattened
@@ -70,8 +70,8 @@ class NopAdversary(Adversary):
     Dummy adversary that acts like an identity function.
     """
     
-    def perturb(self, initial_vector: torch.tensor,
-                get_gradient: Callable[[torch.tensor], Tuple[torch.tensor, float]]) -> torch.tensor:
+    def perturb(self, initial_vector: torch.Tensor,
+                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         return initial_vector
     
 
@@ -88,8 +88,8 @@ class FGSMAdversary(Adversary):
         super().__init__()
         self.eps = eps
         
-    def perturb(self, initial_vector: torch.tensor,
-                get_gradient: Callable[[torch.tensor], Tuple[torch.tensor, float]]) -> torch.tensor:
+    def perturb(self, initial_vector: torch.Tensor,
+                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         return initial_vector + self.eps * torch.sign(get_gradient(initial_vector)[0])
 
 
@@ -140,13 +140,13 @@ class PGDAdversary(Adversary):
         assert not unit_sphere_normalization or norm == "scaled_l_2",\
             "unit_sphere_normalization is only compatible with scaled_l_2 norm"
     
-    def norm_(self, x: torch.tensor) -> float:
+    def norm_(self, x: torch.Tensor) -> float:
         """
         (Possibly scaled) norm of x.
         """
         return x.norm(np.infty if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
     
-    def normalize_gradient_(self, x: torch.tensor) -> torch.tensor:
+    def normalize_gradient_(self, x: torch.Tensor) -> torch.Tensor:
         """
         Normalizes the vector of gradients.
         In the L2 space, this is done by dividing the vector by its norm.
@@ -154,7 +154,7 @@ class PGDAdversary(Adversary):
         """
         return x.sign() if self.inf_norm else (x / self.norm_(x))
     
-    def project_(self, x: torch.tensor, rho: float) -> torch.tensor:
+    def project_(self, x: torch.Tensor, rho: float) -> torch.Tensor:
         """
         Projects the vector onto the rho-ball.
         In the L2 space, this is done by scaling the vector.
@@ -162,8 +162,8 @@ class PGDAdversary(Adversary):
         """
         return x.clamp(-rho, rho) if self.inf_norm else (x / self.norm_(x) * rho)
     
-    def perturb(self, initial_vector: torch.tensor,
-                get_gradient: Callable[[torch.tensor], Tuple[torch.tensor, float]]) -> torch.tensor:
+    def perturb(self, initial_vector: torch.Tensor,
+                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         best_perturbation = None
         best_perturbation_norm = np.infty
         # rho may potentially shrink with repeat_mode == "min":
@@ -230,7 +230,7 @@ class PGDAdversary(Adversary):
     
     ### projections on the unit sphere: ###
     
-    def optional_normalize_(self, x: torch.tensor):
+    def optional_normalize_(self, x: torch.Tensor):
         """
         Optional unit sphere normalization.
         :param x: vector of shape 1*dim to normalize.
@@ -238,7 +238,7 @@ class PGDAdversary(Adversary):
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
     
-    def recompute_with_unit_sphere_normalization_(self, perturbed_vector: torch.tensor, perturbation: torch.tensor):
+    def recompute_with_unit_sphere_normalization_(self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor):
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
@@ -249,7 +249,7 @@ class PGDAdversary(Adversary):
         effective_perturbed_vector = self.optional_normalize_(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
     
-    def adjust_step_for_unit_sphere_(self, perturbation_step: torch.tensor, previous_perturbed_vector: torch.tensor):
+    def adjust_step_for_unit_sphere_(self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor):
         """
         If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
         compensates for the reduction of the learning step due to projection of a unit sphere.
@@ -277,7 +277,7 @@ class ImageSet:
         self.captions = []
         self.max_num = max_num
     
-    def append(self, images: List[torch.tensor], captions: List[str] = None):
+    def append(self, images: List[torch.Tensor], captions: List[str] = None):
         """
         Appends the given images and captions.
         :param images: list of images (PyTorch tensors).
@@ -328,7 +328,7 @@ class Util:
         plt.rcParams["mathtext.fontset"] = "dejavuserif"
     
     @staticmethod
-    def imshow(img: torch.tensor, figsize: Tuple[float, float] = (12, 2)):
+    def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)):
         """
         Shows the image and saves the produced figure.
         :param img: image to show (PyTorch tensor).
@@ -343,7 +343,7 @@ class Util:
         plt.close()
     
     @staticmethod
-    def imshow_tensors(*tensors: torch.tensor, clamp: bool = True, figsize: Tuple[float, float] = (12, 2),
+    def imshow_tensors(*tensors: torch.Tensor, clamp: bool = True, figsize: Tuple[float, float] = (12, 2),
                        captions: List[str] = None, nrow: int = 8, pad_value: float = 1):       
         """
         Enhanced torchvision.utils.make_grid(). Supports image captions. Also saves the produced figure.
@@ -459,7 +459,7 @@ class Util:
         return loader
     
     @staticmethod
-    def optimizable_clone(x: torch.tensor) -> torch.tensor:
+    def optimizable_clone(x: torch.Tensor) -> torch.Tensor:
         """
         Clones a PyTorch tensor and makes it suitable for optimization.
         :param x: input tensor.
@@ -478,7 +478,7 @@ class Util:
             p.requires_grad_(value)
     
     @staticmethod
-    def conditional_to_cuda(x: Union[torch.tensor, torch.nn.Module]) -> torch.tensor:
+    def conditional_to_cuda(x: Union[torch.Tensor, torch.nn.Module]) -> torch.Tensor:
         """
         Returns the tensor/module on GPU if there is at least 1 GPU, otherwise just returns the tensor.
         :param x: a PyTorch tensor or module.
@@ -511,7 +511,7 @@ class Util:
         torch.cuda.manual_seed_all(seed + 2)
         
     @staticmethod
-    def normalize_latent(x: torch.tensor):
+    def normalize_latent(x: torch.Tensor) -> torch.Tensor:
         """
         Divides each latent vector of a batch by its scaled Euclidean norm.
         :param x: batch of latent vectors.
