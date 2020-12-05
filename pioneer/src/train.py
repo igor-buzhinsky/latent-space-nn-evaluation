@@ -339,7 +339,8 @@ def train(generator, encoder, g_running, train_data_loader, test_data_loader, se
         
         stats = {}
 
-        one = torch.FloatTensor([1]).cuda(async=(args.gpu_count>1))
+        #one = torch.FloatTensor([1]).cuda(async=(args.gpu_count>1))
+        one = torch.FloatTensor([1]).cuda(non_blocking=(args.gpu_count>1))
 
         try:
             real_image, _ = next(train_dataset)              
@@ -352,7 +353,8 @@ def train(generator, encoder, g_running, train_data_loader, test_data_loader, se
         utils.switch_grad_updates_to_first_of(encoder, generator)
         encoder.zero_grad()
 
-        x = Variable(real_image).cuda(async=(args.gpu_count>1))
+        #x = Variable(real_image).cuda(async=(args.gpu_count>1))
+        x = Variable(real_image).cuda(non_blocking=(args.gpu_count>1))
         kls = ""
         if train_mode == config.MODE_GAN:
             

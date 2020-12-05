@@ -20,6 +20,10 @@ To run the toolset, you need Python 3. Dependencies are listed in [requirements.
 
 > conda install --name latent-adversarial -c pytorch -c conda-forge --file requirements.txt
 
+There are no known version limitations, so if there is a problem installing the specified package versions, you may try your luck and install the packages without version constraints.
+
+If you would like to minimize the size of the installation, you may try installing packages only when you run into import errors. Many packages are needed for PIONEER generative autoencoder training which you may not need to run.
+
 ## Running (MNIST only)
 
 The starting point is to run the toolset on MNIST, as all trained models are small and already included into this repository.
@@ -38,10 +42,10 @@ Some examples of running .py scripts are given in files [ClassifierTraining.sh](
 
 CelebA and LSUN classifier models are included into the repository, but classifier training/evaluation for these datasets will require downloading these datasets. This will be done automatically for CelebA during the first run, but you will need to [download LSUN on your own](https://github.com/fyu/lsun/blob/master/download.py). You need to have the following directories:
 
-* data/LSUN/bedroom_train_lmdb
-* data/LSUN/bedroom_val_lmdb
-* data/LSUN/church_outdoor_train_lmdb
-* data/LSUN/church_outdoor_val_lmdb
+* data/LSUN/bedroom_train_lmdb ([download archive](http://dl.yf.io/lsun/scenes/bedroom_train_lmdb.zip))
+* data/LSUN/bedroom_val_lmdb ([download archive](http://dl.yf.io/lsun/scenes/bedroom_val_lmdb.zip))
+* data/LSUN/church_outdoor_train_lmdb ([download archive](http://dl.yf.io/lsun/scenes/church_outdoor_train_lmdb.zip))
+* data/LSUN/church_outdoor_val_lmdb ([download archive](http://dl.yf.io/lsun/scenes/church_outdoor_val_lmdb.zip))
 
 Evaluation of latent performance metrics for CelebA and LSUN will also require pretrained [PIONEER](https://github.com/AaltoVision/pioneer) models. You will need to download the following files (~670 MB each) and place them at the following locations:
 
@@ -58,7 +62,3 @@ Implement a new dataset wrapper in datasets.py. Add support to this dataset in c
 * [PIONEER](https://github.com/AaltoVision/pioneer) autoencoder. A copy of PIONEER (slightly modified) is included into this repository (pioneer/src), but if you need PIONEER on its own, take it from the original repository. Model training and loading is memory-intensive.
 
 Alternatively, you can implement a different subclass of GenerativeModel. Even if you implement only generation (generate/decode) but not approximation in the latent space (encode), evaluation of latent space metrics based on generation should work.
-
-## Bugs, questions, etc.
-
-Email Igor Buzhinsky (igor.buzhinsky@gmail.com).

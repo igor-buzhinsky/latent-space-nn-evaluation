@@ -1,15 +1,17 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import resource
 from abc import ABC, abstractmethod
 from typing import *
+import os
 
 from ml_util import *
 
 
-# this may prevent an error in DataLoader with num_workers > 0
-resource.setrlimit(resource.RLIMIT_NOFILE, (2048 * 2, resource.getrlimit(resource.RLIMIT_NOFILE)[1]))
+if os.name == "posix":
+    import resource
+    # this may prevent an error in DataLoader with num_workers > 0
+    resource.setrlimit(resource.RLIMIT_NOFILE, (2048 * 2, resource.getrlimit(resource.RLIMIT_NOFILE)[1]))
 
 # norm bounds for conventional robustness evaluation
 MNIST_L2_UPPER_BOUND = 0.6

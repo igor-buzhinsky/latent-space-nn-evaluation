@@ -420,6 +420,7 @@ class Trainer:
                 severities += [norm_fn(perturbed_image - image)]
             if show_images:
                 Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
-        severities = np.array(severities)
+        severities = torch.tensor(severities)
+        print(severities)
         return severities.mean(), severities.std(), len(severities)
         

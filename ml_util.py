@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pickle
 import gzip
-import resource
 import torch
 from typing import *
 import matplotlib
@@ -15,6 +14,10 @@ import cv2
 from enum import Enum
 import time
 import random
+import statsmodels.nonparametric.bandwidths
+
+if os.name == "posix":
+    import resource
 
 # A enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128")
@@ -312,16 +315,17 @@ class Util:
     @staticmethod
     def set_memory_limit(mb: int):
         """
-        Sets memory limit in megabytes.
+        Sets memory limit in megabytes (this has effect only on Linux).
         """
-        rsrc = resource.RLIMIT_DATA
-        soft, hard = resource.getrlimit(rsrc)
-        resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
+        if os.name == "posix":
+            rsrc = resource.RLIMIT_DATA
+            soft, hard = resource.getrlimit(rsrc)
+            resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
     
     @staticmethod
     def configure(memory_limit_mb: int):
         """
-        Sets memory limit in megabytes. Configures matplotlib fonts.
+        Sets memory limit in megabytes (this has effect only on Linux). Configures matplotlib fonts.
         """
         Util.set_memory_limit(memory_limit_mb)
         plt.rcParams["font.family"] = "serif"
@@ -521,6 +525,16 @@ class Util:
         norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
         return norm_vector @ x
         #return torch.stack([x[i] / torch.norm(x[i]) for i in range(x.shape[0])])
+        
+    @staticmethod
+    def get_kde_bandwidth(x: np.ndarray) -> float:
+        """
+        This fixes a peculiar problem with sns.kdeplot/distplot. Use this to compute the bandwidth and provide it as argument bw. 
+        https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
+        :param x: input (numpy array).
+        :return KDE bandwidth computed by Scott's method.
+        """
+        return statsmodels.nonparametric.bandwidths.bw_scott(x)
 
 
 class EpsDTransformer:
@@ -563,7 +577,6 @@ class TauRhoTransformer:
         """
         return np.sqrt((self.c1 - tau) / self.c2 / self.n_l)
 
-
 class LogUtil:
     """
     Performs logging of text and images to a new timestamped directory.
@@ -596,7 +609,7 @@ class LogUtil:
         LogUtil.ensure_dir_existence()
         if regular_print:
             print(msg)
-        with open(LogUtil.dirname_ + "/log.txt", "a+") as f:
+        with open(LogUtil.dirname_ + "/log.txt", "a+", encoding="utf-8") as f:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
     
     @staticmethod
@@ -632,3 +645,4 @@ class LogUtil:
         Switches matplotlib backend to 'pdf'.
         """
         matplotlib.use("pdf", warn=False, force=True)
+        

@@ -32,7 +32,8 @@ class SpectralNorm:
         size = weight.size()
         weight_mat = weight.contiguous().view(size[0], -1)
         if weight_mat.is_cuda:
-            u = u.cuda(async=(args.gpu_count>1))
+            #u = u.cuda(async=(args.gpu_count>1))
+            u = u.cuda(non_blocking=(args.gpu_count>1))
         v = weight_mat.t() @ u
         v = v / v.norm()
         u = weight_mat @ v
