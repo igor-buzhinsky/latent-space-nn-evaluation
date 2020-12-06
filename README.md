@@ -40,9 +40,9 @@ Some examples of running .py scripts are given in files [ClassifierTraining.sh](
 
 ## Running (CelebA and LSUN)
 
-CelebA and LSUN classifier models are included into the repository, but classifier training/evaluation for these datasets will require downloading these datasets. This will be done automatically for CelebA during the first run, but you will need to [download LSUN on your own](https://github.com/fyu/lsun/blob/master/download.py). You need to have the following directories:
+CelebA and LSUN classifier models are included into the repository, but classifier training/evaluation for these datasets will require downloading these datasets. This will be done automatically for CelebA during the first run, but you will need to download LSUN on your own. You need to have the following directories:
 
-* data/LSUN/bedroom_train_lmdb ([download archive](http://dl.yf.io/lsun/scenes/bedroom_train_lmdb.zip))
+* data/LSUN/bedroom_train_lmdb ([download archive](http://dl.yf.io/lsun/scenes/bedroom_train_lmdb.zip), size warning!)
 * data/LSUN/bedroom_val_lmdb ([download archive](http://dl.yf.io/lsun/scenes/bedroom_val_lmdb.zip))
 * data/LSUN/church_outdoor_train_lmdb ([download archive](http://dl.yf.io/lsun/scenes/church_outdoor_train_lmdb.zip))
 * data/LSUN/church_outdoor_val_lmdb ([download archive](http://dl.yf.io/lsun/scenes/church_outdoor_val_lmdb.zip))

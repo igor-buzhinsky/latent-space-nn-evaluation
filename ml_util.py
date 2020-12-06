@@ -332,6 +332,10 @@ class Util:
         plt.rcParams["mathtext.fontset"] = "dejavuserif"
     
     @staticmethod
+    def tensor2numpy(x: torch.Tensor) -> np.ndarray:
+        return x.detach().cpu().numpy()
+    
+    @staticmethod
     def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)):
         """
         Shows the image and saves the produced figure.
@@ -340,7 +344,7 @@ class Util:
         """
         plt.figure(figsize=figsize)
         img = img / 2 + 0.5  # unnormalize
-        plt.imshow(np.transpose(img.numpy(), (1, 2, 0)))
+        plt.imshow(np.transpose(Util.tensor2numpy(img), (1, 2, 0)))
         plt.axis("off")
         LogUtil.savefig("imshow")
         plt.show()
@@ -384,7 +388,7 @@ class Util:
             default_size = (128,) * 2
             for i in range(len(t)):
                 assert type(captions[i]) == str, "Captions must be str"
-                t[i] = (t[i].cpu().numpy().transpose(1, 2, 0) / 2 + 0.5) * 255
+                t[i] = (Util.tensor2numpy(t[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
                 # shape = H*W*3
                 t[i] = cv2.resize(t[i], default_size, interpolation=cv2.INTER_NEAREST)
                 t[i] = multiline_puttext(t[i], captions[i]) / 255

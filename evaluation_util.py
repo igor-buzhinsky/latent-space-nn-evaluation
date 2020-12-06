@@ -140,7 +140,32 @@ class EvaluationUtil:
                 img, _ = next(sampler)
                 images += [img, gm.decode(gm.encode(img))]
             Util.imshow_tensors(*images, nrow=(images_in_line*2))
-            
+    
+    @staticmethod
+    def show_reconstruction_distance_statistics(gm: GenerativeModel, no_images: int):
+        """
+        Shows statistics on the distance of reconstructed images (based on the supplied generative model)
+        from the original ones.
+        :param gm: generative model to use.
+        :param no_images: number of images to construct statistics for.
+        """
+        sampler = gm.get_sampler()
+        norms, distances = np.empty(no_images), np.empty(no_images)
+        norm = lambda x: x.flatten().norm() / np.sqrt(x.numel())
+        for i in range(no_images):
+            img, _ = next(sampler)
+            norms[i] = norm(img)
+            distances[i] = norm(img - gm.decode(gm.encode(img)))
+        print(f"Scaled norms of original images:       mean={norms.mean():.4f}, "
+              f"median={np.median(norms):.4f}, std={norms.std():.4f}")
+        print(f"Scaled norms of reconstruction errors: mean={distances.mean():.4f}, "
+              f"median={np.median(distances):.4f}, std={distances.std():.4f}")
+        plt.figure(figsize=(10,3))
+        plt.title("Scaled norms of reconstruction errors")
+        plt.hist(distances)
+        plt.show()
+        plt.close()
+    
     @staticmethod
     def show_generated_images(gm: GenerativeModel, lines: int, images_in_line: int):
         """
