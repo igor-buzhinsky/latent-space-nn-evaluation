@@ -207,11 +207,11 @@ class GAN:
     @torch.no_grad()
     def save_params_to_disk(self, filename: str):
         """
-        Saves current trainable parameters to disk. This is done with pickle.
+        Saves current trainable parameters to disk.
         :param filename: target filename.
         """
-        Util.dump_model(filename, (copy.deepcopy(self.generator.state_dict()),
-                                   copy.deepcopy(self.discriminator.state_dict())))
+        torch.save(self.generator.state_dict(), filename + ".generator")
+        torch.save(self.discriminator.state_dict(), filename + ".discriminator")
 
     @torch.no_grad()
     def restore_params(self):
@@ -224,11 +224,23 @@ class GAN:
     @torch.no_grad()
     def restore_params_from_disk(self, filename: str):
         """
-        Restores previously saved trainable parameters from disk. This is done with pickle.
+        Restores previously saved trainable parameters from disk.
         :param filename: target filename.
         """
-        self.params = Util.read_model(filename)
+        loc = ("cuda:0" if Util.using_cuda else "cpu")
+        self.params = (torch.load(filename + ".generator",     map_location=loc),
+                       torch.load(filename + ".discriminator", map_location=loc))
         self.restore_params()
+        
+    @torch.no_grad()
+    def legacy_restore_params_from_disk(self, filename: str):
+        """
+        Deprecated.
+        """
+        import pickle
+        self.params = pickle.load(gzip.open(filename))
+        self.generator.load_state_dict(self.params[0])
+        self.discriminator.load_state_dict(self.params[1])
 
     @torch.no_grad()
     def random_init(self):

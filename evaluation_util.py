@@ -118,7 +118,7 @@ class EvaluationUtil:
             classifier.set_misclassification_gradients(False)
             s = ImageSet(pairs_in_line)
             for target_label in range(no_classes):
-                image = mean_image + torch.randn(*mean_image.shape) * noise_sigma
+                image = mean_image + Util.conditional_to_cuda(torch.randn(*mean_image.shape)) * noise_sigma
                 perturb = get_conventional_perturb(classifier, image_optimizer)
                 s.append([image.unsqueeze(0), perturb(image, target_label).unsqueeze(0)])
                 s.maybe_show(nrow=nrow)

@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pickle
 import gzip
 import torch
 from typing import *
@@ -20,7 +19,7 @@ if os.name == "posix":
     import resource
 
 # A enumeration of all supported datasets.
-DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128")
+DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNetAnimals")
 
 ### PyTorch utils ###
 
@@ -143,27 +142,27 @@ class PGDAdversary(Adversary):
         assert not unit_sphere_normalization or norm == "scaled_l_2",\
             "unit_sphere_normalization is only compatible with scaled_l_2 norm"
     
-    def norm_(self, x: torch.Tensor) -> float:
+    def _norm(self, x: torch.Tensor) -> float:
         """
         (Possibly scaled) norm of x.
         """
         return x.norm(np.infty if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
     
-    def normalize_gradient_(self, x: torch.Tensor) -> torch.Tensor:
+    def _normalize_gradient(self, x: torch.Tensor) -> torch.Tensor:
         """
         Normalizes the vector of gradients.
         In the L2 space, this is done by dividing the vector by its norm.
         In the L-inf space, this is done by taking the sign of the gradient.
         """
-        return x.sign() if self.inf_norm else (x / self.norm_(x))
+        return x.sign() if self.inf_norm else (x / self._norm(x))
     
-    def project_(self, x: torch.Tensor, rho: float) -> torch.Tensor:
+    def _project(self, x: torch.Tensor, rho: float) -> torch.Tensor:
         """
         Projects the vector onto the rho-ball.
         In the L2 space, this is done by scaling the vector.
         In the L-inf space, this is done by clamping all components independently.
         """
-        return x.clamp(-rho, rho) if self.inf_norm else (x / self.norm_(x) * rho)
+        return x.clamp(-rho, rho) if self.inf_norm else (x / self._norm(x) * rho)
     
     def perturb(self, initial_vector: torch.Tensor,
                 get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
@@ -187,53 +186,54 @@ class PGDAdversary(Adversary):
                     # uniform radius, random direction
                     # note that this distribution is not uniform in terms of R^n!
                     perturbation = torch.randn(1, x1.numel())
-                    perturbation /= self.norm_(perturbation) / rho
+                    perturbation /= self._norm(perturbation) / rho
                     perturbation *= np.random.rand()
                 perturbation = Util.conditional_to_cuda(perturbation)
 
             if self.verbose > 0:
-                print(f">> #run = {run_n}, ║x1║ = {self.norm_(x1):.5f}, ρ = {rho:.5f}")
+                print(f">> #run = {run_n}, ║x1║ = {self._norm(x1):.5f}, ρ = {rho:.5f}")
 
             found = False
             for i in range(self.steps):
                 perturbed_vector = x1 + perturbation
-                perturbed_vector, perturbation = self.recompute_with_unit_sphere_normalization_(perturbed_vector, perturbation)
+                perturbed_vector, perturbation = self._recompute_with_unit_sphere_normalization(perturbed_vector,
+                                                                                                perturbation)
                 classification_gradient, classification_loss = get_gradient(perturbed_vector)
                 if self.verbose > 0:
                     if classification_loss > self.stop_loss or i == self.steps - 1 or i % 5 == 0 and self.verbose > 1:
                         print(f"step {i:3d}: objective = {-classification_loss:+.7f}, "
-                              f"║Δx║ = {self.norm_(perturbation):.5f}, ║x║ = {self.norm_(perturbed_vector):.5f}")
+                              f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}")
                 if classification_loss > self.stop_loss:
                     found = True
                     break
                 # learning step
-                perturbation_step = rho * self.step_size * self.normalize_gradient_(classification_gradient)
-                perturbation_step = self.adjust_step_for_unit_sphere_(perturbation_step, x1 + perturbation)
+                perturbation_step = rho * self.step_size * self._normalize_gradient(classification_gradient)
+                perturbation_step = self._adjust_step_for_unit_sphere(perturbation_step, x1 + perturbation)
                 perturbation += perturbation_step
                 # projecting on rho-ball around x1
-                if self.norm_(perturbation) > rho:
-                    perturbation = self.project_(perturbation, rho)
+                if self._norm(perturbation) > rho:
+                    perturbation = self._project(perturbation, rho)
             
             # end of run
             if found:
                 if self.shrinking_repeats:
-                    if self.norm_(perturbation) < best_perturbation_norm:
-                        best_perturbation_norm = self.norm_(perturbation)
+                    if self._norm(perturbation) < best_perturbation_norm:
+                        best_perturbation_norm = self._norm(perturbation)
                         best_perturbation = perturbation
                         rho = best_perturbation_norm
                 else: # regular repeats
                     # return immediately
-                    return self.optional_normalize_(x1 + perturbation)
+                    return self._optional_normalize(x1 + perturbation)
             if best_perturbation is None:
                 best_perturbation = perturbation
             if self.shrinking_repeats and run_n == self.n_repeat - 1:
                 # heuristic: the last run is always from the center
                 random_start = False
-        return self.optional_normalize_(x1 + best_perturbation)
+        return self._optional_normalize(x1 + best_perturbation)
     
     ### projections on the unit sphere: ###
     
-    def optional_normalize_(self, x: torch.Tensor):
+    def _optional_normalize(self, x: torch.Tensor):
         """
         Optional unit sphere normalization.
         :param x: vector of shape 1*dim to normalize.
@@ -241,7 +241,7 @@ class PGDAdversary(Adversary):
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
     
-    def recompute_with_unit_sphere_normalization_(self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor):
+    def _recompute_with_unit_sphere_normalization(self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor):
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
@@ -249,10 +249,10 @@ class PGDAdversary(Adversary):
         :param perturbation: perturbation vector.
         :return possibly recomputed (perturbed_vector, perturbation).
         """
-        effective_perturbed_vector = self.optional_normalize_(perturbed_vector)
+        effective_perturbed_vector = self._optional_normalize(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
     
-    def adjust_step_for_unit_sphere_(self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor):
+    def _adjust_step_for_unit_sphere(self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor):
         """
         If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
         compensates for the reduction of the learning step due to projection of a unit sphere.
@@ -260,7 +260,7 @@ class PGDAdversary(Adversary):
         :param previous_perturbed_vector: previous perturbed vector.
         :return altered perturbation_step.
         """
-        new_perturbed_vector = self.optional_normalize_(previous_perturbed_vector + perturbation_step)
+        new_perturbed_vector = self._optional_normalize(previous_perturbed_vector + perturbation_step)
         effective_perturbation_step = new_perturbed_vector - previous_perturbed_vector
         coef = perturbation_step.norm() / effective_perturbation_step.norm()
         return perturbation_step * coef
@@ -311,6 +311,7 @@ class Util:
     
     # if False, will use CPU even if CUDA is available
     cuda_enabled = True
+    using_cuda = cuda_enabled and torch.cuda.is_available()
     
     @staticmethod
     def set_memory_limit(mb: int):
@@ -395,24 +396,6 @@ class Util:
                 t[i] = torch.FloatTensor(t[i].transpose(2, 0, 1) * 2 - 1)
             
         Util.imshow(torchvision.utils.make_grid(torch.stack(t), nrow=nrow, pad_value=pad_value), figsize)
-
-    @staticmethod
-    def read_model(filename: str):
-        """
-        Loads an object from disk with pickle.
-        :param filename: filename.
-        :return: loaded, unpickled object.
-        """
-        return pickle.load(gzip.open(filename))
-
-    @staticmethod
-    def dump_model(filename: str, o):
-        """
-        Dumps an object to disk with pickle.
-        :param filename: filename.
-        :param o: the object to pickle and write.
-        """
-        pickle.dump(o, gzip.open(filename, "w"), pickle.HIGHEST_PROTOCOL)
         
     @staticmethod
     def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
@@ -443,7 +426,7 @@ class Util:
     @staticmethod
     def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
         """
-        Restarts or limits the parent loader, so that the desired number of images is produced.
+        Restarts or limits the parent loader so that the desired number of images is produced.
         :param no_images: desired number of images (the effective number will be a multiple of batch size).
         :param parent_loader_fn: the loader-returning function to decorate.
         :param restarts: if False, then just limit the parent loader and do not restart it when the end is reached.
@@ -465,6 +448,19 @@ class Util:
                     yield items, labels
                     generated += len(items)
         return loader
+    
+    @staticmethod
+    def leakless_cycle(iterable_fn: Callable) -> Generator:
+        """
+        Fixes the memory leak problem of itertools.cycle (https://github.com/pytorch/pytorch/issues/23900).
+        :iterable_fn function that returns an iterable.
+        """
+        iterator = iter(iterable_fn())
+        while True:
+            try:
+                yield next(iterator)
+            except StopIteration:
+                iterator = iter(iterable_fn())
     
     @staticmethod
     def optimizable_clone(x: torch.Tensor) -> torch.Tensor:
@@ -492,7 +488,7 @@ class Util:
         :param x: a PyTorch tensor or module.
         :return: x on GPU if there is at least 1 GPU, otherwise just x.
         """
-        return x.cuda() if (Util.cuda_enabled and torch.cuda.is_available()) else x
+        return x.cuda() if Util.using_cuda else x
     
     @staticmethod
     def number_of_trainable_parameters(model: torch.nn.Module) -> int:

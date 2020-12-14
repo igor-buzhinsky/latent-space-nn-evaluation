@@ -10,24 +10,65 @@ from tensorboardX import SummaryWriter
 from ml_util import *
 from datasets import *
 
+class ResBlock(torch.nn.Module):
+    def __init__(self, base_map_num: int):
+        super().__init__()
+        self.relu = torch.nn.ReLU()
+        self.layer = torch.nn.Sequential(
+            torch.nn.Conv2d(base_map_num, base_map_num, 3, padding=1),
+            torch.nn.BatchNorm2d(base_map_num, track_running_stats=False),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(base_map_num, base_map_num, 3, padding=1),
+            torch.nn.BatchNorm2d(base_map_num, track_running_stats=False),
+        )
+
+    def forward(self, x):
+        return self.relu(x + self.layer(x))
+
 
 class Unit(torch.nn.Module):
     """
     Basic convolutional block.
     """
     
-    def __init__(self, in_channels: int, out_channels: int, p_dropout):
+    def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0):
+        """
+        :param unit_type: 0, 1 and 2.
+          0: basic choice.
+          1: with ResBlocks.
+          2: deeper version of 0.
+        """
         super().__init__()
-        self.model = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
+        block = lambda in_ch: [
+            torch.nn.Conv2d(in_ch, out_channels, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
-            torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
+        ]
+        end = lambda: [
             torch.nn.MaxPool2d(kernel_size=2, padding=0),
-            torch.nn.Dropout(p_dropout)
-        )
+            torch.nn.Dropout(p_dropout),
+        ]
+        if unit_type == 0:
+            self.model = torch.nn.Sequential(
+                *block(in_channels),
+                *block(out_channels),
+                *end(),
+            )
+        elif unit_type == 1:
+            self.model = torch.nn.Sequential(
+                ResBlock(in_channels),
+                *block(in_channels),
+                *end(),
+            )
+        elif unit_type == 2:
+            self.model = torch.nn.Sequential(
+                *block(in_channels),
+                *block(out_channels),
+                *block(out_channels),
+                *end(),
+            )
+        else:
+            raise AssertionError(f"Unexpected unit type {unit_type}")
 
     def forward(self, x):
         return self.model(x)
@@ -38,17 +79,20 @@ class ColoredNet128(torch.nn.Module):
     Simple CNN classifier to process 128x128 images with 2 target classes.
     """
     
-    def __init__(self):
+    def __init__(self, no_classes: int = 2, unit_type: int = 0):
+        """
+        :param unit_type: architecture (0..2).
+        """
         super().__init__()
         base_map_num = 8
         self.model = torch.nn.Sequential(
-            Unit(3,                 1 * base_map_num, 0.2),
-            Unit(1 * base_map_num,  2 * base_map_num, 0.25),
-            Unit(2 * base_map_num,  4 * base_map_num, 0.25),
-            Unit(4 * base_map_num,  8 * base_map_num, 0.3),
-            Unit(8 * base_map_num, 16 * base_map_num, 0.4),
+            Unit(3,                 1 * base_map_num, 0.2,  unit_type),
+            Unit(1 * base_map_num,  2 * base_map_num, 0.25, unit_type),
+            Unit(2 * base_map_num,  4 * base_map_num, 0.25, unit_type),
+            Unit(4 * base_map_num,  8 * base_map_num, 0.3,  unit_type),
+            Unit(8 * base_map_num, 16 * base_map_num, 0.4,  unit_type),
             Flatten(),
-            torch.nn.Linear(16 * base_map_num * 4 * 4, 2)
+            torch.nn.Linear(16 * base_map_num * 4 * 4, no_classes)
         )
 
     def forward(self, x):
@@ -60,14 +104,17 @@ class MNISTNet(torch.nn.Module):
     Simple CNN classifier for 28x28 MNIST images.
     """
     
-    def __init__(self):
+    def __init__(self, unit_type: int = 0):
+        """
+        :param unit_type: architecture (0..2).
+        """
         super().__init__()
         base_map_num = 8
         self.model = torch.nn.Sequential(
             Lambda(lambda x: torch.nn.functional.pad(input=x, pad=((4,) * 4), mode="constant", value=0)),
-            Unit(1,                1 * base_map_num, 0.2),
-            Unit(1 * base_map_num, 2 * base_map_num, 0.3),
-            Unit(2 * base_map_num, 4 * base_map_num, 0.4),
+            Unit(1,                1 * base_map_num, 0.2, unit_type),
+            Unit(1 * base_map_num, 2 * base_map_num, 0.3, unit_type),
+            Unit(2 * base_map_num, 4 * base_map_num, 0.4, unit_type),
             Flatten(),
             torch.nn.Linear(4 * base_map_num * 4 * 4, 10)
         )
@@ -116,19 +163,22 @@ class Trainer:
     Trainable CNN classifier.
     """
     
-    def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable):
+    def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0):
         """
         Constructs Trainer.
         :param dataset: one of 'celeba-128', 'lsun-128', 'mnist'. This determines network architecture.
         :param train_loader_fn: function that returns a TorchVision loader of (possibly augmented) training data.
         :param val_loader_fn: function that returns a TorchVision loader of validation/test data.
+        :param unit_type: architecture (0..2).
         """
         if dataset in ["celeba-128", "lsun-128"]:
-            self.model = ColoredNet128()
+            self.model = ColoredNet128(2, unit_type)
+        elif dataset == "animals-128":
+            self.model = ColoredNet128(3, unit_type)
         elif dataset == "mnist":
-            self.model = MNISTNet()
+            self.model = MNISTNet(unit_type)
         else:
-            raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist")
+            raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, animals-128")
         self.model = Util.conditional_to_cuda(self.model)
         self.params: dict = {}
         LogUtil.info(f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters")
@@ -147,10 +197,10 @@ class Trainer:
     @torch.no_grad()
     def save_params_to_disk(self, filename: str):
         """
-        Saves current trainable parameters to disk. This is done with pickle.
+        Saves current trainable parameters to disk.
         :param filename: target filename.
         """
-        Util.dump_model(filename, copy.deepcopy(self.model.state_dict()))
+        torch.save(self.model.state_dict(), filename)
 
     @torch.no_grad()
     def restore_params(self):
@@ -162,10 +212,19 @@ class Trainer:
     @torch.no_grad()
     def restore_params_from_disk(self, filename: str):
         """
-        Restores previously saved trainable parameters from disk. This is done with pickle.
+        Restores previously saved trainable parameters from disk.
         :param filename: target filename.
         """
-        self.params = Util.read_model(filename)
+        self.params = torch.load(filename, map_location=("cuda:0" if Util.using_cuda else "cpu"))
+        self.restore_params()
+        
+    @torch.no_grad()
+    def legacy_restore_params_from_disk(self, filename: str):
+        """
+        Deprecated.
+        """
+        import pickle
+        self.params = pickle.load(gzip.open(filename))
         self.restore_params()
 
     def disable_param_gradients(self):
@@ -229,7 +288,8 @@ class Trainer:
             losses += [loss.item()]
             with torch.no_grad():
                 predictions += [torch.argmax(ps).item()]
-        return Util.conditional_to_cuda(torch.LongTensor(predictions)), Util.conditional_to_cuda(torch.FloatTensor(losses))
+        return (Util.conditional_to_cuda(torch.LongTensor(predictions)),
+                Util.conditional_to_cuda(torch.FloatTensor(losses)))
     
     @torch.no_grad()
     def predict(self, x: torch.Tensor) -> torch.LongTensor:
@@ -241,7 +301,8 @@ class Trainer:
         self.model.eval()  # set prediction mode
         # predicting separately for each item
         # otherwise, prediction quality will drop due to the behavior of batch normalization
-        return Util.conditional_to_cuda(torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1) for i in range(x.shape[0])]))
+        return Util.conditional_to_cuda(torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1)
+                                                          for i in range(x.shape[0])]))
 
     @torch.no_grad()
     def predict_probs(self, x: torch.Tensor) -> torch.FloatTensor:
@@ -292,7 +353,7 @@ class Trainer:
                 prediction = torch.argmax(outputs, 1)[0]
                 self.accuracy = (prediction == label).float().item()
 
-        infinite_val_stream = itertools.cycle(self.val_loader_fn())
+        infinite_val_stream = Util.leakless_cycle(self.val_loader_fn)
         batch_index = 0
         
         for epoch in range(epochs):
@@ -323,7 +384,6 @@ class Trainer:
                         val_accuracy += p.accuracy
                 writer.add_scalar("validation_loss", val_loss_sum / no_val, batch_index)
                 writer.add_scalar("validation_accuracy", val_accuracy / no_val, batch_index)
-
                 batch_index += 1
 
             # end of epoch
@@ -392,7 +452,8 @@ class Trainer:
         return np.array(all_accuracies).mean(), len(all_accuracies)
     
     def measure_adversarial_severity(self, perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
-                                     data_loader_fn: Callable, ds: DatasetWrapper, norm_fn: Callable[[torch.FloatTensor], float],
+                                     data_loader_fn: Callable, ds: DatasetWrapper,
+                                     norm_fn: Callable[[torch.FloatTensor], float],
                                      show_images: bool = True) -> Tuple[float, float, int]:
         """
         Measures adversarial severity (mean norm of minimum adversarial perturbations) on the supplied data loader.

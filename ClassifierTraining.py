@@ -36,6 +36,8 @@ parser.add_argument("--img_in_epoch", type=int, default=100000,
                     help="number of images per epoch (command = train)")
 parser.add_argument("--no_epochs", type=int, default=8,
                     help="number of epochs (command = train)")
+parser.add_argument("--unit_type", type=int, default=0,
+                    help="architecture choice (0..2), default = 0")
 # evaluation-specific arguments
 parser.add_argument("--img_accuracy", type=int, default=10**10,
                     help="limit accuracy evaluation to this number of images (command = evaluate)")
@@ -77,7 +79,7 @@ else:
 class_weights = [1 / no_classes] * no_classes
 train_loader = ds.get_train_loader if args.conventional_augmentation else ds.get_unaugmented_train_loader
 train_loader = Util.fixed_length_loader(args.img_in_epoch, train_loader)
-c = Trainer(trainer_name, train_loader, ds.get_test_loader)
+c = Trainer(trainer_name, train_loader, ds.get_test_loader, args.unit_type)
 
 if args.command == "train":
     if args.load_filename is not None:

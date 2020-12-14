@@ -20,6 +20,34 @@ MNIST_LINF_UPPER_BOUND = 1.2
 OTHER_LINF_UPPER_BOUND = 0.1
 
 
+def merge_loaders(parent_loader_fns: List[Callable], batch_size: int, shuffle: bool) -> Callable:
+    """
+    Merges several dataset loaders. Batch size is preserved.
+    Labels are replaced with 0 for the first loader, 1 for the second loader and so on.
+    Items from both are cycled until the end of any of them is reached.
+    """
+    n_loaders = len(parent_loader_fns)
+    data_generators = [iter(f(batch_size, shuffle)) for f in parent_loader_fns]
+    while True:
+        # load
+        try:
+            item_label_pairs = [next(g) for g in data_generators]
+        except StopIteration:
+            return
+        all_items  = torch.cat([p[0] for p in item_label_pairs])
+        all_labels = torch.cat([p[1] for p in item_label_pairs])
+        # shuffle
+        if shuffle:
+            perm = torch.randperm(batch_size * n_loaders)
+            all_items = all_items[perm]
+            all_labels = all_labels[perm]
+        # spit out
+        for i in range(n_loaders):
+            i1 = batch_size * i
+            i2 = batch_size * (i + 1)
+            yield all_items[i1:i2], all_labels[i1:i2]
+
+
 class DatasetWrapper(ABC):
     """
     Base class for dataset wrappers. These classes specify several loading procedures with customizable
@@ -35,6 +63,29 @@ class DatasetWrapper(ABC):
         transforms.Lambda(Util.conditional_to_cuda),
         transforms.Normalize((0.5,) * 3, (0.5,) * 3)
     ])
+    
+    @staticmethod
+    def resize_crop_transform(size: int):
+        return transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(size),
+            DatasetWrapper.base_transform
+        ])
+    
+    @staticmethod
+    def augmentation_transform(size: int):
+        return transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(size),
+            transforms.RandomOrder([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomApply([transforms.ColorJitter(brightness=0.3, contrast=0.3,
+                                                               saturation=0.2, hue=0.2)], 0.7),
+                transforms.RandomApply([transforms.RandomAffine(25, translate=(0.1, 0.1), scale=(0.9, 1.1))], 0.7),
+            ]),
+            DatasetWrapper.base_transform,
+            transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False),
+        ])
     
     def __init__(self, img_size: int, classes: List[str], printed_classes: List[str], test_transform, train_transform):
         """
@@ -87,7 +138,7 @@ class DatasetWrapper(ABC):
         """
         return [self.printed_classes[int(i)] for i in indices]
     
-    def get_loader_(self, torchvision_dataset, batch_size: int, shuffle: bool):
+    def _get_loader(self, torchvision_dataset, batch_size: int, shuffle: bool) -> torch.utils.data.DataLoader:
         """
         Get a torch.utils.data.DataLoader for this dataset.
         :param torchvision_dataset: TorchVision dataset.
@@ -97,6 +148,8 @@ class DatasetWrapper(ABC):
         """
         return torch.utils.data.DataLoader(torchvision_dataset, batch_size=batch_size,
                                            shuffle=shuffle, num_workers=0, drop_last=True,
+                                           #pin_memory=Util.using_cuda,
+                                           pin_memory=False,
                                            collate_fn=self.preprocess_batch)
     
     def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
@@ -108,7 +161,7 @@ class DatasetWrapper(ABC):
         """
         if batch_size is None:
             batch_size = self.train_batch_size
-        return self.get_loader_(self.unaugmented_trainset, batch_size, shuffle)
+        return self._get_loader(self.unaugmented_trainset, batch_size, shuffle)
     
     def get_train_loader(self, batch_size: int = None, shuffle: bool = True):
         """
@@ -119,7 +172,7 @@ class DatasetWrapper(ABC):
         """
         if batch_size is None:
             batch_size = self.train_batch_size
-        return self.get_loader_(self.trainset, batch_size, shuffle)
+        return self._get_loader(self.trainset, batch_size, shuffle)
     
     def get_test_loader(self, batch_size: int = None, shuffle: bool = True):
         """
@@ -130,7 +183,7 @@ class DatasetWrapper(ABC):
         """
         if batch_size is None:
             batch_size = self.test_batch_size
-        return self.get_loader_(self.testset, batch_size, shuffle)
+        return self._get_loader(self.testset, batch_size, shuffle)
     
 
 class MNISTData(DatasetWrapper):
@@ -229,23 +282,8 @@ class CelebAData(DatasetWrapper):
         
         labels = (a_no, a_yes)
         super().__init__(size, labels, labels,
-            transforms.Compose([
-                transforms.Resize(size),
-                transforms.CenterCrop(size),
-                DatasetWrapper.base_transform
-            ]),
-            transforms.Compose([
-                transforms.Resize(size),
-                transforms.CenterCrop(size),
-                transforms.RandomOrder([
-                    transforms.RandomHorizontalFlip(),
-                    #transforms.RandomGrayscale(p=0.1),
-                    transforms.RandomApply([transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.2)], 0.7),
-                    transforms.RandomApply([transforms.RandomAffine(25, translate=(0.1, 0.1), scale=(0.9, 1.1))], 0.7),
-                ]),
-                DatasetWrapper.base_transform,
-                transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False),
-            ])
+            DatasetWrapper.resize_crop_transform(size),
+            DatasetWrapper.augmentation_transform(size)
         )
         self.trainset = torchvision.datasets.CelebA(root='./data', split="train", download=True,
                                                     transform=self.train_transform)
@@ -261,8 +299,8 @@ class CelebAData(DatasetWrapper):
 
 class LSUNData(DatasetWrapper):
     """
-    LSUN dataset wrapper. If the dataset is missing, it will be downloaded automatically (???).
-    Images are center-cropped as resized to 128x128.
+    LSUN dataset wrapper. Data needs to be downloaded manually.
+    Images are center-cropped and resized to 128x128.
     """
     
     def __init__(self, unique_label: int = None):
@@ -273,77 +311,31 @@ class LSUNData(DatasetWrapper):
         size = 128
         labels =         ("bedroom", "church_outdoor")
         printed_labels = ("bedroom", "outdoor")
-        #("bedroom", "bridge", "church_outdoor", "classroom", "conference_room", "dining_room",
-        # "kitchen", "living_room", "restaurant", "test", "tower")
         super().__init__(size, labels, printed_labels,
-            transforms.Compose([
-                transforms.Resize(size),
-                transforms.CenterCrop(size),
-                DatasetWrapper.base_transform
-            ]),
-            transforms.Compose([
-                transforms.Resize(size),
-                transforms.CenterCrop(size),
-                transforms.RandomOrder([
-                    transforms.RandomHorizontalFlip(),
-                    #transforms.RandomGrayscale(p=0.1),
-                    transforms.RandomApply([transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.2)], 0.7),
-                    transforms.RandomApply([transforms.RandomAffine(25, translate=(0.1, 0.1), scale=(0.9, 1.1))], 0.7),
-                ]),
-                DatasetWrapper.base_transform,
-                transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False),
-            ])
+            DatasetWrapper.resize_crop_transform(size),
+            DatasetWrapper.augmentation_transform(size)
         )
         
-        def mnist_class_dataset(train: bool, transform):
+        def class_dataset(train: bool, transform):
             dirname = f"./data/LSUN/{labels[unique_label]}_{'train' if train else 'val'}_lmdb/"
             return torchvision.datasets.LSUNClass(root=dirname, transform=transform)
         
         if unique_label is None:
             self.nested_datasets = [LSUNData(i) for i in range(len(labels))]
-            self.trainset = None
-            self.unaugmented_trainset = None
-            self.testset = None
+            self.trainset, self.unaugmented_trainset, self.testset = None, None, None
         else:
-            self.trainset =             mnist_class_dataset(True, self.train_transform)
-            self.unaugmented_trainset = mnist_class_dataset(True, self.test_transform)
-            self.testset =              mnist_class_dataset(False, self.test_transform)
+            self.trainset             = class_dataset(True, self.train_transform)
+            self.unaugmented_trainset = class_dataset(True, self.test_transform)
+            self.testset              = class_dataset(False, self.test_transform)
         
         self.unique_label = unique_label
-        
-    @staticmethod
-    def merge_loaders_(parent_loader_1_fn: Callable, parent_loader_2_fn: Callable, batch_size: int, shuffle: bool) -> Callable:
-        """
-        Merges two dataset loaders. Batch size is preserved.
-        Labels are replaced with 0 (first loader) and 1 (second loader).
-        Items from both are cycled until the end of any of them is reached.
-        """
-        data_generator1 = iter(parent_loader_1_fn(batch_size, shuffle))
-        data_generator2 = iter(parent_loader_2_fn(batch_size, shuffle))
-        while True:
-            # load
-            try:
-                items1, labels1 = next(data_generator1)
-                items2, labels2 = next(data_generator2)
-            except StopIteration:
-                return
-            all_items = torch.cat([items1, items2])
-            all_labels = torch.cat([labels1, labels2])
-            # shuffle
-            if shuffle:
-                perm = torch.randperm(batch_size * 2)
-                all_items = all_items[perm]
-                all_labels = all_labels[perm]
-            # spit out
-            yield all_items[:batch_size], all_labels[:batch_size]
-            yield all_items[batch_size:], all_labels[batch_size:]
         
     def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
         if batch_size is None:
             batch_size = self.train_batch_size
         if self.unique_label is None:
             loaders = [ds.get_unaugmented_train_loader for ds in self.nested_datasets]
-            return LSUNData.merge_loaders_(loaders[0], loaders[1], batch_size, shuffle)
+            return merge_loaders(loaders, batch_size, shuffle)
         else:
             return super().get_unaugmented_train_loader(batch_size, shuffle)
     
@@ -352,7 +344,7 @@ class LSUNData(DatasetWrapper):
             batch_size = self.train_batch_size
         if self.unique_label is None:
             loaders = [ds.get_train_loader for ds in self.nested_datasets]
-            return LSUNData.merge_loaders_(loaders[0], loaders[1], batch_size, shuffle)
+            return merge_loaders(loaders, batch_size, shuffle)
         else:
             return super().get_train_loader(batch_size, shuffle)
     
@@ -361,6 +353,64 @@ class LSUNData(DatasetWrapper):
             batch_size = self.test_batch_size
         if self.unique_label is None:
             loaders = [ds.get_test_loader for ds in self.nested_datasets]
-            return LSUNData.merge_loaders_(loaders[0], loaders[1], batch_size, shuffle)
+            return merge_loaders(loaders, batch_size, shuffle)
         else:
             return super().get_test_loader(batch_size, shuffle)
+
+
+class ImageNetAnimalsData(DatasetWrapper):
+    """
+    ImageNet dataset wrapper for classes Cat, Dog, Bear. Data needs to be downloaded manually.
+    Images are center-cropped and resized to 128x128.
+    """
+    
+    def __init__(self, unique_label: int = None):
+        """
+        Constructs ImageNetAnimalsData.
+        :param unique_label: 0 (cat), 1 (dog), 2 (bear) or None. If None, then items of both labels will be produced.
+        """
+        size = 128
+        labels = printed_labels = ("cat", "dog", "bear")
+        super().__init__(size, labels, printed_labels,
+            DatasetWrapper.resize_crop_transform(size),
+            DatasetWrapper.augmentation_transform(size)
+        )
+        
+        def class_dataset(train: bool, transform):
+            # train: not used
+            dirname = f"./data/ImageNet/{labels[unique_label]}"
+            return torchvision.datasets.ImageFolder(root=dirname, transform=transform)
+        
+        if unique_label is None:
+            self.nested_datasets = [ImageNetAnimalsData(i) for i in range(len(labels))]
+            self.trainset, self.unaugmented_trainset, self.testset = None, None, None
+        else:
+            self.trainset             = class_dataset(True, self.train_transform)
+            self.unaugmented_trainset = class_dataset(True, self.test_transform)
+            self.testset              = class_dataset(False, self.test_transform)
+        
+        self.unique_label = unique_label
+        
+    def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
+        if batch_size is None:
+            batch_size = self.train_batch_size
+        if self.unique_label is None:
+            loaders = [ds.get_unaugmented_train_loader for ds in self.nested_datasets]
+            return merge_loaders(loaders, batch_size, shuffle)
+        else:
+            return super().get_unaugmented_train_loader(batch_size, shuffle)
+    
+    def get_train_loader(self, batch_size: int = None, shuffle: bool = True):
+        if batch_size is None:
+            batch_size = self.train_batch_size
+        if self.unique_label is None:
+            loaders = [ds.get_train_loader for ds in self.nested_datasets]
+            return merge_loaders(loaders, batch_size, shuffle)
+        else:
+            return super().get_train_loader(batch_size, shuffle)
+    
+    def get_test_loader(self, batch_size: int = None, shuffle: bool = True):
+        """
+        Test set not yet implemented.
+        """
+        return self.get_train_loader(batch_size, shuffle)
