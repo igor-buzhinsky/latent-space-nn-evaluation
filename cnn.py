@@ -482,6 +482,5 @@ class Trainer:
             if show_images:
                 Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
         severities = torch.tensor(severities)
-        print(severities)
         return severities.mean(), severities.std(), len(severities)
         

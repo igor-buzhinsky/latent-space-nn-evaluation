@@ -1,19 +1,20 @@
 import os
-import numpy as np
-import gzip
-import torch
 from typing import *
-import matplotlib
-import matplotlib.pyplot as plt
-import torchvision
-from abc import ABC, abstractmethod
-import scipy
-import scipy.stats
-import cv2
-from enum import Enum
 import time
 import random
+from enum import Enum
+from abc import ABC, abstractmethod
+import glob
+
+import numpy as np
+import scipy
+import scipy.stats
 import statsmodels.nonparametric.bandwidths
+import matplotlib
+import matplotlib.pyplot as plt
+import torch
+import torchvision
+import cv2
 
 if os.name == "posix":
     import resource
@@ -186,7 +187,10 @@ class PGDAdversary(Adversary):
                     # uniform radius, random direction
                     # note that this distribution is not uniform in terms of R^n!
                     perturbation = torch.randn(1, x1.numel())
-                    perturbation /= self._norm(perturbation) / rho
+                    if rho > 0:
+                        perturbation /= self._norm(perturbation) / rho
+                    else:
+                        perturbation *= 0
                     perturbation *= np.random.rand()
                 perturbation = Util.conditional_to_cuda(perturbation)
 
@@ -583,19 +587,30 @@ class LogUtil:
     Logs are also printed to stdout. Figures are only shown in notebooks.
     """
     
-    timestamp_ = lambda: str(int(round(time.time() * 1000)))
-    dirname_ = "logdir_" + timestamp_()
-    created_ = False
+    _timestamp = lambda: str(int(round(time.time() * 1000)))
+    _dirname = "logdir_" + _timestamp()
+    _created = False
+    
+    @staticmethod
+    def set_custom_dirname(dirname: str):
+        """
+        Set the custom name for a logging directory.
+        The previous contents of the directory will be deleted!
+        """
+        LogUtil._dirname = dirname
+        LogUtil.ensure_dir_existence()
+        for filename in os.listdir(dirname):
+            os.remove(os.path.join(dirname, filename))
     
     @staticmethod
     def ensure_dir_existence():
         """
         Creates the directory for logging if it hasn't been created yet.
         """
-        if not LogUtil.created_:
-            LogUtil.created_ = True
+        if not LogUtil._created:
+            LogUtil._created = True
             try:
-                os.mkdir(LogUtil.dirname_)
+                os.mkdir(LogUtil._dirname)
             except FileExistsError:
                 pass
     
@@ -609,7 +624,7 @@ class LogUtil:
         LogUtil.ensure_dir_existence()
         if regular_print:
             print(msg)
-        with open(LogUtil.dirname_ + "/log.txt", "a+", encoding="utf-8") as f:
+        with open(LogUtil._dirname + "/log.txt", "a+", encoding="utf-8") as f:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
     
     @staticmethod
@@ -621,7 +636,7 @@ class LogUtil:
         :param pdf: if True, save as PDF. If False, save as PNG.
         """
         LogUtil.ensure_dir_existence()
-        fname = LogUtil.dirname_ + "/fig_" + prefix + "_" + LogUtil.timestamp_() + (".pdf" if pdf else ".png")
+        fname = LogUtil._dirname + "/fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png")
         plt.savefig(fname, dpi=300, bbox_inches="tight")
         LogUtil.info(f"[produced a figure: {fname}]", False)
         

@@ -41,10 +41,18 @@ parser.add_argument("--no_adversary", action="store_true",
                          "reconstruction/generation accuracy (this overrides --force_search_with_restarts)")
 parser.add_argument("--bounded_search_rho", type=float, default=0.2,
                     help="scaled norm bound to check latent adversarial accuracy (command = generate_bounded)")
+parser.add_argument("--unit_type", type=int, default=0,
+                    help="architecture choice (0..2), default = 0")
 parser.add_argument("--unit_sphere_normalization", action="store_true",
                     help="(experimental, not described in the paper) search perturbations on the unit sphere instead of "
                          "the entire latent space")
+parser.add_argument("--logdir", type=str, default=None,
+                    help="set a custom logging directory and remove its previous contents (by default, a new "
+                         " name will be generated based on the timestamp)")
 args = parser.parse_args()
+
+if args.logdir is not None:
+    LogUtil.set_custom_dirname(args.logdir)
 LogUtil.info(args)
 
 try:
@@ -77,7 +85,7 @@ if class_proportions is None:
     class_proportions = np.repeat(1 / no_classes, no_classes)
     
 def load_classifier(weights_filename: str):
-    c = cnn.Trainer(classifier_d, ds.get_train_loader, ds.get_test_loader)
+    c = cnn.Trainer(classifier_d, ds.get_train_loader, ds.get_test_loader, args.unit_type)
     c.restore_params_from_disk(weights_filename)
     return c
 
