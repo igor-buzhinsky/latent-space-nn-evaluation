@@ -609,10 +609,7 @@ class LogUtil:
         """
         if not LogUtil._created:
             LogUtil._created = True
-            try:
-                os.mkdir(LogUtil._dirname)
-            except FileExistsError:
-                pass
+            os.makedirs(LogUtil._dirname, exist_ok=True)
     
     @staticmethod
     def info(msg: str, regular_print: bool = True):
@@ -624,7 +621,7 @@ class LogUtil:
         LogUtil.ensure_dir_existence()
         if regular_print:
             print(msg)
-        with open(LogUtil._dirname + "/log.txt", "a+", encoding="utf-8") as f:
+        with open(os.path.join(LogUtil._dirname, "log.txt"), "a+", encoding="utf-8") as f:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
     
     @staticmethod
@@ -636,7 +633,7 @@ class LogUtil:
         :param pdf: if True, save as PDF. If False, save as PNG.
         """
         LogUtil.ensure_dir_existence()
-        fname = LogUtil._dirname + "/fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png")
+        fname = os.path.join(LogUtil._dirname, "fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png"))
         plt.savefig(fname, dpi=300, bbox_inches="tight")
         LogUtil.info(f"[produced a figure: {fname}]", False)
         
