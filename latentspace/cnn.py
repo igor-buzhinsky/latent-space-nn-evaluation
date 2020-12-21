@@ -1,14 +1,15 @@
-import numpy as np
-import torch.nn
-import torch.autograd
 from typing import *
 import copy
 from abc import ABC, abstractmethod
 import itertools
+
+import numpy as np
+import torch.nn
+import torch.autograd
 from tensorboardX import SummaryWriter
 
-from ml_util import *
-from datasets import *
+from .ml_util import *
+from .datasets import *
 
 class ResBlock(torch.nn.Module):
     def __init__(self, base_map_num: int):

@@ -3,9 +3,9 @@ import torchvision
 from typing import *
 import seaborn as sns
 
-from ml_util import *
-import generative
-import cnn
+from .ml_util import *
+from .generative import GenerativeModel
+from .cnn import Trainer
 
 
 class RandomPerturbationStatistician:
@@ -14,7 +14,7 @@ class RandomPerturbationStatistician:
     Also shows these noisy images.
     """
     
-    def __init__(self, gm: generative.GenerativeModel, classifiers: List[cnn.Trainer], no_images: int,
+    def __init__(self, gm: GenerativeModel, classifiers: List[Trainer], no_images: int,
                  perturbations_per_image: int, visualize: bool, epsilons: List[float]):
         """
         Constructs RandomPerturbationStatistician.
@@ -70,7 +70,7 @@ class RandomPerturbationStatistician:
                 LogUtil.info(s)
 
 
-def get_get_gradient(classifier: cnn.Trainer, label: int, vector_transform_1: Callable, vector_transform_2: Callable,
+def get_get_gradient(classifier: Trainer, label: int, vector_transform_1: Callable, vector_transform_2: Callable,
                      grad_transform: Callable):
     """
     Produces custom "get_gradient" functions that are accepted by Adversaries.
@@ -89,7 +89,7 @@ def get_get_gradient(classifier: cnn.Trainer, label: int, vector_transform_1: Ca
     return get_gradient
 
 
-def get_conventional_perturb(classifier: cnn.Trainer, adversary: Adversary):
+def get_conventional_perturb(classifier: Trainer, adversary: Adversary):
     """
     Produces "perturb" functions that are accepted by Trainers (classifiers).
     Perturbations are performed in the original image space.
@@ -109,7 +109,7 @@ class AdversarialGenerator:
     Generates adversarial images with the provided adversary, shows them and computes peturbation statistics.
     """
     
-    def __init__(self, gm: generative.GenerativeModel, classifiers: List[cnn.Trainer], use_generated_images: bool,
+    def __init__(self, gm: GenerativeModel, classifiers: List[Trainer], use_generated_images: bool,
                  decay_factor: float):
         """
         Constructs AdversarialGenerator.
@@ -126,9 +126,9 @@ class AdversarialGenerator:
             c.disable_param_gradients()
         self.use_generated_images = use_generated_images
         self.decay_factor = decay_factor
-        self.clear_stat_()
+        self._clear_stat()
         
-    def set_generative_model(self, gm: generative.GenerativeModel):
+    def set_generative_model(self, gm: GenerativeModel):
         """
         Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at once),
         but statistics needs to be calculated across all models (image classes).
@@ -136,7 +136,7 @@ class AdversarialGenerator:
         """
         self.gm = gm
     
-    def clear_stat_(self):
+    def _clear_stat(self):
         """
         Initializes (when called first time) or clears accumulated statistics.
         """
@@ -150,7 +150,7 @@ class AdversarialGenerator:
         self.recorded_decayed_successes = create()
         self.recorded_modified_successes = create()
     
-    def join_predictions_(self, img: torch.Tensor, classifiers: List[cnn.Trainer]):
+    def _join_predictions(self, img: torch.Tensor, classifiers: List[Trainer]):
         """
         Convenience function.
         """
@@ -158,13 +158,13 @@ class AdversarialGenerator:
         str_classes = [self.gm.ds.prediction_indices_to_printed_classes(p)[0] for p in predictions]
         return "\n".join(str_classes), [x.item() for x in predictions]
     
-    def l2_norm_(self, x: torch.Tensor) -> torch.Tensor:
+    def _l2_norm(self, x: torch.Tensor) -> torch.Tensor:
         """
         Scaled L2 norm of x.
         """
         return x.norm() / np.sqrt(x.numel())
     
-    def l1_norm_(self, x: torch.Tensor) -> torch.Tensor:
+    def _l1_norm(self, x: torch.Tensor) -> torch.Tensor:
         """
         Scaled L1 norm of x.
         """
@@ -233,7 +233,7 @@ class AdversarialGenerator:
         :param produce_images: whether to actually produce all images.
         """
         if clear_stat:
-            self.clear_stat_()
+            self._clear_stat()
         result = ImageSet(1)
         nrow = 3 + len(self.classifiers)
         if show_perturbations:
@@ -261,7 +261,7 @@ class AdversarialGenerator:
                 reconstr_img_decayed = self.gm.decode(latent_code)
             
             images = [orig_img, reconstr_img, reconstr_img_decayed]
-            list_of_tuples = [self.join_predictions_(img, self.classifiers) for img in images]
+            list_of_tuples = [self._join_predictions(img, self.classifiers) for img in images]
             str_predictions = [x[0] for x in list_of_tuples]
             predictions = [x[1] for x in list_of_tuples]
             
@@ -281,14 +281,14 @@ class AdversarialGenerator:
                 with torch.no_grad():
                     reconstr_img_perturbed = self.gm.decode(perturbed_latent_code)
                     images += [reconstr_img_perturbed]
-                    new_str_predictions, new_predictions = self.join_predictions_(reconstr_img_perturbed, [c])
+                    new_str_predictions, new_predictions = self._join_predictions(reconstr_img_perturbed, [c])
                     self.recorded_modified_successes[i] += [new_predictions[0] == label]
                     str_predictions += [new_str_predictions]
                     diff = reconstr_img_perturbed - reconstr_img_decayed
-                    self.recorded_original_l2_norms[i] += [self.l2_norm_(diff)]
-                    self.recorded_original_l1_norms[i] += [self.l1_norm_(diff)]
-                    self.recorded_latent_norms[i]      += [self.l2_norm_(perturbed_latent_code - latent_code)]
-                    self.recorded_latent_norm_diffs[i] += [self.l2_norm_(perturbed_latent_code) - self.l2_norm_(latent_code)]
+                    self.recorded_original_l2_norms[i] += [self._l2_norm(diff)]
+                    self.recorded_original_l1_norms[i] += [self._l1_norm(diff)]
+                    self.recorded_latent_norms[i]      += [self._l2_norm(perturbed_latent_code - latent_code)]
+                    self.recorded_latent_norm_diffs[i] += [self._l2_norm(perturbed_latent_code) - self._l2_norm(latent_code)]
                     if show_perturbations:
                         images += [diff]
                         str_predictions += [""]

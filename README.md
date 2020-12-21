@@ -20,7 +20,7 @@ To run the toolset, you need Python 3. Dependencies are listed in [requirements.
 
 > conda install --name latent-adversarial -c pytorch -c conda-forge --file requirements.txt
 
-There are no known version limitations, so if there is a problem installing the specified package versions, you may try your luck and install the packages without version constraints.
+If there is a problem installing the specified package versions, you may try your luck and install the packages without version constraints.
 
 If you would like to minimize the size of the installation, you may try installing packages only when you run into import errors. Many packages are needed for PIONEER generative autoencoder training which you may not need to run.
 

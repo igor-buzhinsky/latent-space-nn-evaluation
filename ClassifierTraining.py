@@ -1,15 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import argparse
+
 import numpy as np
 import scipy.stats
 
-from datasets import *
-from ml_util import *
-from cnn import *
-from adversarial_generation import *
-from evaluation_util import EvaluationUtil
+from latentspace.datasets import *
+from latentspace.ml_util import *
+from latentspace.cnn import *
+from latentspace.adversarial_generation import *
+from latentspace.evaluation_util import EvaluationUtil
 
 Util.configure(5500)
 LogUtil.to_pdf()
@@ -18,7 +16,7 @@ parser = argparse.ArgumentParser(description="Generator of latent adversarial ex
 parser.add_argument("--command", type=str, required=True,
                     help="one of train, evaluate, local_evaluate")
 parser.add_argument("--dataset", type=str, required=True,
-                    help="one of MNIST, CelebA128Gender, LSUN128")
+                    help="one of MNIST, CelebA128Gender, LSUN128, ImageNetAnimals")
 parser.add_argument("--load_filename", type=str, required=False,
                     help="classifier to load for evaluation or taking pretrained parameters")
 # train-specific arguments
@@ -57,22 +55,26 @@ except KeyError:
     raise AssertionError(f"Unsupported dataset name {args.dataset}.")
 
 # evaluation on noise-corrupted images will be done noise_evaluation_multiplier times
-noise_evaluation_multiplier: int = 1
+noise_evaluation_multiplier = 1
     
 if dataset_info == DatasetInfo.MNIST:
-    no_classes = 10
     trainer_name = "mnist"
     ds = MNISTData()
+    no_classes = 10
 elif dataset_info == DatasetInfo.CelebA128Gender:
-    no_classes = 2
     trainer_name = "celeba-128"
     ds = CelebAData(20)
-elif dataset_info == DatasetInfo.LSUN128:
     no_classes = 2
+elif dataset_info == DatasetInfo.LSUN128:
     trainer_name = "lsun-128"
     ds = LSUNData()
+    no_classes = 2
     # partially overcoming the problem of small (600) validation set:
     noise_evaluation_multiplier = 20
+elif dataset_info == DatasetInfo.ImageNetAnimals:
+    trainer_name = "animals-128"
+    ds = ImageNetAnimalsData()
+    no_classes = 3
 else:
     raise AssertionError()
 

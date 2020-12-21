@@ -1,17 +1,15 @@
-#!/usr/bin/env python
-# coding: utf-8
+import argparse
 
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-import argparse
 
-from ml_util import *
-import datasets
-import generative
-import cnn
-from adversarial_generation import *
-from evaluation_util import EvaluationUtil
+from latentspace.ml_util import *
+from latentspace.adversarial_generation import *
+from latentspace.evaluation_util import EvaluationUtil
+import latentspace.datasets as datasets
+import latentspace.generative as generative
+import latentspace.cnn as cnn
 
 Util.set_memory_limit(5000)
 LogUtil.to_pdf()

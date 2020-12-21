@@ -1,11 +1,12 @@
+import os
+from abc import ABC, abstractmethod
+from typing import *
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
-from abc import ABC, abstractmethod
-from typing import *
-import os
 
-from ml_util import *
+from .ml_util import *
 
 
 if os.name == "posix":
@@ -378,7 +379,7 @@ class ImageNetAnimalsData(DatasetWrapper):
         
         def class_dataset(train: bool, transform):
             # train: not used
-            dirname = f"./data/ImageNet/{labels[unique_label]}"
+            dirname = f"./data/ImageNet/{labels[unique_label]}_{'train' if train else 'test'}"
             return torchvision.datasets.ImageFolder(root=dirname, transform=transform)
         
         if unique_label is None:
@@ -410,7 +411,10 @@ class ImageNetAnimalsData(DatasetWrapper):
             return super().get_train_loader(batch_size, shuffle)
     
     def get_test_loader(self, batch_size: int = None, shuffle: bool = True):
-        """
-        Test set not yet implemented.
-        """
-        return self.get_train_loader(batch_size, shuffle)
+        if batch_size is None:
+            batch_size = self.test_batch_size
+        if self.unique_label is None:
+            loaders = [ds.get_test_loader for ds in self.nested_datasets]
+            return merge_loaders(loaders, batch_size, shuffle)
+        else:
+            return super().get_test_loader(batch_size, shuffle)

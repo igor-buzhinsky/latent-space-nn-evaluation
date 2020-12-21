@@ -1,16 +1,16 @@
 from typing import *
 import itertools
 
-from ml_util import *
-from datasets import *
-from adversarial_generation import *
-from generative import *
-import cnn
+from .ml_util import *
+from .datasets import *
+from .adversarial_generation import *
+from .generative import *
+from .cnn import Trainer
 
 
 class EvaluationUtil:
     @staticmethod
-    def show_some_predictions(classifiers: List[cnn.Trainer], ds: DatasetWrapper):
+    def show_some_predictions(classifiers: List[Trainer], ds: DatasetWrapper):
         """
         Shows several images, and prints/logs several predictions of the supplied classifiers on them.
         :param classifiers: list of classifiers.
@@ -22,7 +22,7 @@ class EvaluationUtil:
             LogUtil.info(f"Predicted {i}: {ds.prediction_indices_to_classes(c.predict(images))}")
     
     @staticmethod
-    def evaluate_accuracy(classifiers: List[cnn.Trainer], ds: DatasetWrapper, max_imgs: int = None,
+    def evaluate_accuracy(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int = None,
                           noise_evaluation_multiplier: int = 1):
         """
         Evaluates the conventional accuracy of the supplied classifiers.
@@ -44,7 +44,7 @@ class EvaluationUtil:
                 LogUtil.info(f"Accuracy of classifier {i} on {total} validation images (noise {noise_sigma:.1f}): {acc_str:>6}%")
     
     @staticmethod
-    def evaluate_conventional_robustness(classifiers: List[cnn.Trainer], ds: DatasetWrapper, max_imgs: int,
+    def evaluate_conventional_robustness(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int,
                                          l_2_bounds: List[float], l_inf_bounds: List[float]):
         """
         Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations.
@@ -68,7 +68,7 @@ class EvaluationUtil:
                                  f"accuracy on {total} images = {acc_str:>6}%")
                     
     @staticmethod
-    def evaluate_conventional_adversarial_severity(classifiers: List[cnn.Trainer], ds: DatasetWrapper, max_imgs: int,
+    def evaluate_conventional_adversarial_severity(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int,
                                                    l_2_bound: float, l_inf_bound: float):
         """
         Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations)
@@ -93,7 +93,7 @@ class EvaluationUtil:
                              f"(std = {std:.8f}, #images = {total})")
     
     @staticmethod
-    def generate_images_with_classifier(classifiers: List[cnn.Trainer], ds: DatasetWrapper, no_classes: int,
+    def generate_images_with_classifier(classifiers: List[Trainer], ds: DatasetWrapper, no_classes: int,
                                         noise_sigma: float, norm: str, norm_bound: float,
                                         pairs_in_line: int = 3, estimation_batches: int = 100, nrow: int = 8):
         """
@@ -138,7 +138,7 @@ class EvaluationUtil:
             images = []
             for i in range(images_in_line):
                 img, _ = next(sampler)
-                images += [img, gm.decode(gm.encode(img))]
+                images += [img, gm.decode(gm.encode(img), detach=True)]
             Util.imshow_tensors(*images, nrow=(images_in_line*2))
     
     @staticmethod
@@ -175,4 +175,4 @@ class EvaluationUtil:
         :param images_in_line: number of generated images in each line.
         """
         for i in range(lines):
-            Util.imshow_tensors(gm.generate(images_in_line), nrow=images_in_line)
+            Util.imshow_tensors(gm.generate(images_in_line, detach=True), nrow=images_in_line)

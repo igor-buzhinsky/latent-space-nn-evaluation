@@ -1,19 +1,20 @@
 import sys
 import os.path
-import numpy as np
-import torch
-import torchvision
-from typing import *
-import matplotlib.pyplot as plt
-from abc import ABC, abstractmethod
-import seaborn as sns
-from importlib import reload
 import gc
+from typing import *
+from abc import ABC, abstractmethod
+from importlib import reload
 from pathlib import Path
 
-from ml_util import *
-from datasets import *
-from gan import GAN
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import torch
+import torchvision
+
+from .ml_util import *
+from .datasets import *
+from .gan import GAN
 
 
 class GenerativeModel(ABC):
@@ -43,11 +44,20 @@ class GenerativeModel(ABC):
         """
         pass
     
+    def _maybe_detach(self, x: torch.Tensor, detach: bool) -> torch.Tensor:
+        """
+        Optionally detaches the supplied tensor.
+        :x: input tensor.
+        :param detach: whether to .detach() the result. 
+        """
+        return x.detach() if detach else x
+    
     @abstractmethod
-    def generate(self, no_img: int) -> torch.Tensor:
+    def generate(self, no_img: int, detach: bool = False) -> torch.Tensor:
         """
         Generate random images.
         :param no_img: number of images to generate.
+        :param detach: whether to .detach() the result.
         :return: batch of generated random images.
         """
         pass
@@ -77,8 +87,36 @@ class GenerativeModel(ABC):
         :param batch_size: batch size to be used by the loader.
         :return: data loader (not a function).
         """
-        return Util.class_specific_loader(self.unique_label,
-                                          lambda: self.ds.get_unaugmented_train_loader(batch_size=batch_size))()
+        f = lambda: self.ds.get_unaugmented_train_loader(batch_size=batch_size)
+        return Util.class_specific_loader(self.unique_label, f)()
+    
+    @torch.enable_grad()
+    def encode_with_gradient_search(self, img: torch.Tensor, no_restarts: int, no_steps: int, lr: float) -> torch.Tensor:
+        """
+        Implements encoding with a gradient-based approach (4 restarts of Adam).
+        """
+        all_latent = Util.conditional_to_cuda(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
+        loss_f = torch.nn.MSELoss()
+        for i in range(img.shape[0]):
+            best_loss = np.infty
+            for attempt in range(no_restarts):
+                latent = Util.optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
+                optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)
+                #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
+                for j in range(no_steps):
+                    optimizer.zero_grad()
+                    reconstructed = self.decode(latent, False)
+                    loss = loss_f(reconstructed[0], img[i])
+                    loss.backward()
+                    #print(loss.item())
+                    optimizer.step()
+                    #scheduler.step()
+                #print(loss.item())
+                if loss.item() < best_loss:
+                    best_loss = loss.item()
+                    all_latent[i] = latent.detach()
+        #print(f"{best_loss:.3f}")
+        return all_latent
 
 
 class WGAN(GenerativeModel):
@@ -93,6 +131,7 @@ class WGAN(GenerativeModel):
         :param unique_label: label of the data class for which WGAN is created.
         :param ds: DatasetWrapper.
         """
+        assert dataset_info == DatasetInfo.MNIST
         self.g = GAN()
         self.g.restore_params_from_disk(f"mnist-gan/dumped_weights_{unique_label}.bin")
         # disable computation of gradients that are not required
@@ -101,46 +140,81 @@ class WGAN(GenerativeModel):
         # self.g.warm_spectral_norms(ds.get_unaugmented_train_loader)
         super().__init__(28, self.g.latent_dim, unique_label, ds)
         
-    def generate(self, no_img: int = 1) -> torch.Tensor:
-        return self.g.generate(no_img)
+    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+        return self._maybe_detach(self.g.generate(no_img), detach)
     
-    @torch.enable_grad()
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
         Implements WGAN.encode with a gradient-based approach (4 restarts of Adam).
         """
-        all_latent = Util.conditional_to_cuda(torch.empty((img.shape[0], self.g.latent_dim), dtype=torch.float32))
-        loss_f = torch.nn.MSELoss()
-        for i in range(img.shape[0]):
-            best_loss = np.infty
-            for attempt in range(4):
-                latent = Util.optimizable_clone(torch.randn((1, self.g.latent_dim), dtype=torch.float32))
-                lr = 0.1
-                optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)
-                #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
-                for j in range(40):
-                    optimizer.zero_grad()
-                    reconstructed = self.g.decode(latent)
-                    loss = loss_f(reconstructed[0], img[i])
-                    loss.backward()
-                    #print(loss.item())
-                    optimizer.step()
-                    #scheduler.step()
-                #print(loss.item())
-                if loss.item() < best_loss:
-                    best_loss = loss.item()
-                    all_latent[i] = latent.detach()
-        #print(f"{best_loss:.3f}")
-        return all_latent
+        return self.encode_with_gradient_search(img, 4, 40, 0.1)
     
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
-        decoded = self.g.decode(latent_code)
-        return decoded.detach() if detach else decoded
+        return self._maybe_detach(self.g.decode(latent_code), detach)
     
     def destroy(self):
         self.g = None
         gc.collect()
+
+        
+class BigGAN(GenerativeModel):
+    """
+    BigGAN wrapper.
+    """
     
+    def __init__(self, ds: DatasetWrapper):
+        """
+        Constructs BigGAN for several ImageNet classes.
+        :param ds: DatasetWrapper.
+        """
+        super().__init__(128, 120, 0, ds)
+        LogUtil.info("*** Loading BigGAN...")
+        sys.argv = ("sample.py --dataset I128_hdf5 --shuffle --num_workers 0 --batch_size 1 "
+                    "--num_G_accumulations 8 --num_D_accumulations 8 --num_D_steps 1 --G_lr 1e-4 "
+                    "--D_lr 4e-4 --D_B2 0.999 --G_B2 0.999 --G_attn 64 --D_attn 64 --G_ch 96 "
+                    "--D_ch 96 --G_nl inplace_relu --D_nl inplace_relu --SN_eps 1e-6 --BN_eps 1e-5 "
+                    "--adam_eps 1e-6 --G_ortho 0.0 --G_shared --G_init ortho --D_init ortho "
+                    "--skip_init --hier --dim_z 120 --shared_dim 128 --ema --ema_start 20000 "
+                    "--use_multiepoch_sampler --test_every 2000 --save_every 1000 "
+                    "--num_best_copies 5 --num_save_copies 2 --seed 0 --skip_init --G_batch_size 1 "
+                    "--use_ema --G_eval_mode --base_root biggan").split(" ")
+        from biggan.sample import main, create_sample, decode_sample
+        self.create_sample = create_sample
+        self.decode_sample = decode_sample
+        main()
+        self.label = None
+        
+    def configure_class(self, class_index: int, subclass_index: int):
+        """
+        Must be called before using the model.
+        :param class_index: 0=cat, 1=dog, 2=bear.
+        :param subclass_index: 0..4.
+        """
+        self.unique_label = class_index
+        # https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a
+        self.label = {0: [281, 282, 283, 284, 285],
+                      1: [235, 248, 251, 256, 275],
+                      2: [294, 295, 296, 297, 388]}[class_index][subclass_index]
+        
+    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+        tensors = [self._maybe_detach(self.create_sample([self.label])[0], detach) for _ in range(no_img)]
+        return Util.conditional_to_cuda(torch.cat(tensors))
+    
+    def encode(self, img: torch.Tensor) -> torch.Tensor:
+        """
+        Implements BigGAN.encode with a gradient-based approach (4 restarts of Adam).
+        """
+        return self.encode_with_gradient_search(img, 4, 40, 0.1)
+    
+    def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
+        generated = torch.cat([self._maybe_detach(self.decode_sample(latent_code[i:(i+1)].cpu(),
+                                                                     self.label), detach)
+                               for i in range(latent_code.shape[0])])
+        return Util.conditional_to_cuda(generated)
+    
+    def destroy(self):
+        gc.collect()
+        
     
 class PIONEER(GenerativeModel):
     """
@@ -201,7 +275,7 @@ class PIONEER(GenerativeModel):
             f"--test_path {test_path} --sample_N=256 --reconstructions_N=0 --interpolate_N=0 "
             f"--max_phase={max_phase} --testonly --no_TB --manual_seed=-1").split(" ")
         LogUtil.info(f"PIONEER's command line arguments: {sys.argv}")
-        sys.path.append('./pioneer/src')
+        sys.path.append("./pioneer/src")
 
         # PIONEER imports
         import config
@@ -241,25 +315,19 @@ class PIONEER(GenerativeModel):
         this method is useful to free some memory.
         """
         LogUtil.info("*** Cleaning up PIONEER...")
-        self.config = None
-        self.evaluate = None
-        self.model = None
-        self.data = None
-        self.utils = None
-        self.train = None
-        self.session = None
+        self.config, self.evaluate, self.model, self.data, self.utils, self.train, self.session = [None] * 7
         gc.collect()
     
-    def generate_plain(self, no_img: int = 1) -> torch.Tensor:
+    def generate_plain(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
         """
         Originally, PIONEER generates images from normalized (divided by L2 norm) latent vectors.
         In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
         vector and dividing it by sqrt(latent_dim). 
         """
-        return self.decode_plain(self.utils.normalize(torch.randn(no_img, self.latent_dim)))
+        return self.decode_plain(self.utils.normalize(torch.randn(no_img, self.latent_dim)), detach)
     
-    def generate(self, no_img: int = 1) -> torch.Tensor:
-        return self.generate_plain(no_img)
+    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+        return self.generate_plain(no_img, detach)
     
     def encode_plain(self, img: torch.Tensor) -> torch.Tensor:
         """
@@ -281,7 +349,7 @@ class PIONEER(GenerativeModel):
         """
         label = Util.conditional_to_cuda(torch.zeros(latent_code.shape[0], 1, dtype=torch.float32))
         generated = self.session.generator(latent_code, label, self.session.phase, self.session.alpha)
-        return generated.detach() if detach else generated
+        return self._maybe_detach(generated, detach)
     
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         return self.decode_plain(latent_code / np.sqrt(self.latent_dim), detach)

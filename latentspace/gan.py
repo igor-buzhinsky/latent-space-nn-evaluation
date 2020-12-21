@@ -1,10 +1,11 @@
 import numpy as np
 import copy
-import torch
 from typing import *
+
+import torch
 from tensorboardX import SummaryWriter
 
-from ml_util import *
+from .ml_util import *
 
 
 def init_linear(layer):
