@@ -174,8 +174,6 @@ class Trainer:
         """
         if dataset in ["celeba-128", "lsun-128"]:
             self.model = ColoredNet128(2, unit_type)
-        elif dataset == "animals-128":
-            self.model = ColoredNet128(3, unit_type)
         elif dataset == "mnist":
             self.model = MNISTNet(unit_type)
         else:

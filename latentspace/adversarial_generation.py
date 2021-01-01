@@ -110,7 +110,7 @@ class AdversarialGenerator:
     """
     
     def __init__(self, gm: GenerativeModel, classifiers: List[Trainer], use_generated_images: bool,
-                 decay_factor: float):
+                 decay_factor: float, label_printer: Optional[Callable] = None):
         """
         Constructs AdversarialGenerator.
         :param gm: generative model to use.
@@ -127,6 +127,7 @@ class AdversarialGenerator:
         self.use_generated_images = use_generated_images
         self.decay_factor = decay_factor
         self._clear_stat()
+        self.label_printer = label_printer
         
     def set_generative_model(self, gm: GenerativeModel):
         """
@@ -155,7 +156,11 @@ class AdversarialGenerator:
         Convenience function.
         """
         predictions = [c.predict(img) for c in classifiers]
-        str_classes = [self.gm.ds.prediction_indices_to_printed_classes(p)[0] for p in predictions]
+        if self.label_printer is None:
+            label_printer = lambda x: self.gm.ds.prediction_indices_to_printed_classes(x)[0]
+        else:
+            label_printer = self.label_printer
+        str_classes = [label_printer(p) for p in predictions]
         return "\n".join(str_classes), [x.item() for x in predictions]
     
     def _l2_norm(self, x: torch.Tensor) -> torch.Tensor:

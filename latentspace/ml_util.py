@@ -20,7 +20,7 @@ if os.name == "posix":
     import resource
 
 # A enumeration of all supported datasets.
-DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNetAnimals")
+DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 ### PyTorch utils ###
 
@@ -76,24 +76,6 @@ class NopAdversary(Adversary):
     def perturb(self, initial_vector: torch.Tensor,
                 get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         return initial_vector
-    
-
-class FGSMAdversary(Adversary):
-    """
-    Implements Fast Gradient Sign Method (FGSM).
-    """
-    
-    def __init__(self, eps: float):
-        """
-        Constructs FGSMAdversary.
-        :param eps: positive number used to scale the sign of the gradient.
-        """
-        super().__init__()
-        self.eps = eps
-        
-    def perturb(self, initial_vector: torch.Tensor,
-                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
-        return initial_vector + self.eps * torch.sign(get_gradient(initial_vector)[0])
 
 
 class PGDAdversary(Adversary):
@@ -314,7 +296,7 @@ class Util:
     """
     
     # if False, will use CPU even if CUDA is available
-    cuda_enabled = True
+    cuda_enabled = False
     using_cuda = cuda_enabled and torch.cuda.is_available()
     
     @staticmethod

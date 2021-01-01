@@ -359,38 +359,27 @@ class LSUNData(DatasetWrapper):
             return super().get_test_loader(batch_size, shuffle)
 
 
-class ImageNetAnimalsData(DatasetWrapper):
+class ImageNetData(DatasetWrapper):
     """
-    ImageNet dataset wrapper for classes Cat, Dog, Bear. Data needs to be downloaded manually.
+    ImageNet dataset wrapper. Data needs to be downloaded manually.
     Images are center-cropped and resized to 128x128.
     """
     
-    def __init__(self, unique_label: int = None):
+    def __init__(self, label_indices: List[int], unique_label: int = None):
         """
         Constructs ImageNetAnimalsData.
-        :param unique_label: 0 (cat), 1 (dog), 2 (bear) or None. If None, then items of both labels will be produced.
+        :param unique_label: ImageNet label.
         """
         size = 128
-        labels = printed_labels = ("cat", "dog", "bear")
+        labels = printed_labels = [str(x) for x in label_indices]
         super().__init__(size, labels, printed_labels,
             DatasetWrapper.resize_crop_transform(size),
             DatasetWrapper.augmentation_transform(size)
         )
         
-        def class_dataset(train: bool, transform):
-            # train: not used
-            dirname = f"./data/ImageNet/{labels[unique_label]}_{'train' if train else 'test'}"
-            return torchvision.datasets.ImageFolder(root=dirname, transform=transform)
+        self.trainset, self.unaugmented_trainset, self.testset = None, None, None
         
-        if unique_label is None:
-            self.nested_datasets = [ImageNetAnimalsData(i) for i in range(len(labels))]
-            self.trainset, self.unaugmented_trainset, self.testset = None, None, None
-        else:
-            self.trainset             = class_dataset(True, self.train_transform)
-            self.unaugmented_trainset = class_dataset(True, self.test_transform)
-            self.testset              = class_dataset(False, self.test_transform)
-        
-        self.unique_label = unique_label
+        self.unique_label = None
         
     def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
         if batch_size is None:

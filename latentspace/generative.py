@@ -162,10 +162,11 @@ class BigGAN(GenerativeModel):
     BigGAN wrapper.
     """
     
-    def __init__(self, ds: DatasetWrapper):
+    def __init__(self, ds: DatasetWrapper, builtin_decay: float = 0.0):
         """
         Constructs BigGAN for several ImageNet classes.
         :param ds: DatasetWrapper.
+        :param ds: built-in latent decay (0..1) that makes images more plausible but less diverse.
         """
         super().__init__(128, 120, 0, ds)
         LogUtil.info("*** Loading BigGAN...")
@@ -182,22 +183,15 @@ class BigGAN(GenerativeModel):
         self.create_sample = create_sample
         self.decode_sample = decode_sample
         main()
-        self.label = None
-        
-    def configure_class(self, class_index: int, subclass_index: int):
-        """
-        Must be called before using the model.
-        :param class_index: 0=cat, 1=dog, 2=bear.
-        :param subclass_index: 0..4.
-        """
-        self.unique_label = class_index
-        # https://gist.github.com/yrevar/942d3a0ac09ec9e5eb3a
-        self.label = {0: [281, 282, 283, 284, 285],
-                      1: [235, 248, 251, 256, 275],
-                      2: [294, 295, 296, 297, 388]}[class_index][subclass_index]
-        
+        self.unique_label = None
+        self.builtin_decay = builtin_decay
+    
+    def configure_label(self, unique_label: int):
+        self.unique_label = unique_label
+    
     def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
-        tensors = [self._maybe_detach(self.create_sample([self.label])[0], detach) for _ in range(no_img)]
+        tensors = [self._maybe_detach(self.create_sample([self.unique_label], self.builtin_decay)[0], detach)
+                   for _ in range(no_img)]
         return Util.conditional_to_cuda(torch.cat(tensors))
     
     def encode(self, img: torch.Tensor) -> torch.Tensor:
@@ -208,7 +202,8 @@ class BigGAN(GenerativeModel):
     
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         generated = torch.cat([self._maybe_detach(self.decode_sample(latent_code[i:(i+1)].cpu(),
-                                                                     self.label), detach)
+                                                                     self.unique_label,
+                                                                     self.builtin_decay), detach)
                                for i in range(latent_code.shape[0])])
         return Util.conditional_to_cuda(generated)
     
