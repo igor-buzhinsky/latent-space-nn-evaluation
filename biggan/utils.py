@@ -16,7 +16,6 @@ import datetime
 import json
 import pickle
 from argparse import ArgumentParser
-from .animal_hash import a as animal_hash_a, b as animal_hash_b, c as animal_hash_c
 
 import torch
 import torch.nn as nn
@@ -1019,17 +1018,6 @@ def name_from_config(config):
     return hashname(name)
   else:
     return name
-
-
-# A simple function to produce a unique experiment name from the animal hashes.
-def hashname(name):
-  h = hash(name)
-  a = h % len(animal_hash.a)
-  h = h // len(animal_hash.a)
-  b = h % len(animal_hash.b)
-  h = h // len(animal_hash.c)
-  c = h % len(animal_hash.c)
-  return animal_hash.a[a] + animal_hash.b[b] + animal_hash.c[c]
 
 
 # Get GPU memory, -i is the index

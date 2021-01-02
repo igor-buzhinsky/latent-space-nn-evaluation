@@ -15,7 +15,6 @@ import torch.nn.functional as F
 from torch.nn import Parameter as P
 import torchvision
 
-from .inception_utils import prepare_inception_metrics
 from .utils import load_weights, imsize_dict, nclass_dict, activation_dict, update_config_roots, seed_rng, name_from_config, count_parameters, prepare_z_y, sample as utils_sample, accumulate_standing_stats, sample_sheet, classes_per_sheet_dict, interp_sheet, prepare_parser, add_sample_parser
 
 G, z_, y_, config, device = [None] * 5
