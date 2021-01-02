@@ -296,7 +296,7 @@ class Util:
     """
     
     # if False, will use CPU even if CUDA is available
-    cuda_enabled = False
+    cuda_enabled = True
     using_cuda = cuda_enabled and torch.cuda.is_available()
     
     @staticmethod

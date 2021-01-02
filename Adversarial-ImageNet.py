@@ -18,14 +18,12 @@ from latentspace.evaluation_util import EvaluationUtil
 Util.configure(6000)
 LogUtil.to_pdf()
 
-DATA = 'ImageNet'
-dataset_function = getattr(robustness_datasets, DATA)
-DATA_PATH_DICT = {'ImageNet': './data/ImageNet'}
-dataset = dataset_function(DATA_PATH_DICT[DATA])
+dataset_function = getattr(robustness_datasets, 'ImageNet')
+dataset = dataset_function('./data/ImageNet')
 model_kwargs = {'arch': 'resnet50', 'dataset': dataset, 'resume_path': f'./imagenet-models/ImageNet.pt'}
 model, _ = model_utils.make_and_restore_model(**model_kwargs)
-model = model.cpu()
-model.eval();
+model = model.to("cuda:0" if Util.using_cuda else "cpu")
+model.eval()
 
 dataset_info = DatasetInfo.ImageNet
 label_indices = np.arange(1000)
@@ -89,7 +87,7 @@ nonrobust_classifiers = [(models.squeezenet1_0, 256),   # error 41.90
                          (models.alexnet, 256),         # error 43.45
                          (models.resnet18, 224),        # error 30.24
                          (models.resnext50_32x4d, 224)] # error 21.49
-nonrobust_classifiers = [ModelZooClassifierWrapper(m(pretrained=True), side)
+nonrobust_classifiers = [ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side)
                          for m, side in nonrobust_classifiers]
 classifiers = nonrobust_classifiers + robust_classifiers
 
@@ -115,7 +113,9 @@ def advgen_experiments(adversary: Adversary, noise_eps: float, total_images: int
 # ### Measure LAGS
 if True:
     max_rho, noise_eps = 2.5, 1.0
-    adversary = PGDAdversary(max_rho, 50, 0.05, False, 0, verbose=0)   
+    #max_rho, noise_eps = 2.5, 0.5
+    adversary = PGDAdversary(max_rho, 50, 0.05, False, 0, verbose=0, n_repeat=12, repeat_mode="min")
+    #adversary = PGDAdversary(max_rho, 1250, 0.002, False, 0, verbose=0)
     advgen_experiments(adversary, noise_eps, total_images=600)
 
 # Measure LAGA

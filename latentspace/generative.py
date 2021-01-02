@@ -182,17 +182,21 @@ class BigGAN(GenerativeModel):
         from biggan.sample import main, create_sample, decode_sample
         self.create_sample = create_sample
         self.decode_sample = decode_sample
-        main()
+        main("cuda:0" if Util.using_cuda else "cpu")
         self.unique_label = None
         self.builtin_decay = builtin_decay
     
     def configure_label(self, unique_label: int):
+        """
+        Sets the ImageNet class to generate.
+        :param unique_label: ImageNet class label (0..999)
+        """
         self.unique_label = unique_label
     
     def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
         tensors = [self._maybe_detach(self.create_sample([self.unique_label], self.builtin_decay)[0], detach)
                    for _ in range(no_img)]
-        return Util.conditional_to_cuda(torch.cat(tensors))
+        return torch.cat(tensors)
     
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
@@ -201,11 +205,10 @@ class BigGAN(GenerativeModel):
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
     
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
-        generated = torch.cat([self._maybe_detach(self.decode_sample(latent_code[i:(i+1)].cpu(),
-                                                                     self.unique_label,
-                                                                     self.builtin_decay), detach)
-                               for i in range(latent_code.shape[0])])
-        return Util.conditional_to_cuda(generated)
+        return torch.cat([self._maybe_detach(self.decode_sample(latent_code[i:(i+1)],
+                                                                self.unique_label,
+                                                                self.builtin_decay), detach)
+                          for i in range(latent_code.shape[0])])
     
     def destroy(self):
         gc.collect()
