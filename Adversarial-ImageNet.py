@@ -18,6 +18,43 @@ from latentspace.evaluation_util import EvaluationUtil
 Util.configure(6000)
 LogUtil.to_pdf()
 
+parser = argparse.ArgumentParser(description="Generator of latent adversarial examples for ImageNet.")
+parser.add_argument("--command", type=str, required=True,
+                    help="one of generate_minimum, generate_bounded")
+parser.add_argument("--no_images", type=int, required=True,
+                    help="total number of images for adversarial generation")
+parser.add_argument("--bounded_search_rho", type=float, default=0.2,
+                    help="scaled norm bound to check latent adversarial accuracy "
+                         "(command = generate_bounded), default = 0.2")
+parser.add_argument("--noise_epsilon", type=float, required=False, default=1.0,
+                    help="noise magnitude (positive number) for adversarial generation, default = 1.0")
+parser.add_argument("--no_adversary", action="store_true",
+                    help="use an adversary that does nothing - this is useful to just measure latent "
+                         "reconstruction/generation accuracy")
+parser.add_argument("--logdir", type=str, default=None,
+                    help="set a custom logging directory and remove its previous contents (by default, a new "
+                         " name will be generated based on the timestamp)")
+args = parser.parse_args()
+
+if args.logdir is not None:
+    LogUtil.set_custom_dirname(args.logdir)
+LogUtil.info(args)
+
+# configure the generative model (BigGAN)
+NO_LABELS = 1000
+dataset_info = DatasetInfo.ImageNet
+label_indices = np.arange(NO_LABELS)
+no_classes = len(label_indices)
+classifier_d = "mnist" # any value that can be accepted by a classifier
+ds = datasets.ImageNetData(label_indices)
+gm = generative.BigGAN(ds, 0.25) # set built-in decay factor
+
+# load ImageNet-1k string labels
+with open("./data/ImageNet/imagenet1000_clsidx_to_labels.txt") as f: 
+    imagenet_labels = f.read()
+imagenet_labels = json.loads(imagenet_labels) 
+
+# load the robust classifier
 dataset_function = getattr(robustness_datasets, 'ImageNet')
 dataset = dataset_function('./data/ImageNet')
 model_kwargs = {'arch': 'resnet50', 'dataset': dataset, 'resume_path': f'./imagenet-models/ImageNet.pt'}
@@ -25,103 +62,83 @@ model, _ = model_utils.make_and_restore_model(**model_kwargs)
 model = model.to("cuda:0" if Util.using_cuda else "cpu")
 model.eval()
 
-dataset_info = DatasetInfo.ImageNet
-label_indices = np.arange(1000)
-no_classes = len(label_indices)
-classifier_d = "mnist" # any value that can be accepted by a classifier
-ds = datasets.ImageNetData(label_indices)
-gm = generative.BigGAN(ds, 0.25) # set built-in decay factor
-class_proportions = np.repeat(1 / no_classes, no_classes)
-
-
-with open("./data/ImageNet/imagenet1000_clsidx_to_labels.txt") as f: 
-    imagenet_labels = f.read()
-imagenet_labels = json.loads(imagenet_labels) 
-
-
-class Resize(torch.nn.Module):
-    def __init__(self, side: int):
-        super().__init__()
-        self.side = side
-    
-    def forward(self, x: torch.Tensor):
-        return torch.nn.functional.interpolate(x, size=(self.side, self.side),
-                                               mode="bicubic", align_corners=False)
-
-modelzoo_normalize_transform = torchvision.transforms.Normalize(
-    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-)
-
-def normalize_modelzoo(x):
-    # [-1, 1] -> [0, 1], then normalize
-    # https://pytorch.org/docs/stable/torchvision/models.html
-    return modelzoo_normalize_transform((x[0] + 1) / 2).unsqueeze(0)
-
-def normalize_01(x):
-    # [-1, 1] -> [0, 1]
-    return (x + 1) / 2
-    
+# normalize input + wrap the robust classifier
 class RobustnessClassifierWrapper(Trainer):
     def __init__(self, model):
         super().__init__(classifier_d, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(224),
-            Lambda(normalize_01),
+            Lambda(lambda x: (x + 1) / 2),
             model,
             Lambda(lambda x: x[0]),
         )
         
 robust_classifiers = [RobustnessClassifierWrapper(model)]
 
-
+# load non-robust classifiers, then normalizae input + wrap
 class ModelZooClassifierWrapper(Trainer):
+    modelzoo_normalize_transform = torchvision.transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    )
+
+    @staticmethod
+    def normalize_modelzoo(x):
+        # [-1, 1] -> [0, 1], then normalize
+        # https://pytorch.org/docs/stable/torchvision/models.html
+        return modelzoo_normalize_transform((x[0] + 1) / 2).unsqueeze(0)
+    
     def __init__(self, model, side: int):
         super().__init__(classifier_d, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(side),
-            Lambda(normalize_modelzoo),
+            Lambda(ModelZooClassifierWrapper.normalize_modelzoo),
             model,
         )
 
-nonrobust_classifiers = [(models.squeezenet1_0, 256),   # error 41.90
-                         (models.alexnet, 256),         # error 43.45
-                         (models.resnet18, 224),        # error 30.24
-                         (models.resnext50_32x4d, 224)] # error 21.49
+nonrobust_classifiers = [(models.squeezenet1_0, 256),   # ImageNet top-1 error 41.90
+                         (models.alexnet, 256),         # ImageNet top-1 error 43.45
+                         (models.resnet18, 224),        # ImageNet top-1 error 30.24
+                         (models.resnext50_32x4d, 224)] # ImageNet top-1 error 21.49
 nonrobust_classifiers = [ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side)
                          for m, side in nonrobust_classifiers]
+
 classifiers = nonrobust_classifiers + robust_classifiers
 
 
-def advgen_experiments(adversary: Adversary, noise_eps: float, total_images: int):
-    decay_factor = EpsDTransformer().eps_to_d(noise_eps)
-    label_printer = lambda x: str(x.item()) #+ " " + imagenet_labels[str(x.item())]
+def advgen_experiments(adversary: Adversary, total_images: int):
+    decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
+    label_printer = lambda x: str(x.item())
     advgen = AdversarialGenerator(None, classifiers, True, decay_factor, label_printer)
     advgen.set_generative_model(gm)
-    for i in np.random.choice(label_indices, size=total_images):
-        no_images = 1
+    if total_images % NO_LABELS == 0:
+        # use stratified labels
+        label_array = np.repeat(np.arange(NO_LABELS), total_images // NO_LABELS)
+    else:
+        # use totally random labels
+        label_array = np.random.choice(label_indices, size=total_images)    
+    for i in label_array:
         LogUtil.info(f"*** CLASS {i}: {imagenet_labels[str(i)]} ***")
         gm.configure_label(i)
-        advgen.generate(adversary, no_images, False, clear_stat=(i == 0))
+        advgen.generate(adversary, 1, True, False, not args.no_adversary)
     LogUtil.info("*** STATISTICS ***")
-    advgen.print_stats(True)
+    advgen.print_stats(plot=(not args.no_adversary), print_norm_statistics=(not args.no_adversary))
 
 
-# ### Measure latent adversarial accuracy (LGA)
-# advgen_experiments(NopAdversary(), noise_eps=1.0, total_images=100)
-
-
-# ### Measure LAGS
-if True:
-    max_rho, noise_eps = 2.5, 1.0
-    #max_rho, noise_eps = 2.5, 0.5
-    adversary = PGDAdversary(max_rho, 50, 0.05, False, 0, verbose=0, n_repeat=12, repeat_mode="min")
-    #adversary = PGDAdversary(max_rho, 1250, 0.002, False, 0, verbose=0)
-    advgen_experiments(adversary, noise_eps, total_images=600)
-
-# Measure LAGA
-if False:
-    rho, noise_eps = 0.3, 1.0
-    # search with restarts (a sequence of restarts will terminate if an adversarial perturbation is found)
-    adversary = PGDAdversary(rho, 50, 0.05, True, 0, verbose=0, n_repeat=12, repeat_mode="any")
-    advgen_experiments(adversary, noise_eps, total_images=100)
-
+if args.command == "generate_minimum":
+    # Measure LAGS
+    max_rho = 2.5
+    if args.no_adversary:
+        adversary = NopAdversary()
+    else:
+        adversary = PGDAdversary(max_rho, 50, 0.05, False, 0, verbose=0, n_repeat=12, repeat_mode="min")
+    advgen_experiments(adversary, total_images=args.no_images)
+elif args.command == "generate_bounded":
+    # Measure LARA
+    rho = args.bounded_search_rho
+    if args.no_adversary:
+        adversary = NopAdversary()
+    else:
+        adversary = PGDAdversary(rho, 50, 0.05, True, 0, verbose=0, n_repeat=12, repeat_mode="any")
+    advgen_experiments(adversary, total_images=args.no_images)
+else:
+    raise RuntimeError(f"Unknown command {args.command}.")

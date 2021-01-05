@@ -48,6 +48,16 @@ class Upsample(torch.nn.Module):
         return torch.nn.functional.interpolate(x, size=None, scale_factor=2, mode='bilinear', align_corners=False)
 
 
+class Resize(torch.nn.Module):
+    def __init__(self, side: int):
+        super().__init__()
+        self.side = side
+    
+    def forward(self, x: torch.Tensor):
+        return torch.nn.functional.interpolate(x, size=(self.side, self.side),
+                                               mode="bicubic", align_corners=False)
+    
+    
 class Adversary(ABC):
     """
     Base class for adversaries. Adversaries can perturb vectors given the gradient pointing to the direction

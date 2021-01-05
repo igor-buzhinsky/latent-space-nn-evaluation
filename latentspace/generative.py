@@ -188,7 +188,7 @@ class BigGAN(GenerativeModel):
     
     def configure_label(self, unique_label: int):
         """
-        Sets the ImageNet class to generate.
+        Sets the ImageNet-1k class to generate.
         :param unique_label: ImageNet class label (0..999)
         """
         self.unique_label = unique_label
@@ -331,7 +331,7 @@ class PIONEER(GenerativeModel):
         """
         PIONEER encoder always generates a normalized vector (scaled L2 norm == 1).
         This is not very important in a multidimensional space, since N(0, sigma^2 I)-distributed
-        vectors are concentrated around a sphere or radius sigma.
+        vectors are concentrated around a sphere of radius sigma.
         """
         ex = self.session.encoder(img, self.session.phase, self.session.alpha, self.data.args.use_ALQ).detach()
         return self.utils.split_labels_out_of_latent(ex)[0]

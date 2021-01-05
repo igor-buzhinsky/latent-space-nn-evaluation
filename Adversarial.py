@@ -25,8 +25,8 @@ parser.add_argument("--pgd_verbosity", type=int, default=0,
                     help="PGD verbosity: 0 = silent (default), 1, or 2 = most verbose")
 parser.add_argument("--noise_perturbations_per_image", type=int, required=False,
                     help="how many noise addition sequences is done for each image (command = generate_noise)")
-parser.add_argument("--noise_epsilon", type=float, required=False,
-                    help="noise magnitude (positive number) for adversarial generation")
+parser.add_argument("--noise_epsilon", type=float, required=False, default=1.0,
+                    help="noise magnitude (positive number) for adversarial generation, default = 1.0")
 parser.add_argument("--classifier_filenames", type=str, nargs="+", required=True,
                     help="filenames with classifier models")
 parser.add_argument("--search_mode", type=str, default="both",
@@ -38,12 +38,13 @@ parser.add_argument("--no_adversary", action="store_true",
                     help="use an adversary that does nothing - this is useful to just measure latent "
                          "reconstruction/generation accuracy (this overrides --force_search_with_restarts)")
 parser.add_argument("--bounded_search_rho", type=float, default=0.2,
-                    help="scaled norm bound to check latent adversarial accuracy (command = generate_bounded)")
+                    help="scaled norm bound to check latent adversarial accuracy "
+                         "(command = generate_bounded), default = 0.2")
 parser.add_argument("--unit_type", type=int, default=0,
                     help="architecture choice (0..2), default = 0")
 parser.add_argument("--unit_sphere_normalization", action="store_true",
-                    help="(experimental, not described in the paper) search perturbations on the unit sphere instead of "
-                         "the entire latent space")
+                    help="(experimental, not described in the paper) search perturbations on the unit sphere instead "
+                         "of the entire latent space")
 parser.add_argument("--logdir", type=str, default=None,
                     help="set a custom logging directory and remove its previous contents (by default, a new "
                          " name will be generated based on the timestamp)")
@@ -114,7 +115,7 @@ def advgen_experiments(adversary: Adversary, total_no_images: int):
             advgen.generate(adversary, int(no_images[i]), True, i == 0, not args.no_adversary)
             gm.destroy()
         LogUtil.info("*** STATISTICS ***")
-        advgen.print_stats(True)
+        advgen.print_stats(plot=(not args.no_adversary), print_norm_statistics=(not args.no_adversary))
 
 if args.command == "test":
     for i in range(no_classes):

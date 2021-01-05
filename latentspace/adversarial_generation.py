@@ -175,16 +175,18 @@ class AdversarialGenerator:
         """
         return x.norm(1) / x.numel()
     
-    def print_stats(self, plot: bool = False):
+    def print_stats(self, plot: bool = False, print_norm_statistics: bool = True):
         """
         Prints/logs the accumulated statistics. Optionally, plots histograms of metrics computed for adversarial perturbations.
         These are the following metrics:
+        - Accuracies on original/generated/reconstructed/perturbed images.
         - ║Δl║ (scaled L2): scaled L2 norms of latent perturbations.
         - ║l + Δl║ - ║l║ (scaled L2): increase of scaled L2 norm after the initial (decayed) images is replaced with an
             adversarial image.
         - ║Δx║ (scaled L2): scaled L2 norm of found adversarial perturbations in the original space.
         - ║Δx║ (scaled L1): scaled L1 norm of found adversarial perturbations in the original space.
         :param plot: whether to plot histograms for each of the aforementioned metrics.
+        :param print_norm_statistics: whether to print norm statistics.
         """
         # classification accuracy
         pairs = []
@@ -201,17 +203,18 @@ class AdversarialGenerator:
                 LogUtil.info(f"Accuracy of classifier {j} on {len(stat_list[j])} {msg} images: {accuracy * 100:.2f}%")
                 
         # perturbation norms
-        iter_list = [(self.recorded_latent_norms,      "          ║Δl║ (scaled L2)", r'$||\Delta l||_2^s$'),
-                     (self.recorded_latent_norm_diffs, "║l + Δl║ - ║l║ (scaled L2)", r'$||l + \Delta l||_2^s - ||l||_2^s$'),
-                     (self.recorded_original_l2_norms, "          ║Δx║ (scaled L2)", r'$||\Delta x||_2^s$'),
-                     (self.recorded_original_l1_norms, "          ║Δx║ (scaled L1)", r'$||\Delta x||_1~/~n_I$')]
-        for i, (norm_list, console_str, _) in enumerate(iter_list):
-            for j in range(len(self.classifiers)):
-                norms = torch.tensor(norm_list[j])
-                qs = np.quantile(norms, np.linspace(0, 1, 5))
-                LogUtil.info(f"For classifier {j} and {len(norms)} images, {console_str:8s}: "
-                             f"mean={norms.mean():.5f}, std={norms.std():.5f}, "
-                             f"Q0={qs[0]:.5f}, Q1={qs[1]:.5f}, Q2={qs[2]:.5f}, Q3={qs[3]:.5f}, Q4={qs[4]:.5f}")
+        iter_list = [(self.recorded_latent_norms,      "            ||dl|| (scaled L2)", r'$||\Delta l||_2^s$'),
+                     (self.recorded_latent_norm_diffs, "||l + dl|| - ||l|| (scaled L2)", r'$||l + \Delta l||_2^s - ||l||_2^s$'),
+                     (self.recorded_original_l2_norms, "            ||dx|| (scaled L2)", r'$||\Delta x||_2^s$'),
+                     (self.recorded_original_l1_norms, "            ||dx|| (scaled L1)", r'$||\Delta x||_1~/~n_I$')]
+        if print_norm_statistics:
+            for i, (norm_list, console_str, _) in enumerate(iter_list):
+                for j in range(len(self.classifiers)):
+                    norms = torch.tensor(norm_list[j])
+                    qs = np.quantile(norms, np.linspace(0, 1, 5))
+                    LogUtil.info(f"For classifier {j} and {len(norms)} images, {console_str:8s}: "
+                                 f"mean={norms.mean():.5f}, std={norms.std():.5f}, "
+                                 f"Q0={qs[0]:.5f}, Q1={qs[1]:.5f}, Q2={qs[2]:.5f}, Q3={qs[3]:.5f}, Q4={qs[4]:.5f}")
         if plot:
             fig, axarr = plt.subplots(1, 4, figsize=(15, 2.0))
             for i, (norm_list, _, plot_str) in enumerate(iter_list):

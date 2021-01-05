@@ -361,14 +361,15 @@ class LSUNData(DatasetWrapper):
 
 class ImageNetData(DatasetWrapper):
     """
-    ImageNet dataset wrapper. Data needs to be downloaded manually.
+    ImageNet-1k dataset wrapper.
+    Actual data loading is currently neither implemented nor used. 
     Images are center-cropped and resized to 128x128.
     """
     
-    def __init__(self, label_indices: List[int], unique_label: int = None):
+    def __init__(self, label_indices: List[int]):
         """
-        Constructs ImageNetAnimalsData.
-        :param unique_label: ImageNet label.
+        Constructs ImageNetData.
+        :param label_indices: label indices.
         """
         size = 128
         labels = printed_labels = [str(x) for x in label_indices]
@@ -376,11 +377,8 @@ class ImageNetData(DatasetWrapper):
             DatasetWrapper.resize_crop_transform(size),
             DatasetWrapper.augmentation_transform(size)
         )
-        
-        self.trainset, self.unaugmented_trainset, self.testset = None, None, None
-        
-        self.unique_label = None
-        
+        self.trainset, self.unaugmented_trainset, self.testset, self.unique_label = [None] * 4
+    
     def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
         if batch_size is None:
             batch_size = self.train_batch_size
