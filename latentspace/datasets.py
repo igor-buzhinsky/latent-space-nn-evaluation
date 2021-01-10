@@ -1,10 +1,13 @@
 import os
 from abc import ABC, abstractmethod
 from typing import *
+import json
+from pathlib import Path
 
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from PIL import Image
 
 from .ml_util import *
 
@@ -362,46 +365,49 @@ class LSUNData(DatasetWrapper):
 class ImageNetData(DatasetWrapper):
     """
     ImageNet-1k dataset wrapper.
-    Actual data loading is currently neither implemented nor used. 
-    Images are center-cropped and resized to 128x128.
+    Only loading of validation data is currentlty implemented. 
+    Images are center-cropped and resized (to 128x128 by default).
     """
     
-    def __init__(self, label_indices: List[int]):
+    def __init__(self, size: int = 128):
         """
-        Constructs ImageNetData.
-        :param label_indices: label indices.
+        Constructs ImageNetData (only validation data is supported).
+        :param size: size = width = height.
         """
-        size = 128
-        labels = printed_labels = [str(x) for x in label_indices]
+        labels = [str(i) for i in range(1000)]
+        self.base_path = Path("./data/ImageNet/")
+        self.img_path = self.base_path / "ILSVRC2012_img_val"
+        # human-readable labels
+        with open(self.base_path / "imagenet-simple-labels.json") as f: 
+            printed_labels = json.load(f)
         super().__init__(size, labels, printed_labels,
             DatasetWrapper.resize_crop_transform(size),
             DatasetWrapper.augmentation_transform(size)
         )
-        self.trainset, self.unaugmented_trainset, self.testset, self.unique_label = [None] * 4
+        self.filenames = np.array(os.listdir(self.img_path))
+        self.val_labels = {}
+        with open("./data/ImageNet/ILSVRC2012_validation_ground_truth_corrected.txt") as f:
+            for line in f.read().splitlines():
+                tokens = line.split(" ")
+                self.val_labels[tokens[0]] = int(tokens[1])
+        self.trainset, self.unaugmented_trainset = [None] * 2
     
     def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
-        if batch_size is None:
-            batch_size = self.train_batch_size
-        if self.unique_label is None:
-            loaders = [ds.get_unaugmented_train_loader for ds in self.nested_datasets]
-            return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_unaugmented_train_loader(batch_size, shuffle)
+        raise NotImplementedError()
     
     def get_train_loader(self, batch_size: int = None, shuffle: bool = True):
-        if batch_size is None:
-            batch_size = self.train_batch_size
-        if self.unique_label is None:
-            loaders = [ds.get_train_loader for ds in self.nested_datasets]
-            return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_train_loader(batch_size, shuffle)
+        raise NotImplementedError()
     
     def get_test_loader(self, batch_size: int = None, shuffle: bool = True):
         if batch_size is None:
-            batch_size = self.test_batch_size
-        if self.unique_label is None:
-            loaders = [ds.get_test_loader for ds in self.nested_datasets]
-            return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_test_loader(batch_size, shuffle)
+            batch_size = DatasetWrapper.test_batch_size
+        filenames = self.filenames.copy()
+        if shuffle:
+            np.random.shuffle(filenames)
+        images, labels = [], []
+        for filename in filenames:
+            images += [self.test_transform(Image.open(self.img_path / filename).convert("RGB"))]
+            labels += [self.val_labels[filename]]
+            if len(images) == batch_size:
+                yield torch.stack(images), Util.conditional_to_cuda(torch.tensor(labels, dtype=torch.long))
+                images, labels = [], []

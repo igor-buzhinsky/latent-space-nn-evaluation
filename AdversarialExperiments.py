@@ -1,6 +1,6 @@
 import os
 
-no_images=600
+no_images = 600
 
 #unit_types = [0, 1, 2]
 unit_types = [2]

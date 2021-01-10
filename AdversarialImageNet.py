@@ -22,9 +22,10 @@ LogUtil.to_pdf()
 
 parser = argparse.ArgumentParser(description="Generator of latent adversarial examples for ImageNet.")
 parser.add_argument("--command", type=str, required=True,
-                    help="one of generate_minimum, generate_bounded, generate_conventional")
+                    help="one of generate_minimum, generate_bounded, measure_accuracy, "
+                         "generate_conventional_from_gan, generate_conventional_from_validation")
 parser.add_argument("--no_images", type=int, required=True,
-                    help="total number of images for adversarial generation")
+                    help="total number of images for adversarial generation or accuracy evaluation")
 parser.add_argument("--bounded_search_rho", type=float, default=0.2,
                     help="scaled norm bound to check latent adversarial accuracy "
                          "(command = generate_bounded), default = 0.2")
@@ -48,17 +49,11 @@ dataset_info = DatasetInfo.ImageNet
 label_indices = np.arange(NO_LABELS)
 no_classes = len(label_indices)
 classifier_d = "mnist" # any value that can be accepted by a classifier
-ds = datasets.ImageNetData(label_indices)
+ds = datasets.ImageNetData()
 gm = generative.BigGAN(ds, 0.25) # set built-in decay factor
 
-# load ImageNet-1k string labels
-with open("./data/ImageNet/imagenet1000_clsidx_to_labels.txt") as f: 
-    imagenet_labels = f.read()
-imagenet_labels = json.loads(imagenet_labels) 
-
 # load the robust classifier
-dataset_function = getattr(robustness_datasets, 'ImageNet')
-dataset = dataset_function('./data/ImageNet')
+dataset = robustness_datasets.ImageNet('./data/ImageNet')
 model_kwargs = {'arch': 'resnet50', 'dataset': dataset, 'resume_path': f'./imagenet-models/ImageNet.pt'}
 model, _ = model_utils.make_and_restore_model(**model_kwargs)
 model = model.to("cuda:0" if Util.using_cuda else "cpu")
@@ -117,12 +112,11 @@ def get_target_labels(total_images: int) -> np.ndarray:
 
 def advgen_experiments(adversary: Adversary, total_images: int):
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
-    label_printer = lambda x: str(x.item())
-    advgen = AdversarialGenerator(None, classifiers, True, decay_factor, label_printer)
+    advgen = AdversarialGenerator(None, classifiers, True, decay_factor)
     advgen.set_generative_model(gm)
     label_array = get_target_labels(total_images)   
     for label in label_array:
-        LogUtil.info(f"*** CLASS {label}: {imagenet_labels[str(label)]} ***")
+        LogUtil.info(f"*** CLASS {label}: {ds.printed_classes[label]} ***")
         gm.configure_label(label)
         advgen.generate(adversary, 1, True, False, not args.no_adversary)
     LogUtil.info("*** STATISTICS ***")
@@ -145,24 +139,36 @@ elif args.command == "generate_bounded":
     else:
         adversary = PGDAdversary(rho, 50, 0.05, True, 0, verbose=0, n_repeat=12, repeat_mode="any")
     advgen_experiments(adversary, total_images=args.no_images)
-elif args.command == "generate_conventional":
-    def loader():
-        label_array = get_target_labels(args.no_images)
-        images, labels = [], []
-        for label in label_array:
-            gm.configure_label(label)
-            images += [gm.generate(1, detach=True)[0]]
-            labels += [label]
-            if len(images) == datasets.DatasetWrapper.test_batch_size:
-                yield images, labels
-                images, labels = [], []
-    for norm, norm_fn, bound in [("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), datasets.OTHER_L2_UPPER_BOUND),
-                                 ("l_inf",      lambda x: x.abs().max(),                 datasets.OTHER_LINF_UPPER_BOUND)]:
+elif args.command == "measure_accuracy":
+    loader = Util.fixed_length_loader(args.no_images, ds.get_test_loader, False)
+    for i, c in enumerate(classifiers):
+        accuracy, total = c.accuracy(loader, 0, 1)
+        acc_str = f"{accuracy * 100:.2f}"
+        LogUtil.info(f"Accuracy of classifier {i} on {total} validation images: {acc_str:>6}%")
+elif args.command in ["generate_conventional_from_gan", "generate_conventional_from_validation"]:
+    if args.command == "generate_conventional_from_gan":
+        def loader():
+            label_array = get_target_labels(args.no_images)
+            images, labels = [], []
+            for label in label_array:
+                gm.configure_label(label)
+                images += [gm.generate(1, detach=True)[0]]
+                labels += [label]
+                if len(images) == datasets.DatasetWrapper.test_batch_size:
+                    yield images, labels
+                    images, labels = [], []
+    else:
+        loader = Util.fixed_length_loader(args.no_images, ds.get_test_loader, False)
+    norms = [
+        ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), datasets.OTHER_L2_UPPER_BOUND),
+        ("l_inf",      lambda x: x.abs().max(),                 datasets.OTHER_LINF_UPPER_BOUND)
+    ]
+    for norm, norm_fn, bound in norms:
         adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm=norm)
         for i, c in enumerate(classifiers):
             perturb = get_conventional_perturb(c, adversary)
             severity, std, total = c.measure_adversarial_severity(perturb, loader, ds, norm_fn, False)
             LogUtil.info(f"Adversarial severity of classifier {i} with {norm:>10} norm = {severity:.8f} "
-                         f"(std = {std:.8f}, #images = {total}) [on generated images]")
+                         f"(std = {std:.8f}, #images = {total})")
 else:
     raise RuntimeError(f"Unknown command {args.command}.")
