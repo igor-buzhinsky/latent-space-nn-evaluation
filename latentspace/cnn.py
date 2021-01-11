@@ -34,10 +34,11 @@ class Unit(torch.nn.Module):
     
     def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0):
         """
-        :param unit_type: 0, 1 and 2.
-          0: basic choice.
-          1: with ResBlocks.
-          2: deeper version of 0.
+        Constructs Unit.
+        :param in_channels: number of input channels.
+        :param out_channels: number of output channels.
+        :param p_dropout: probability of dropout at the end of the layer.
+        :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
         block = lambda in_ch: [
@@ -77,12 +78,14 @@ class Unit(torch.nn.Module):
 
 class ColoredNet128(torch.nn.Module):
     """
-    Simple CNN classifier to process 128x128 images with 2 target classes.
+    Simple CNN classifier to process 128x128 images.
     """
     
     def __init__(self, no_classes: int = 2, unit_type: int = 0):
         """
-        :param unit_type: architecture (0..2).
+        Constructs ColoredNet128.
+        :param no_classes: number of output classes.
+        :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
         base_map_num = 8
@@ -107,7 +110,8 @@ class MNISTNet(torch.nn.Module):
     
     def __init__(self, unit_type: int = 0):
         """
-        :param unit_type: architecture (0..2).
+        Constructs MNISTNet.
+        :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
         base_map_num = 8
@@ -167,20 +171,23 @@ class Trainer:
     def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0):
         """
         Constructs Trainer.
-        :param dataset: one of 'celeba-128', 'lsun-128', 'mnist'. This determines network architecture.
+        :param dataset: one of 'celeba-128', 'lsun-128', 'mnist', 'none'. This determines network architecture.
         :param train_loader_fn: function that returns a TorchVision loader of (possibly augmented) training data.
         :param val_loader_fn: function that returns a TorchVision loader of validation/test data.
-        :param unit_type: architecture (0..2).
+        :param unit_type: unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         if dataset in ["celeba-128", "lsun-128"]:
             self.model = ColoredNet128(2, unit_type)
         elif dataset == "mnist":
             self.model = MNISTNet(unit_type)
+        elif dataset == "none":
+            self.model = None
         else:
-            raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, animals-128")
-        self.model = Util.conditional_to_cuda(self.model)
+            raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, none.")
+        if self.model is not None:
+            self.model = Util.conditional_to_cuda(self.model)
+            LogUtil.info(f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters")
         self.params: dict = {}
-        LogUtil.info(f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters")
         self.train_loader_fn = train_loader_fn
         self.val_loader_fn = val_loader_fn
         # controls the behavior of predict_with_gradient
@@ -215,15 +222,6 @@ class Trainer:
         :param filename: target filename.
         """
         self.params = torch.load(filename, map_location=("cuda:0" if Util.using_cuda else "cpu"))
-        self.restore_params()
-        
-    @torch.no_grad()
-    def legacy_restore_params_from_disk(self, filename: str):
-        """
-        Deprecated.
-        """
-        import pickle
-        self.params = pickle.load(gzip.open(filename))
         self.restore_params()
 
     def disable_param_gradients(self):
@@ -381,7 +379,7 @@ class Trainer:
                         p = EvaluatedPrediction(self, image, label)
                         val_loss_sum += p.loss.item()
                         val_accuracy += p.accuracy
-                writer.add_scalar("validation_loss", val_loss_sum / no_val, batch_index)
+                writer.add_scalar("validation_loss",     val_loss_sum / no_val, batch_index)
                 writer.add_scalar("validation_accuracy", val_accuracy / no_val, batch_index)
                 batch_index += 1
 

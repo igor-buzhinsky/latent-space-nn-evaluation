@@ -64,7 +64,7 @@ class EvaluationUtil:
                     perturb = get_conventional_perturb(c, adversary)
                     accuracy, total = c.measure_robustness(perturb, loader, ds, False)
                     acc_str = f"{accuracy * 100:.2f}"
-                    LogUtil.info(f"For classifier {i}, ({norm:>10}) ║Δx║ ≤ {bound:.6f}, "
+                    LogUtil.info(f"For classifier {i}, ({norm:>10}) ||dx|| <= {bound:.6f}, "
                                  f"accuracy on {total} images = {acc_str:>6}%")
                     
     @staticmethod
@@ -131,7 +131,7 @@ class EvaluationUtil:
         Shows several images reconstructed by the supplied generative model.
         :param gm: generative model to use.
         :param lines: lines of images to show.
-        :param images_in_line: number of original - reconstructed image pairs in each line.
+        :param images_in_line: number of (original, reconstructed) image pairs in each line.
         """
         sampler = gm.get_sampler()
         for i in range(lines):

@@ -40,14 +40,14 @@ class GenerativeModel(ABC):
     
     def destroy(self):
         """
-        Free memory.
+        Free memory, or at least try.
         """
         pass
     
     def _maybe_detach(self, x: torch.Tensor, detach: bool) -> torch.Tensor:
         """
         Optionally detaches the supplied tensor.
-        :x: input tensor.
+        :param x: input tensor.
         :param detach: whether to .detach() the result. 
         """
         return x.detach() if detach else x

@@ -53,6 +53,7 @@ To work with ImageNet-1k (1000 classes):
 
 * Download the archive ILSVRC2012_img_val.tar with the validation data from [http://www.image-net.org/challenges/LSVRC/2012/downloads](http://www.image-net.org/challenges/LSVRC/2012/downloads) (you will need to register and accept some terms). Unpack this archive to data/ImageNet/ILSVRC2012_img_val (so that all the images are in this folder, without subfolders). The corresponding reference labels are already included in this repository.
 * Download this [pretrained BigGAN model](https://drive.google.com/open?id=1dmZrcVJUAWkPBGza_XgswSuT-UODXZcO). Unpack the archive to biggan/weights/BigGAN_I128_hdf5_seed0_Gch96_Dch96_bs1_nDa8_nGa8_Glr1.0e-04_Dlr4.0e-04_Gnlinplace_relu_Dnlinplace_relu_Ginitortho_Dinitortho_Gattn64_Dattn64_Gshared_hier_ema (so that .pth files are inside this folder, without subfolders). For convenience, the relevant [code of BigGAN](https://github.com/ajbrock/BigGAN-PyTorch) is already copied to this repository. If you need BiGAN on its own, use the code from the original repository.
+* Download the [robust ImageNet classifier](http://andrewilyas.com/ImageNet.pt) and make it available as imagenet-models/ImageNet.pt. Other (non-robust) classifiers will be downloaded automatically upon first access.
 * Check the notebook [AdversarialImageNet.ipynb](AdversarialImageNet.ipynb) or the scripts [AdversarialImageNet.py](AdversarialImageNet.py), [AdversarialImageNetExperiments.py](AdversarialImageNetExperiments.py).
 
 ## Working with other image datasets

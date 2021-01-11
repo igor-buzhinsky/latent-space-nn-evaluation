@@ -392,8 +392,9 @@ class ImageNetData(DatasetWrapper):
                 self.val_labels[tokens[0]] = int(tokens[1])
         self.trainset, self.unaugmented_trainset = [None] * 2
     
-    def get_unaugmented_train_loader(self, batch_size: int = None, shuffle: bool = True):
-        raise NotImplementedError()
+    def get_unaugmented_train_loader(self, *args, **kwargs):
+        print("Warning: loading validation data while training data was requested.")
+        return self.get_test_loader(*args, **kwargs)
     
     def get_train_loader(self, batch_size: int = None, shuffle: bool = True):
         raise NotImplementedError()

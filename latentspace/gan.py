@@ -228,21 +228,11 @@ class GAN:
         Restores previously saved trainable parameters from disk.
         :param filename: target filename.
         """
-        loc = ("cuda:0" if Util.using_cuda else "cpu")
+        loc = "cuda:0" if Util.using_cuda else "cpu"
         self.params = (torch.load(filename + ".generator",     map_location=loc),
                        torch.load(filename + ".discriminator", map_location=loc))
         self.restore_params()
         
-    @torch.no_grad()
-    def legacy_restore_params_from_disk(self, filename: str):
-        """
-        Deprecated.
-        """
-        import pickle
-        self.params = pickle.load(gzip.open(filename))
-        self.generator.load_state_dict(self.params[0])
-        self.discriminator.load_state_dict(self.params[1])
-
     @torch.no_grad()
     def random_init(self):
         """
