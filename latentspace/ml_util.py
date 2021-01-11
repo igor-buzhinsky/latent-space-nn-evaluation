@@ -416,7 +416,7 @@ class Util:
                         # save the remainder for the next yield
                         result = result[batch_size:]
                 except StopIteration:
-                    raise StopIteration()
+                    return
         return loader
     
     @staticmethod
