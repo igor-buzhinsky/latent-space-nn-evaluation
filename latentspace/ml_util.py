@@ -233,7 +233,7 @@ class PGDAdversary(Adversary):
         """
         Optional unit sphere normalization.
         :param x: vector of shape 1*dim to normalize.
-        :return optionally normalized x.
+        :return: optionally normalized x.
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
     
@@ -243,7 +243,7 @@ class PGDAdversary(Adversary):
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
         :param perturbed_vector: perturbed vector (initial vector + perturbation).
         :param perturbation: perturbation vector.
-        :return possibly recomputed (perturbed_vector, perturbation).
+        :return: possibly recomputed (perturbed_vector, perturbation).
         """
         effective_perturbed_vector = self._optional_normalize(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
@@ -254,7 +254,7 @@ class PGDAdversary(Adversary):
         compensates for the reduction of the learning step due to projection of a unit sphere.
         :param perturbation_step: unmodified pertubation step.
         :param previous_perturbed_vector: previous perturbed vector.
-        :return altered perturbation_step.
+        :return: altered perturbation_step.
         """
         new_perturbed_vector = self._optional_normalize(previous_perturbed_vector + perturbation_step)
         effective_perturbation_step = new_perturbed_vector - previous_perturbed_vector
@@ -272,8 +272,7 @@ class ImageSet:
         Constructs ImageSet.
         :param max_num: number of images and captions to accumulate until they can be shown.
         """
-        self.images = []
-        self.captions = []
+        self.images, self.captions = [], []
         self.max_num = max_num
     
     def append(self, images: List[torch.Tensor], captions: List[str] = None):
@@ -515,7 +514,7 @@ class Util:
         """
         Divides each latent vector of a batch by its scaled Euclidean norm.
         :param x: batch of latent vectors.
-        :return normalized vector.
+        :return: normalized vector.
         """
         norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
         norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
@@ -528,7 +527,7 @@ class Util:
         This fixes a peculiar problem with sns.kdeplot/distplot. Use this to compute the bandwidth and provide it as argument bw. 
         https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
         :param x: input (numpy array).
-        :return KDE bandwidth computed by Scott's method.
+        :return: KDE bandwidth computed by Scott's method.
         """
         return statsmodels.nonparametric.bandwidths.bw_scott(x)
 
@@ -541,12 +540,16 @@ class EpsDTransformer:
     def eps_to_d(self, eps: float) -> float:
         """
         Converts d to epsilon.
+        :param eps: noise magnitude.
+        :return: decay factor.
         """
         return 1 - 1 / np.sqrt(1 + eps**2)
     
     def d_to_eps(self, d: float) -> float:
         """
         Converts epsilon to d.
+        :param d: decay factor.
+        :return: noise magnitude.
         """
         return np.sqrt((1 / (1 - d))**2 - 1)
         
@@ -649,4 +652,3 @@ class LogUtil:
         Switches matplotlib backend to 'pdf'.
         """
         matplotlib.use("pdf", warn=False, force=True)
-        

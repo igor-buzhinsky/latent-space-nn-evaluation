@@ -187,7 +187,7 @@ class Trainer:
         if self.model is not None:
             self.model = Util.conditional_to_cuda(self.model)
             LogUtil.info(f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters")
-        self.params: dict = {}
+        self.params = {}
         self.train_loader_fn = train_loader_fn
         self.val_loader_fn = val_loader_fn
         # controls the behavior of predict_with_gradient
@@ -317,7 +317,7 @@ class Trainer:
             disk_backup_filename: str = "dumped_weights.bin", noise_sigma: float = 0) -> None:
         """
         Trains the classifier using the cross-entropy loss and RMSProp.
-        :param: class_weights: weights (importance values) of each image class.
+        :param class_weights: weights (importance values) of each image class.
         :param epochs: number of epochs. An epoch is a full pass over the train loader.
         :param lr: learning rate.
         :param lr_decay: after each epoch, the learning rate is multiplied by 1 - lr_decay.

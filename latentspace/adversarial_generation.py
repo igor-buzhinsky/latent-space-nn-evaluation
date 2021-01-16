@@ -89,7 +89,7 @@ def get_get_gradient(classifier: Trainer, label: int, vector_transform_1: Callab
     return get_gradient
 
 
-def get_conventional_perturb(classifier: Trainer, adversary: Adversary):
+def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Callable:
     """
     Produces "perturb" functions that are accepted by Trainers (classifiers).
     Perturbations are performed in the original image space.

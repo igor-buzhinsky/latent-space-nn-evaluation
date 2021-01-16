@@ -48,13 +48,13 @@ NO_LABELS = 1000
 dataset_info = DatasetInfo.ImageNet
 label_indices = np.arange(NO_LABELS)
 no_classes = len(label_indices)
-classifier_d = "mnist" # any value that can be accepted by a classifier
+classifier_d = "none"
 ds = datasets.ImageNetData()
 gm = generative.BigGAN(ds, 0.25) # set built-in decay factor
 
 # load the robust classifier
-dataset = robustness_datasets.ImageNet('./data/ImageNet')
-model_kwargs = {'arch': 'resnet50', 'dataset': dataset, 'resume_path': f'./imagenet-models/ImageNet.pt'}
+dataset = robustness_datasets.ImageNet("./data/ImageNet")
+model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": f"./imagenet-models/ImageNet.pt"}
 model, _ = model_utils.make_and_restore_model(**model_kwargs)
 model = model.to("cuda:0" if Util.using_cuda else "cpu")
 model.eval()
@@ -132,7 +132,7 @@ if args.command == "generate_minimum":
         adversary = PGDAdversary(max_rho, 50, 0.05, False, 0, verbose=0, n_repeat=12, repeat_mode="min")
     advgen_experiments(adversary, total_images=args.no_images)
 elif args.command == "generate_bounded":
-    # Measure LARA
+    # Measure LAGA
     rho = args.bounded_search_rho
     if args.no_adversary:
         adversary = NopAdversary()
