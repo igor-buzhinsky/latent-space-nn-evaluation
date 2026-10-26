@@ -11,7 +11,7 @@ import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 
-from .ml_util import Util
+from latentspace.ml_util import Util
 
 if os.name == "posix":
     import resource

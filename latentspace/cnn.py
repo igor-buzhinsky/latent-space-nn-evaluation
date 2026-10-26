@@ -6,8 +6,8 @@ import torch.autograd
 import torch.nn
 from tensorboardX import SummaryWriter
 
-from .datasets import DatasetWrapper
-from .ml_util import Flatten, Lambda, LogUtil, Util
+from latentspace.datasets import DatasetWrapper
+from latentspace.ml_util import Flatten, Lambda, LogUtil, Util
 
 
 class ResBlock(torch.nn.Module):

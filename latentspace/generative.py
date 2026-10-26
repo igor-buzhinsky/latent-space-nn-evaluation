@@ -9,9 +9,9 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .datasets import DatasetWrapper
-from .gan import GAN
-from .ml_util import DatasetInfo, LogUtil, Util
+from latentspace.datasets import DatasetWrapper
+from latentspace.gan import GAN
+from latentspace.ml_util import DatasetInfo, LogUtil, Util
 
 
 class GenerativeModel(ABC):

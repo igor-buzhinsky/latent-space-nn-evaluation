@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from .adversarial_generation import get_conventional_perturb
-from .cnn import Trainer
-from .datasets import DatasetWrapper
-from .generative import GenerativeModel
-from .ml_util import ImageSet, LogUtil, PGDAdversary, Util
+from latentspace.adversarial_generation import get_conventional_perturb
+from latentspace.cnn import Trainer
+from latentspace.datasets import DatasetWrapper
+from latentspace.generative import GenerativeModel
+from latentspace.ml_util import ImageSet, LogUtil, PGDAdversary, Util
 
 
 class EvaluationUtil:

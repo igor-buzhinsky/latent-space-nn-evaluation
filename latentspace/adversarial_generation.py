@@ -5,9 +5,9 @@ import numpy as np
 import seaborn as sns
 import torch
 
-from .cnn import Trainer
-from .generative import GenerativeModel
-from .ml_util import Adversary, ImageSet, LogUtil, Util
+from latentspace.cnn import Trainer
+from latentspace.generative import GenerativeModel
+from latentspace.ml_util import Adversary, ImageSet, LogUtil, Util
 
 
 class RandomPerturbationStatistician:

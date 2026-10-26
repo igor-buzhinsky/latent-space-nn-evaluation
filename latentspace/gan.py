@@ -5,7 +5,7 @@ from typing import Any
 import torch
 from tensorboardX import SummaryWriter
 
-from .ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
+from latentspace.ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
 
 
 def init_linear(layer: torch.nn.Linear) -> None:

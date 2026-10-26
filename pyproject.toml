@@ -54,8 +54,12 @@ target-version = "py311"
 extend-exclude = ["biggan", "pioneer"]
 
 [tool.ruff.lint]
-# pyflakes, basic pycodestyle errors, import sorting, modern type hint syntax (PEP 585/604)
-select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
+# pyflakes, basic pycodestyle errors, import sorting, modern type hint syntax (PEP 585/604), absolute imports
+select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045", "TID252"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# use absolute imports (latentspace.module) instead of relative ones (.module)
+ban-relative-imports = "all"
 
 [tool.ruff.lint.isort]
 known-first-party = ["latentspace"]
