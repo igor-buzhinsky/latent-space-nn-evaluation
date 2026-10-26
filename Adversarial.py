@@ -87,7 +87,6 @@ try:
 except KeyError:
     raise AssertionError(f"Unsupported dataset name {args.dataset}.")
 
-class_proportions = None
 if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
     no_classes = 2
     if dataset_info == DatasetInfo.CelebA128Gender:
@@ -99,17 +98,17 @@ if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
         ds = datasets.LSUNData()
         classifier_d = "lsun-128"
         classifier_weights_filename = "lsun-128-classifier/"
+        class_proportions = np.repeat(1 / no_classes, no_classes)
     gm_loader = lambda label: generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_no_images=25)
 elif dataset_info == DatasetInfo.MNIST:
     no_classes = 10
     ds = datasets.MNISTData()
     classifier_d = "mnist"
     classifier_weights_filename = "mnist-classifier/"
+    class_proportions = np.repeat(1 / no_classes, no_classes)
     gm_loader = lambda label: generative.WGAN(dataset_info, label, ds)
 else:
     raise AssertionError()
-if class_proportions is None:
-    class_proportions = np.repeat(1 / no_classes, no_classes)
 
 
 def load_classifier(weights_filename: str):
@@ -161,7 +160,7 @@ if args.command == "test":
         RandomPerturbationStatistician(gm, classifiers, args.no_images, 2, True, LOCAL_NOISE_EPSILONS).process()
         # produce "class mean" vector
         advgen = AdversarialGenerator(gm, classifiers, True, 1.0)
-        advgen.generate(PGDAdversary(0.01, 1, 0.1, False, 0, verbose=args.pgd_verbosity), 1, 1, False)
+        advgen.generate(PGDAdversary(0.01, 1, 0.1, False, 0, verbose=args.pgd_verbosity), 1, True, False)
         gm.destroy()
 elif args.command == "generate_noise":
     # measure resistance to noise

@@ -171,6 +171,8 @@ class Trainer:
     Trainable CNN classifier.
     """
 
+    model: torch.nn.Module
+
     def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0):
         """
         Constructs Trainer.
@@ -179,16 +181,18 @@ class Trainer:
         :param val_loader_fn: function that returns a TorchVision loader of validation/test data.
         :param unit_type: unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
+        model: Optional[torch.nn.Module]
         if dataset in ["celeba-128", "lsun-128"]:
-            self.model = ColoredNet128(2, unit_type)
+            model = ColoredNet128(2, unit_type)
         elif dataset == "mnist":
-            self.model = MNISTNet(unit_type)
+            model = MNISTNet(unit_type)
         elif dataset == "none":
-            self.model = None
+            # the model is expected to be assigned by a subclass
+            model = None
         else:
             raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, none.")
-        if self.model is not None:
-            self.model = Util.conditional_to_cuda(self.model)
+        if model is not None:
+            self.model = Util.conditional_to_cuda(model)
             LogUtil.info(
                 f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters"
             )
@@ -241,20 +245,7 @@ class Trainer:
         """
         Performs random initialization.
         """
-
-        def init_weights(m: torch.nn.Module):
-            if isinstance(m, torch.nn.Conv2d):
-                m.weight.normal_(0, 0.1)
-                m.bias.normal_(0, 0.1)
-            elif isinstance(m, torch.nn.Linear):
-                fan_in: int = m.weight.size(0)
-                # heuristic
-                std = (2 / fan_in) ** 0.5 / 20
-                m.weight.uniform_(-std, std)
-                if m.bias is not None:
-                    m.bias.uniform_(0, 0)
-
-        self.model.apply(init_weights)
+        self.model.apply(Util.init_weights)
 
     def set_misclassification_gradients(self, value: bool):
         """
@@ -264,9 +255,7 @@ class Trainer:
         """
         self.misclassification_gradients = value
 
-    def predict_with_gradient(
-        self, x: torch.Tensor, true_labels: List[int]
-    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+    def predict_with_gradient(self, x: torch.Tensor, true_labels: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts, computes loss and gradient.
         If self.misclassification_gradients is True, the gradient points in the direction of a
@@ -300,7 +289,7 @@ class Trainer:
         )
 
     @torch.no_grad()
-    def predict(self, x: torch.Tensor) -> torch.LongTensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
         Predict on a batch of input images.
         :param x: batch of input images.
@@ -314,7 +303,7 @@ class Trainer:
         )
 
     @torch.no_grad()
-    def predict_probs(self, x: torch.Tensor) -> torch.FloatTensor:
+    def predict_probs(self, x: torch.Tensor) -> torch.Tensor:
         """
         Returns soft predictions for a batch of input images.
         :param x: batch of input images.
@@ -441,7 +430,7 @@ class Trainer:
 
     def measure_robustness(
         self,
-        perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
+        perturb_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         data_loader_fn: Callable,
         ds: DatasetWrapper,
         show_images: bool = True,
@@ -475,12 +464,12 @@ class Trainer:
 
     def measure_adversarial_severity(
         self,
-        perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
+        perturb_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         data_loader_fn: Callable,
         ds: DatasetWrapper,
-        norm_fn: Callable[[torch.FloatTensor], float],
+        norm_fn: Callable[[torch.Tensor], Union[float, torch.Tensor]],
         show_images: bool = True,
-    ) -> Tuple[float, float, int]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, int]:
         """
         Measures adversarial severity (mean norm of minimum adversarial perturbations) on the supplied data loader.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.

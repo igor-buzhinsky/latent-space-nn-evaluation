@@ -33,8 +33,7 @@ class SpectralNorm:
         size = weight.size()
         weight_mat = weight.contiguous().view(size[0], -1)
         if weight_mat.is_cuda:
-            # u = u.cuda(async=(args.gpu_count>1))
-            u = u.cuda(non_blocking=(args.gpu_count > 1))
+            u = u.cuda()
         v = weight_mat.t() @ u
         v = v / v.norm()
         u = weight_mat @ v
@@ -193,7 +192,7 @@ class GAN:
         self.latent_dim = 64
         self.generator = Util.conditional_to_cuda(MNISTGenerator(self.latent_dim))
         self.discriminator = Util.conditional_to_cuda(MNISTDiscriminator())
-        self.params = None
+        self.params: Optional[Tuple[dict, dict]] = None
         LogUtil.info(f"generator: {Util.number_of_trainable_parameters(self.generator)} trainable parameters")
         LogUtil.info(f"discriminator: {Util.number_of_trainable_parameters(self.discriminator)} trainable parameters")
 
@@ -218,6 +217,7 @@ class GAN:
         """
         Restores previously saved trainable parameters of the WGAN.
         """
+        assert self.params is not None, "No saved parameters to restore."
         self.generator.load_state_dict(self.params[0])
         self.discriminator.load_state_dict(self.params[1])
 
@@ -350,5 +350,5 @@ class GAN:
                     writer.add_scalar("epoch", epoch, batch_index)
                     if batch_index % 20 == 0:
                         writer.add_images("generated_batch", fake_data.detach().clamp(-1, 1), batch_index)
-                        writer.add_images("real_batch", real_data.detach(), batch_index)
+                        writer.add_images("real_batch", real_batches[-1].detach(), batch_index)
                 batch_index += 1

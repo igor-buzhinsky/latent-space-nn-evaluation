@@ -24,6 +24,9 @@ class GenerativeModel(ABC):
     (2) encode images into N(0, I)-distributed latent codes.
     """
 
+    # may be None for class-conditional models before a class is configured
+    unique_label: Optional[int]
+
     def __init__(self, resolution: int, latent_dim: int, unique_label: int, ds: DatasetWrapper):
         """
         Constructs GenerativeModel.
@@ -88,6 +91,7 @@ class GenerativeModel(ABC):
         :return: data loader (not a function).
         """
         f = lambda: self.ds.get_unaugmented_train_loader(batch_size=batch_size)
+        assert self.unique_label is not None
         return Util.class_specific_loader(self.unique_label, f)()
 
     @torch.enable_grad()
@@ -155,7 +159,7 @@ class WGAN(GenerativeModel):
         return self._maybe_detach(self.g.decode(latent_code), detach)
 
     def destroy(self):
-        self.g = None
+        del self.g
         gc.collect()
 
 
@@ -172,7 +176,8 @@ class BigGAN(GenerativeModel):
         """
         super().__init__(128, 120, 0, ds)
         LogUtil.info("*** Loading BigGAN...")
-        sys.argv = (
+        # str.split() on a literal is inferred as list[LiteralString], which is not list[str]
+        sys.argv = (  # pyrefly: ignore[bad-assignment]
             "sample.py --dataset I128_hdf5 --shuffle --num_workers 0 --batch_size 1 "
             "--num_G_accumulations 8 --num_D_accumulations 8 --num_D_steps 1 --G_lr 1e-4 "
             "--D_lr 4e-4 --D_B2 0.999 --G_B2 0.999 --G_attn 64 --D_attn 64 --G_ch 96 "
@@ -199,6 +204,7 @@ class BigGAN(GenerativeModel):
         self.unique_label = unique_label
 
     def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+        assert self.unique_label is not None, "Call configure_label() first."
         tensors = [
             self._maybe_detach(self.create_sample([self.unique_label], self.builtin_decay)[0], detach)
             for _ in range(no_img)
@@ -212,10 +218,12 @@ class BigGAN(GenerativeModel):
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
 
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
+        unique_label = self.unique_label
+        assert unique_label is not None, "Call configure_label() first."
         return torch.cat(
             [
                 self._maybe_detach(
-                    self.decode_sample(latent_code[i : (i + 1)], self.unique_label, self.builtin_decay), detach
+                    self.decode_sample(latent_code[i : (i + 1)], unique_label, self.builtin_decay), detach
                 )
                 for i in range(latent_code.shape[0])
             ]
@@ -337,7 +345,7 @@ class PIONEER(GenerativeModel):
         this method is useful to free some memory.
         """
         LogUtil.info("*** Cleaning up PIONEER...")
-        self.config, self.evaluate, self.model, self.data, self.utils, self.train, self.session = [None] * 7
+        del self.config, self.evaluate, self.model, self.data, self.utils, self.train, self.session
         gc.collect()
 
     def generate_plain(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:

@@ -19,6 +19,8 @@ import cv2
 if os.name == "posix":
     import resource
 
+TensorOrModule = TypeVar("TensorOrModule", bound=Union[torch.Tensor, torch.nn.Module])
+
 # A enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
@@ -105,7 +107,7 @@ class PGDAdversary(Adversary):
         verbose: int = 1,
         norm: str = "scaled_l_2",
         n_repeat: int = 1,
-        repeat_mode: str = None,
+        repeat_mode: Optional[str] = None,
         unit_sphere_normalization: bool = False,
     ):
         """
@@ -242,7 +244,8 @@ class PGDAdversary(Adversary):
             if self.shrinking_repeats and run_n == self.n_repeat - 1:
                 # heuristic: the last run is always from the center
                 random_start = False
-        return self._optional_normalize(x1 + best_perturbation)
+        assert best_perturbation is not None, "n_repeat must be positive"
+        return self._optional_normalize(initial_vector + best_perturbation)
 
     ### projections on the unit sphere: ###
 
@@ -292,7 +295,7 @@ class ImageSet:
         self.images, self.captions = [], []
         self.max_num = max_num
 
-    def append(self, images: List[torch.Tensor], captions: List[str] = None):
+    def append(self, images: List[torch.Tensor], captions: Optional[List[str]] = None):
         """
         Appends the given images and captions.
         :param images: list of images (PyTorch tensors).
@@ -368,7 +371,7 @@ class Util:
         *tensors: torch.Tensor,
         clamp: bool = True,
         figsize: Tuple[float, float] = (12, 2),
-        captions: List[str] = None,
+        captions: Optional[List[str]] = None,
         nrow: int = 8,
         pad_value: float = 1,
     ):
@@ -388,7 +391,7 @@ class Util:
             t = t.repeat(1, 3, 1, 1)
         if clamp:
             t = torch.clamp(t, -1, 1)
-        t = list(t)
+        images: List[Any] = list(t)
 
         # adding textual captions if they are given (this involes rescaling)
         if captions is not None:
@@ -407,15 +410,15 @@ class Util:
                 return img
 
             default_size = (128,) * 2
-            for i in range(len(t)):
+            for i in range(len(images)):
                 assert type(captions[i]) == str, "Captions must be str"
-                t[i] = (Util.tensor2numpy(t[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
+                images[i] = (Util.tensor2numpy(images[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
                 # shape = H*W*3
-                t[i] = cv2.resize(t[i], default_size, interpolation=cv2.INTER_NEAREST)
-                t[i] = multiline_puttext(t[i], captions[i]) / 255
-                t[i] = torch.FloatTensor(t[i].transpose(2, 0, 1) * 2 - 1)
+                images[i] = cv2.resize(images[i], default_size, interpolation=cv2.INTER_NEAREST)
+                images[i] = multiline_puttext(images[i], captions[i]) / 255
+                images[i] = torch.FloatTensor(images[i].transpose(2, 0, 1) * 2 - 1)
 
-        Util.imshow(torchvision.utils.make_grid(torch.stack(t), nrow=nrow, pad_value=pad_value), figsize)
+        Util.imshow(torchvision.utils.make_grid(torch.stack(images), nrow=nrow, pad_value=pad_value), figsize)
 
     @staticmethod
     def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
@@ -496,6 +499,25 @@ class Util:
         return Util.conditional_to_cuda(x.clone().detach()).requires_grad_(True)
 
     @staticmethod
+    @torch.no_grad()
+    def init_weights(m: torch.nn.Module):
+        """
+        Randomly initializes the weights of a convolutional or linear layer. To be used with torch.nn.Module.apply.
+        :param m: PyTorch module.
+        """
+        if isinstance(m, torch.nn.Conv2d):
+            m.weight.normal_(0, 0.1)
+            if m.bias is not None:
+                m.bias.normal_(0, 0.1)
+        elif isinstance(m, torch.nn.Linear):
+            fan_in: int = m.weight.size(0)
+            # heuristic
+            std = (2 / fan_in) ** 0.5 / 20
+            m.weight.uniform_(-std, std)
+            if m.bias is not None:
+                m.bias.uniform_(0, 0)
+
+    @staticmethod
     def set_param_requires_grad(m: torch.nn.Module, value: bool):
         """
         Sets requires_grad_(value) for all parameters of the module.
@@ -506,13 +528,13 @@ class Util:
             p.requires_grad_(value)
 
     @staticmethod
-    def conditional_to_cuda(x: Union[torch.Tensor, torch.nn.Module]) -> torch.Tensor:
+    def conditional_to_cuda(x: TensorOrModule) -> TensorOrModule:
         """
         Returns the tensor/module on GPU if there is at least 1 GPU, otherwise just returns the tensor.
         :param x: a PyTorch tensor or module.
         :return: x on GPU if there is at least 1 GPU, otherwise just x.
         """
-        return x.cuda() if Util.using_cuda else x
+        return cast(TensorOrModule, x.cuda()) if Util.using_cuda else x
 
     @staticmethod
     def number_of_trainable_parameters(model: torch.nn.Module) -> int:
@@ -521,10 +543,10 @@ class Util:
         :param model: PyTorch module.
         :return: number of trainable parameters in model.
         """
-        return sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad])
+        return int(sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad]))
 
     @staticmethod
-    def set_random_seed(seed: int = None):
+    def set_random_seed(seed: Optional[int] = None):
         """
         Set random seed of random, numpy and pytorch.
         :param seed seed value. If None, it is replaced with the current timestamp.
@@ -637,7 +659,7 @@ class LogUtil:
             os.makedirs(LogUtil._dirname, exist_ok=True)
 
     @staticmethod
-    def info(msg: str, regular_print: bool = True):
+    def info(msg: Any, regular_print: bool = True):
         """
         Log/print a message to <log directory>/log.txt.
         :param msg: message to log and, optionally, print to console.

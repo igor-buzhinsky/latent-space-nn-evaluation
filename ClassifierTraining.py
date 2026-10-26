@@ -89,10 +89,6 @@ elif dataset_info == DatasetInfo.LSUN128:
     no_classes = 2
     # partially overcoming the problem of small (600) validation set:
     noise_evaluation_multiplier = 20
-elif dataset_info == DatasetInfo.ImageNetAnimals:
-    trainer_name = "animals-128"
-    ds = ImageNetAnimalsData()
-    no_classes = 3
 else:
     raise AssertionError()
 

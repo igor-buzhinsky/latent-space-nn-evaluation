@@ -23,7 +23,10 @@ class EvaluationUtil:
 
     @staticmethod
     def evaluate_accuracy(
-        classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int = None, noise_evaluation_multiplier: int = 1
+        classifiers: List[Trainer],
+        ds: DatasetWrapper,
+        max_imgs: Optional[int] = None,
+        noise_evaluation_multiplier: int = 1,
     ):
         """
         Evaluates the conventional accuracy of the supplied classifiers.

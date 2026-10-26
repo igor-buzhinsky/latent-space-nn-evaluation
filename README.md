@@ -24,6 +24,13 @@ poetry install --extras imagenet  # also install the robustness package for the 
 
 Then run scripts inside the environment, e.g. `poetry run python Adversarial.py --help`, or start the notebooks with `poetry run jupyter notebook`.
 
+For development, code is formatted with [black](https://github.com/psf/black) and type-checked with [pyrefly](https://pyrefly.org/) (both are in the `dev` group; vendored `biggan/` and `pioneer/` are excluded):
+
+```bash
+poetry run black .
+poetry run pyrefly check
+```
+
 ## Running: MNIST
 
 The starting point is to run the toolset on MNIST, as all trained models are small and already included into this repository.

@@ -17,11 +17,11 @@ class RandomPerturbationStatistician:
     def __init__(
         self,
         gm: GenerativeModel,
-        classifiers: List[Trainer],
+        classifiers: Sequence[Trainer],
         no_images: int,
         perturbations_per_image: int,
         visualize: bool,
-        epsilons: List[float],
+        epsilons: Union[Sequence[float], np.ndarray],
     ):
         """
         Constructs RandomPerturbationStatistician.
@@ -126,24 +126,27 @@ class AdversarialGenerator:
     Generates adversarial images with the provided adversary, shows them and computes peturbation statistics.
     """
 
+    gm: GenerativeModel
+
     def __init__(
         self,
-        gm: GenerativeModel,
-        classifiers: List[Trainer],
+        gm: Optional[GenerativeModel],
+        classifiers: Sequence[Trainer],
         use_generated_images: bool,
         decay_factor: float,
         label_printer: Optional[Callable] = None,
     ):
         """
         Constructs AdversarialGenerator.
-        :param gm: generative model to use.
+        :param gm: generative model to use. If None, it must be later set with set_generative_model.
         :param classifiers: list of clasifiers for which to perform evaluation.
         :param use_generated_images: when True, calculate generation-based metrics.
             When False, calculate reconstruction-based methods.
         :param decay_factor: decay factor: Float 0..1. The latent code of the image is multiplied by 1 - decay_factor
             prior to adversarial search.
         """
-        self.gm = gm
+        if gm is not None:
+            self.gm = gm
         self.classifiers = classifiers
         for c in classifiers:
             c.disable_param_gradients()
@@ -174,7 +177,7 @@ class AdversarialGenerator:
         self.recorded_decayed_successes = create()
         self.recorded_modified_successes = create()
 
-    def _join_predictions(self, img: torch.Tensor, classifiers: List[Trainer]):
+    def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]):
         """
         Convenience function.
         """
@@ -288,6 +291,7 @@ class AdversarialGenerator:
         nrow = 3 + len(self.classifiers)
         if show_perturbations:
             nrow += 1 + len(self.classifiers)
+        dataset = None
         if self.use_generated_images:
             nrow -= 1
         else:
@@ -295,6 +299,7 @@ class AdversarialGenerator:
 
         for _ in range(no_images):
             label = self.gm.unique_label
+            assert label is not None
             with torch.no_grad():
                 if self.use_generated_images:
                     latent_code = Util.conditional_to_cuda(torch.randn(1, self.gm.latent_dim))
@@ -302,6 +307,7 @@ class AdversarialGenerator:
                     # dummy copy
                     orig_img = reconstr_img
                 else:
+                    assert dataset is not None
                     orig_img, label_ = next(dataset)
                     assert label_[0] == label
                     latent_code = self.gm.encode(orig_img)
