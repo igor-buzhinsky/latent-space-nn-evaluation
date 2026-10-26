@@ -1,17 +1,17 @@
 import os
-from typing import *
-import time
 import random
-from enum import Enum
+import time
 from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Any, Callable, Generator, List, Optional, Tuple, TypeVar, Union, cast
 
-import numpy as np
-import statsmodels.nonparametric.bandwidths
+import cv2
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import statsmodels.nonparametric.bandwidths
 import torch
 import torchvision
-import cv2
 
 if os.name == "posix":
     import resource
@@ -408,7 +408,7 @@ class Util:
 
             default_size = (128,) * 2
             for i in range(len(images)):
-                assert type(captions[i]) == str, "Captions must be str"
+                assert isinstance(captions[i], str), "Captions must be str"
                 images[i] = (Util.tensor2numpy(images[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
                 # shape = H*W*3
                 images[i] = cv2.resize(images[i], default_size, interpolation=cv2.INTER_NEAREST)
@@ -631,7 +631,9 @@ class LogUtil:
     Logs are also printed to stdout. Figures are only shown in notebooks.
     """
 
-    _timestamp = lambda: str(int(round(time.time() * 1000)))
+    def _timestamp():
+        return str(int(round(time.time() * 1000)))
+
     _dirname = "logdir_" + _timestamp()
     _created = False
 

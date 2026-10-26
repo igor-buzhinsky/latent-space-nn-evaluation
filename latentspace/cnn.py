@@ -1,13 +1,13 @@
-from typing import *
 import copy
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
-import torch.nn
 import torch.autograd
+import torch.nn
 from tensorboardX import SummaryWriter
 
-from .ml_util import *
-from .datasets import *
+from .datasets import DatasetWrapper
+from .ml_util import Flatten, Lambda, LogUtil, Util
 
 
 class ResBlock(torch.nn.Module):
@@ -40,15 +40,20 @@ class Unit(torch.nn.Module):
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
-        block = lambda in_ch: [
-            torch.nn.Conv2d(in_ch, out_channels, kernel_size=3, stride=1, padding=1),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
-        ]
-        end = lambda: [
-            torch.nn.MaxPool2d(kernel_size=2, padding=0),
-            torch.nn.Dropout(p_dropout),
-        ]
+
+        def block(in_ch):
+            return [
+                torch.nn.Conv2d(in_ch, out_channels, kernel_size=3, stride=1, padding=1),
+                torch.nn.ReLU(),
+                torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
+            ]
+
+        def end():
+            return [
+                torch.nn.MaxPool2d(kernel_size=2, padding=0),
+                torch.nn.Dropout(p_dropout),
+            ]
+
         if unit_type == 0:
             self.model = torch.nn.Sequential(
                 *block(in_channels),

@@ -1,10 +1,13 @@
-import torch
-from typing import *
-import seaborn as sns
+from typing import Callable, Optional, Sequence, Tuple, Union
 
-from .ml_util import *
-from .generative import GenerativeModel
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import torch
+
 from .cnn import Trainer
+from .generative import GenerativeModel
+from .ml_util import Adversary, ImageSet, LogUtil, Util
 
 
 class RandomPerturbationStatistician:
@@ -166,7 +169,10 @@ class AdversarialGenerator:
         """
         Initializes (when called first time) or clears accumulated statistics.
         """
-        create = lambda: [[] for c in self.classifiers]
+
+        def create():
+            return [[] for c in self.classifiers]
+
         self.recorded_original_l2_norms = create()
         self.recorded_original_l1_norms = create()
         self.recorded_latent_norms = create()
@@ -182,7 +188,10 @@ class AdversarialGenerator:
         """
         predictions = [c.predict(img) for c in classifiers]
         if self.label_printer is None:
-            label_printer = lambda x: self.gm.ds.prediction_indices_to_printed_classes(x)[0]
+
+            def label_printer(x):
+                return self.gm.ds.prediction_indices_to_printed_classes(x)[0]
+
         else:
             label_printer = self.label_printer
         str_classes = [label_printer(p) for p in predictions]

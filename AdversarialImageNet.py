@@ -5,13 +5,26 @@ import argparse
 
 import numpy as np
 import torch
+import torchvision
 import torchvision.models as models
-from robustness import model_utils, datasets as robustness_datasets
+from robustness import datasets as robustness_datasets
+from robustness import model_utils
 
-from latentspace.ml_util import *
 import latentspace.datasets as datasets
 import latentspace.generative as generative
-from latentspace.adversarial_generation import *
+from latentspace.adversarial_generation import AdversarialGenerator, get_conventional_perturb
+from latentspace.cnn import Trainer
+from latentspace.ml_util import (
+    Adversary,
+    DatasetInfo,
+    EpsDTransformer,
+    Lambda,
+    LogUtil,
+    NopAdversary,
+    PGDAdversary,
+    Resize,
+    Util,
+)
 
 Util.configure(11000)
 LogUtil.to_pdf()
@@ -73,7 +86,7 @@ gm = generative.BigGAN(ds, 0.25)  # set built-in decay factor
 
 # load the robust classifier
 dataset = robustness_datasets.ImageNet("./data/ImageNet")
-model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": f"./imagenet-models/ImageNet.pt"}
+model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": "./imagenet-models/ImageNet.pt"}
 model, _ = model_utils.make_and_restore_model(**model_kwargs)
 model = model.to("cuda:0" if Util.using_cuda else "cpu")
 model.eval()

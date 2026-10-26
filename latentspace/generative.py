@@ -1,17 +1,17 @@
-import sys
-import os.path
 import gc
-from typing import *
+import os.path
+import sys
 from abc import ABC, abstractmethod
 from importlib import reload
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import torch
 
-from .ml_util import *
-from .datasets import *
+from .datasets import DatasetWrapper
 from .gan import GAN
+from .ml_util import DatasetInfo, LogUtil, Util
 
 
 class GenerativeModel(ABC):
@@ -87,7 +87,10 @@ class GenerativeModel(ABC):
         :param batch_size: batch size to be used by the loader.
         :return: data loader (not a function).
         """
-        f = lambda: self.ds.get_unaugmented_train_loader(batch_size=batch_size)
+
+        def f():
+            return self.ds.get_unaugmented_train_loader(batch_size=batch_size)
+
         assert self.unique_label is not None
         return Util.class_specific_loader(self.unique_label, f)()
 
@@ -185,7 +188,7 @@ class BigGAN(GenerativeModel):
             "--num_best_copies 5 --num_save_copies 2 --seed 0 --skip_init --G_batch_size 1 "
             "--use_ema --G_eval_mode --base_root biggan"
         ).split(" ")
-        from biggan.sample import main, create_sample, decode_sample
+        from biggan.sample import create_sample, decode_sample, main
 
         self.create_sample = create_sample
         self.decode_sample = decode_sample
@@ -322,10 +325,10 @@ class PIONEER(GenerativeModel):
         train.setup()
         self.session = train.Session()
         self.session.create()
-        for model in (self.session.generator, self.session.encoder):
-            model.eval()
+        for network in (self.session.generator, self.session.encoder):
+            network.eval()
             # disable computation of gradients that are not required
-            Util.set_param_requires_grad(model, False)
+            Util.set_param_requires_grad(network, False)
 
         # "warm" spectral norms in the encoder
         LogUtil.info(f"*** Spectral norm warming with {spectral_norm_warming_no_images} images...")

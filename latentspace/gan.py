@@ -1,10 +1,10 @@
 import copy
-from typing import *
+from typing import Callable, Optional, Tuple
 
 import torch
 from tensorboardX import SummaryWriter
 
-from .ml_util import *
+from .ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
 
 
 def init_linear(layer):

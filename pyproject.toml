@@ -34,7 +34,8 @@ imagenet = ["robustness"]
 notebooks = ["jupyter", "ipython"]
 dev = [
     "black[jupyter] (>=26.10.1,<27.0.0)",
-    "pyrefly (>=1.4.0,<2.0.0)"
+    "pyrefly (>=1.4.0,<2.0.0)",
+    "ruff (>=0.17.2,<0.18.0)"
 ]
 
 [tool.poetry]
@@ -45,6 +46,19 @@ line-length = 120
 target-version = ["py311"]
 # Vendored third-party code is kept as in upstream.
 extend-exclude = "^/(biggan|pioneer)/"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+# Vendored third-party code is kept as in upstream.
+extend-exclude = ["biggan", "pioneer"]
+
+[tool.ruff.lint]
+# pyflakes, basic pycodestyle errors, import sorting
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["latentspace"]
 
 [tool.pyrefly]
 preset = "default"

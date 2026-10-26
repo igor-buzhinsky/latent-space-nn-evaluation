@@ -2,12 +2,12 @@ import argparse
 
 import numpy as np
 
-from latentspace.ml_util import *
-from latentspace.adversarial_generation import *
-from latentspace.evaluation_util import EvaluationUtil
+import latentspace.cnn as cnn
 import latentspace.datasets as datasets
 import latentspace.generative as generative
-import latentspace.cnn as cnn
+from latentspace.adversarial_generation import AdversarialGenerator, RandomPerturbationStatistician
+from latentspace.evaluation_util import EvaluationUtil
+from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil, NopAdversary, PGDAdversary, Util
 
 Util.set_memory_limit(10000)
 LogUtil.to_pdf()
@@ -97,14 +97,20 @@ if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
         classifier_d = "lsun-128"
         classifier_weights_filename = "lsun-128-classifier/"
         class_proportions = np.repeat(1 / no_classes, no_classes)
-    gm_loader = lambda label: generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_no_images=25)
+
+    def gm_loader(label):
+        return generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_no_images=25)
+
 elif dataset_info == DatasetInfo.MNIST:
     no_classes = 10
     ds = datasets.MNISTData()
     classifier_d = "mnist"
     classifier_weights_filename = "mnist-classifier/"
     class_proportions = np.repeat(1 / no_classes, no_classes)
-    gm_loader = lambda label: generative.WGAN(dataset_info, label, ds)
+
+    def gm_loader(label):
+        return generative.WGAN(dataset_info, label, ds)
+
 else:
     raise AssertionError()
 

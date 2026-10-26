@@ -1,11 +1,15 @@
-from typing import *
 import itertools
+from typing import List, Optional
 
-from .ml_util import *
-from .datasets import *
-from .adversarial_generation import *
-from .generative import *
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+
+from .adversarial_generation import get_conventional_perturb
 from .cnn import Trainer
+from .datasets import DatasetWrapper
+from .generative import GenerativeModel
+from .ml_util import ImageSet, LogUtil, PGDAdversary, Util
 
 
 class EvaluationUtil:
@@ -178,7 +182,10 @@ class EvaluationUtil:
         """
         sampler = gm.get_sampler()
         norms, distances = np.empty(no_images), np.empty(no_images)
-        norm = lambda x: x.flatten().norm() / np.sqrt(x.numel())
+
+        def norm(x):
+            return x.flatten().norm() / np.sqrt(x.numel())
+
         for i in range(no_images):
             img, _ = next(sampler)
             norms[i] = norm(img)

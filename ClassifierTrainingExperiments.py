@@ -1,5 +1,5 @@
 import os
-from typing import *
+from typing import Optional
 
 img_in_epoch = 100000
 
