@@ -31,10 +31,10 @@ For development, code (including notebooks) is formatted with [black](https://gi
 ./lint.sh --fix  # apply formatting and safe fixes, then check
 ```
 
-Unit tests of the `latentspace` package are in [tests](tests). They use small in-memory data and the bundled MNIST models (no dataset downloads) and take a few seconds. Run them from the repository root:
+Unit tests of the `latentspace` package are in [tests](tests). They use small in-memory data and the bundled MNIST models (no dataset downloads) and take a few seconds. To run them:
 
 ```bash
-poetry run python -m unittest discover -b tests
+./test.sh     # or: ./test.sh -v, ./test.sh -k PGD
 ```
 
 ## Running: MNIST
