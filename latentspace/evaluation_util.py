@@ -9,7 +9,7 @@ from latentspace.adversaries import PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import DatasetWrapper
 from latentspace.generative import GenerativeModel
-from latentspace.loaders import fixed_length_loader
+from latentspace.loader_decorators import fixed_length_loader
 from latentspace.logging_util import LogUtil
 from latentspace.plotting import ImageSet, imshow_tensors
 from latentspace.torch_util import to_device

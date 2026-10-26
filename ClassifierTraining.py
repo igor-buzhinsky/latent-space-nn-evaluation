@@ -20,7 +20,7 @@ from latentspace.datasets import (
     MNISTData,
 )
 from latentspace.evaluation_util import EvaluationUtil
-from latentspace.loaders import fixed_length_loader
+from latentspace.loader_decorators import fixed_length_loader
 from latentspace.logging_util import LogUtil
 from latentspace.runtime import configure_runtime
 from latentspace.torch_util import to_device

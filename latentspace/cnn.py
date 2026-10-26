@@ -7,7 +7,7 @@ from tensorboardX import SummaryWriter
 
 from latentspace.datasets import DatasetWrapper
 from latentspace.layers import Flatten, Lambda
-from latentspace.loaders import leakless_cycle
+from latentspace.loader_decorators import restarting_cycle
 from latentspace.logging_util import LogUtil
 from latentspace.plotting import imshow_tensors
 from latentspace.torch_util import (
@@ -382,7 +382,7 @@ class Trainer:
                 prediction = torch.argmax(outputs, 1)[0]
                 self.accuracy = (prediction == label).float().item()
 
-        infinite_val_stream = leakless_cycle(self.val_loader_fn)
+        infinite_val_stream = restarting_cycle(self.val_loader_fn)
         batch_index = 0
 
         for epoch in range(epochs):

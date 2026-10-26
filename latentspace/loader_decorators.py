@@ -1,5 +1,5 @@
 """
-Decorators of data loaders.
+Decorators of loader-returning functions: filtering by class, limiting or restarting, and endless cycling.
 """
 
 from collections.abc import Callable, Generator, Iterator
@@ -65,11 +65,15 @@ def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bo
     return loader
 
 
-def leakless_cycle(iterable_fn: Callable) -> Generator:
+def restarting_cycle(iterable_fn: Callable) -> Generator:
     """
-    Fixes the memory leak problem of `itertools.cycle` (https://github.com/pytorch/pytorch/issues/23900).
+    Endlessly yields items from the iterable returned by `iterable_fn`, calling `iterable_fn` again each time the
+    current iterable is exhausted. Unlike `itertools.cycle`, this does not store copies of the yielded items (for a
+    data loader, this would keep all batches in memory, see https://github.com/pytorch/pytorch/issues/23900), and
+    each pass can produce different items (e.g., reshuffled data).
 
     :param iterable_fn: Function that returns an iterable.
+    :return: Infinite generator of items.
     """
     iterator = iter(iterable_fn())
     while True:
