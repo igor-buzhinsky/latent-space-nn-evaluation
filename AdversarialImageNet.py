@@ -5,13 +5,12 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.models as models
-from robustness import datasets as robustness_datasets
-from robustness import model_utils
 
 import latentspace.datasets as datasets
 import latentspace.generative as generative
 from latentspace.adversarial_generation import AdversarialGenerator, get_conventional_perturb
 from latentspace.cnn import Trainer
+from latentspace.compat import patch_torchvision_for_robustness
 from latentspace.ml_util import (
     Adversary,
     EpsDTransformer,
@@ -108,6 +107,10 @@ class ModelZooClassifierWrapper(Trainer):
 
 def load_classifiers(ds: datasets.DatasetWrapper) -> List[Trainer]:
     # load the robust classifier
+    patch_torchvision_for_robustness()
+    from robustness import datasets as robustness_datasets
+    from robustness import model_utils
+
     dataset = robustness_datasets.ImageNet("./data/ImageNet")
     model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": "./imagenet-models/ImageNet.pt"}
     model, _ = model_utils.make_and_restore_model(**model_kwargs)
