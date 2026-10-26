@@ -171,7 +171,6 @@ class DatasetWrapper(ABC):
             shuffle=shuffle,
             num_workers=0,
             drop_last=True,
-            # pin_memory=Util.using_cuda,
             pin_memory=False,
             collate_fn=self.preprocess_batch,
         )
@@ -381,8 +380,7 @@ class LSUNData(DatasetWrapper):
         if self.unique_label is None:
             loaders = [ds.get_unaugmented_train_loader for ds in self.nested_datasets]
             return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_unaugmented_train_loader(batch_size, shuffle)
+        return super().get_unaugmented_train_loader(batch_size, shuffle)
 
     def get_train_loader(
         self, batch_size: Optional[int] = None, shuffle: bool = True
@@ -392,8 +390,7 @@ class LSUNData(DatasetWrapper):
         if self.unique_label is None:
             loaders = [ds.get_train_loader for ds in self.nested_datasets]
             return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_train_loader(batch_size, shuffle)
+        return super().get_train_loader(batch_size, shuffle)
 
     def get_test_loader(
         self, batch_size: Optional[int] = None, shuffle: bool = True
@@ -403,8 +400,7 @@ class LSUNData(DatasetWrapper):
         if self.unique_label is None:
             loaders = [ds.get_test_loader for ds in self.nested_datasets]
             return merge_loaders(loaders, batch_size, shuffle)
-        else:
-            return super().get_test_loader(batch_size, shuffle)
+        return super().get_test_loader(batch_size, shuffle)
 
 
 class ImageNetData(DatasetWrapper):

@@ -165,9 +165,9 @@ class EvaluationUtil:
         :param images_in_line: number of (original, reconstructed) image pairs in each line.
         """
         sampler = gm.get_sampler()
-        for i in range(lines):
+        for _ in range(lines):
             images = []
-            for i in range(images_in_line):
+            for _ in range(images_in_line):
                 img, _ = next(sampler)
                 images += [img, gm.decode(gm.encode(img), detach=True)]
             Util.imshow_tensors(*images, nrow=(images_in_line * 2))
@@ -212,5 +212,5 @@ class EvaluationUtil:
         :param lines: lines of images to show.
         :param images_in_line: number of generated images in each line.
         """
-        for i in range(lines):
+        for _ in range(lines):
             Util.imshow_tensors(gm.generate(images_in_line, detach=True), nrow=images_in_line)

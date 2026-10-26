@@ -48,12 +48,12 @@ class RandomPerturbationStatistician:
         Does actual processing.
         """
         dataset = self.gm.get_sampler()
-        for i_img in range(self.no_images):
+        for _ in range(self.no_images):
             orig_img, labels = next(dataset)
             latent = self.gm.encode(orig_img)
             reconstr_img = self.gm.decode(latent)
             correct = torch.zeros(len(self.classifiers), self.stat_len)
-            for i_pert in range(self.perturbations_per_image):
+            for _ in range(self.perturbations_per_image):
                 all_img = [orig_img, reconstr_img]
                 for eps in self.epsilons:
                     perturbation = Util.conditional_to_cuda(torch.randn(1, self.gm.latent_dim))
@@ -71,9 +71,9 @@ class RandomPerturbationStatistician:
                     for k in range(len(self.classifiers)):
                         correct[k, j] += (predictions[k][j] == labels[0]).item()
             LogUtil.info(f"Results for all {len(self.classifiers)} classifiers one by one:")
-            for j, s in enumerate(["initial", "reconstructed"] + [f"perturbed({eps:.2f})" for eps in self.epsilons]):
-                s = f"{s:15s} |"
-                for i, c in enumerate(self.classifiers):
+            for j, name in enumerate(["initial", "reconstructed"] + [f"perturbed({eps:.2f})" for eps in self.epsilons]):
+                s = f"{name:15s} |"
+                for i in range(len(self.classifiers)):
                     rate = f"{correct[i, j] / self.perturbations_per_image * 100:.2f}"
                     s += f"   c{i}: {rate:>6}%"
                 LogUtil.info(s)
@@ -246,7 +246,7 @@ class AdversarialGenerator:
             (self.recorded_original_l1_norms, "            ||dx|| (scaled L1)", r"$||\Delta x||_1~/~n_I$"),
         ]
         if print_norm_statistics:
-            for i, (norm_list, console_str, _) in enumerate(iter_list):
+            for norm_list, console_str, _ in iter_list:
                 for j in range(len(self.classifiers)):
                     norms = torch.tensor(norm_list[j])
                     qs = np.quantile(norms, np.linspace(0, 1, 5))
@@ -256,13 +256,11 @@ class AdversarialGenerator:
                         f"Q0={qs[0]:.5f}, Q1={qs[1]:.5f}, Q2={qs[2]:.5f}, Q3={qs[3]:.5f}, Q4={qs[4]:.5f}"
                     )
         if plot:
-            fig, axarr = plt.subplots(1, 4, figsize=(15, 2.0))
+            _, axarr = plt.subplots(1, 4, figsize=(15, 2.0))
             for i, (norm_list, _, plot_str) in enumerate(iter_list):
                 LogUtil.metacall(axarr[i].title.set_text, f"axarr[{i}].title.set_text", plot_str)
                 for j in range(len(self.classifiers)):
                     norms = torch.tensor(norm_list[j])
-                    # axarr[i].title.set_text(plot_str)
-                    # sns.distplot(norms, hist=True, kde=True, ax=axarr[i])
                     LogUtil.metacall(
                         sns.distplot,
                         "sns.distplot",

@@ -38,11 +38,10 @@ class GenerativeModel(ABC):
         self.ds = ds
         self.subclass = ds.prediction_indices_to_classes([unique_label])[0]
 
-    def destroy(self):
+    def destroy(self):  # noqa: B027 (optional hook, not abstract)
         """
-        Free memory, or at least try.
+        Free memory, or at least try. Does nothing by default; subclasses holding large models override this.
         """
-        pass
 
     def _maybe_detach(self, x: torch.Tensor, detach: bool) -> torch.Tensor:
         """
@@ -60,7 +59,6 @@ class GenerativeModel(ABC):
         :param detach: whether to .detach() the result.
         :return: batch of generated random images.
         """
-        pass
 
     @abstractmethod
     def encode(self, img: torch.Tensor) -> torch.Tensor:
@@ -69,7 +67,6 @@ class GenerativeModel(ABC):
         :param img: batch of images to encode.
         :return: latent codes for input images.
         """
-        pass
 
     @abstractmethod
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
@@ -79,7 +76,6 @@ class GenerativeModel(ABC):
         :param detach: whether to .detach() the result.
         :return: batch of decoded images.
         """
-        pass
 
     def get_sampler(self, batch_size: int = 1):
         """
@@ -105,23 +101,18 @@ class GenerativeModel(ABC):
         loss_f = torch.nn.MSELoss()
         for i in range(img.shape[0]):
             best_loss = np.inf
-            for attempt in range(no_restarts):
+            for _ in range(no_restarts):
                 latent = Util.optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
                 optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)
-                # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95)
-                for j in range(no_steps):
+                for _ in range(no_steps):
                     optimizer.zero_grad()
                     reconstructed = self.decode(latent, False)
                     loss = loss_f(reconstructed[0], img[i])
                     loss.backward()
-                    # print(loss.item())
                     optimizer.step()
-                    # scheduler.step()
-                # print(loss.item())
                 if loss.item() < best_loss:
                     best_loss = loss.item()
                     all_latent[i] = latent.detach()
-        # print(f"{best_loss:.3f}")
         return all_latent
 
 
@@ -142,8 +133,7 @@ class WGAN(GenerativeModel):
         self.g.restore_params_from_disk(f"mnist-gan/dumped_weights_{unique_label}.bin")
         # disable computation of gradients that are not required
         Util.set_param_requires_grad(self.g.generator, False)
-        # since discriminator is not used, no need to warm spectral norms
-        # self.g.warm_spectral_norms(ds.get_unaugmented_train_loader)
+        # since the discriminator is not used, there is no need to warm spectral norms (GAN.warm_spectral_norms)
         super().__init__(28, self.g.latent_dim, unique_label, ds)
 
     def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
@@ -334,7 +324,7 @@ class PIONEER(GenerativeModel):
         LogUtil.info(f"*** Spectral norm warming with {spectral_norm_warming_no_images} images...")
         with torch.no_grad():
             dataset = self.get_sampler()
-            for i in range(spectral_norm_warming_no_images):
+            for _ in range(spectral_norm_warming_no_images):
                 self.encode_plain(next(dataset)[0])[0]
 
         LogUtil.info("*** Done!")

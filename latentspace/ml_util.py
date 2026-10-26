@@ -75,7 +75,6 @@ class Adversary(ABC):
             (gradient pointing to the direction of the adversarial attack, the corresponding loss function value).
         :return: the pertured vector of the same size as initial_vector.
         """
-        pass
 
 
 class NopAdversary(Adversary):
@@ -332,7 +331,7 @@ class Util:
         """
         if os.name == "posix":
             rsrc = resource.RLIMIT_DATA
-            soft, hard = resource.getrlimit(rsrc)
+            _, hard = resource.getrlimit(rsrc)
             resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
 
     @staticmethod
@@ -567,7 +566,6 @@ class Util:
         norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
         norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
         return norm_vector @ x
-        # return torch.stack([x[i] / torch.norm(x[i]) for i in range(x.shape[0])])
 
     @staticmethod
     def get_kde_bandwidth(x: np.ndarray) -> float:

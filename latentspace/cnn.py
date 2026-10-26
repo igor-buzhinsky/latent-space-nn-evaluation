@@ -423,7 +423,7 @@ class Trainer:
         correct = total = 0
         for images, labels in data_loader_fn():
             times = noise_evaluation_multiplier if noise_sigma > 0 else 1
-            for i in range(times):
+            for _ in range(times):
                 # measuring corruption robustness with Gaussian noise
                 maybe_corrupted_images = images + Util.conditional_to_cuda(torch.randn(*images.shape)) * noise_sigma
                 predicted = self.predict(maybe_corrupted_images)

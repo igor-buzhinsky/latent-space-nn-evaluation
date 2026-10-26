@@ -145,9 +145,8 @@ def get_target_labels(total_images: int) -> np.ndarray:
     if total_images % NO_LABELS == 0:
         # use stratified labels
         return np.repeat(np.arange(NO_LABELS), total_images // NO_LABELS)
-    else:
-        # use totally random labels
-        return np.random.choice(label_indices, size=total_images)
+    # use totally random labels
+    return np.random.choice(label_indices, size=total_images)
 
 
 def advgen_experiments(adversary: Adversary, total_images: int):

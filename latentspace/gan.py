@@ -311,7 +311,7 @@ class GAN:
             while True:
                 # preload real batches
                 real_batches = []
-                for i in range(n_critic):
+                for _ in range(n_critic):
                     try:
                         real_data, _ = next(data_sampler)
                         real_batches.append(real_data)
@@ -338,7 +338,6 @@ class GAN:
                 g_optimizer.zero_grad()
                 fake_data = self.generator(Util.conditional_to_cuda(torch.randn(batch_size, self.latent_dim)))
                 generator_loss = -self.discriminator(fake_data).mean()
-                # generator_loss = (fake_data - real_data).abs().mean()
                 generator_loss.backward()
                 g_optimizer.step()
 

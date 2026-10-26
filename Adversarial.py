@@ -90,12 +90,10 @@ if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
     if dataset_info == DatasetInfo.CelebA128Gender:
         ds = datasets.CelebAData(20)
         classifier_d = "celeba-128"
-        classifier_weights_filename = "celeba-128-gender-classifier/"
         class_proportions = np.array([0.583, 0.417])
     elif dataset_info == DatasetInfo.LSUN128:
         ds = datasets.LSUNData()
         classifier_d = "lsun-128"
-        classifier_weights_filename = "lsun-128-classifier/"
         class_proportions = np.repeat(1 / no_classes, no_classes)
 
     def gm_loader(label):
@@ -105,7 +103,6 @@ elif dataset_info == DatasetInfo.MNIST:
     no_classes = 10
     ds = datasets.MNISTData()
     classifier_d = "mnist"
-    classifier_weights_filename = "mnist-classifier/"
     class_proportions = np.repeat(1 / no_classes, no_classes)
 
     def gm_loader(label):
