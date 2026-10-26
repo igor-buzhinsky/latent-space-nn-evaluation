@@ -31,6 +31,12 @@ For development, code (including notebooks) is formatted with [black](https://gi
 ./lint.sh --fix  # apply formatting and safe fixes, then check
 ```
 
+Unit tests of the `latentspace` package are in [tests](tests). They use small in-memory data and the bundled MNIST models (no dataset downloads) and take a few seconds. Run them from the repository root:
+
+```bash
+poetry run python -m unittest discover -b tests
+```
+
 ## Running: MNIST
 
 The starting point is to run the toolset on MNIST, as all trained models are small and already included in this repository.
