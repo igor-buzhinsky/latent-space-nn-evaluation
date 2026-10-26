@@ -7,10 +7,7 @@ from importlib import reload
 from pathlib import Path
 
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch
-import torchvision
 
 from .ml_util import *
 from .datasets import *

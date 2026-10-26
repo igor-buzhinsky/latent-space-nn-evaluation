@@ -1,8 +1,6 @@
 import argparse
 
 import numpy as np
-import torch
-import matplotlib.pyplot as plt
 
 from latentspace.ml_util import *
 from latentspace.adversarial_generation import *

@@ -2,10 +2,8 @@
 # coding: utf-8
 
 import argparse
-import json
 
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torchvision.models as models
 from robustness import model_utils, datasets as robustness_datasets
@@ -13,9 +11,7 @@ from robustness import model_utils, datasets as robustness_datasets
 from latentspace.ml_util import *
 import latentspace.datasets as datasets
 import latentspace.generative as generative
-import latentspace.cnn as cnn
 from latentspace.adversarial_generation import *
-from latentspace.evaluation_util import EvaluationUtil
 
 Util.configure(11000)
 LogUtil.to_pdf()

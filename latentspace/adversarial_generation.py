@@ -1,5 +1,4 @@
 import torch
-import torchvision
 from typing import *
 import seaborn as sns
 
