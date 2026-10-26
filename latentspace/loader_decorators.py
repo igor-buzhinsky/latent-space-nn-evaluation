@@ -1,6 +1,4 @@
-"""
-Decorators of loader-returning functions: filtering by class, limiting or restarting, and endless cycling.
-"""
+"""Decorators of loader-returning functions: filtering by class, limiting or restarting, and endless cycling."""
 
 from collections.abc import Callable, Generator, Iterator
 
@@ -9,8 +7,7 @@ import torch
 
 def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
     """
-    Filters the supplied loader `parent_loader_fn`, retaining only elements with `target_label`.
-    Preserves batch size.
+    Filters the supplied loader `parent_loader_fn`, retaining only elements with `target_label`. Preserves batch size.
 
     :param target_label: The label to retain.
     :param parent_loader_fn: The loader-returning function to decorate.
@@ -68,9 +65,9 @@ def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bo
 def restarting_cycle(iterable_fn: Callable) -> Generator:
     """
     Endlessly yields items from the iterable returned by `iterable_fn`, calling `iterable_fn` again each time the
-    current iterable is exhausted. Unlike `itertools.cycle`, this does not store copies of the yielded items (for a
-    data loader, this would keep all batches in memory, see https://github.com/pytorch/pytorch/issues/23900), and
-    each pass can produce different items (e.g., reshuffled data).
+    current iterable is exhausted. Unlike `itertools.cycle`, this does not store copies of the yielded items (for a data
+    loader, this would keep all batches in memory, see https://github.com/pytorch/pytorch/issues/23900), and each pass
+    can produce different items (e.g., reshuffled data).
 
     :param iterable_fn: Function that returns an iterable.
     :return: Infinite generator of items.

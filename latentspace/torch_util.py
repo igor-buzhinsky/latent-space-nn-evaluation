@@ -1,6 +1,4 @@
-"""
-PyTorch helpers: device handling, tensors and model parameters.
-"""
+"""PyTorch helpers: device handling, tensors and model parameters."""
 
 import random
 import time

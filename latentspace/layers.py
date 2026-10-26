@@ -1,6 +1,4 @@
-"""
-Simple PyTorch layers.
-"""
+"""Simple PyTorch layers."""
 
 from collections.abc import Callable
 

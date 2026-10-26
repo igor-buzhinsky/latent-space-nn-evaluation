@@ -15,8 +15,8 @@ from latentspace.torch_util import optimizable_clone, to_device
 
 class RandomPerturbationStatistician:
     """
-    Measures classification performance on images with added latent noise (local latent noise accuracy, LLNA).
-    Also shows these noisy images.
+    Measures classification performance on images with added latent noise (local latent noise accuracy, LLNA). Also
+    shows these noisy images.
     """
 
     def __init__(
@@ -48,9 +48,7 @@ class RandomPerturbationStatistician:
 
     @torch.no_grad()
     def process(self) -> None:
-        """
-        Does actual processing.
-        """
+        """Does actual processing."""
         dataset = self.gm.get_sampler()
         for _ in range(self.no_images):
             orig_img, labels = next(dataset)
@@ -91,8 +89,8 @@ def get_get_gradient(
     grad_transform: Callable,
 ) -> Callable[[torch.Tensor], tuple[torch.Tensor, float]]:
     """
-    Produces custom `get_gradient` functions that are accepted by adversaries.
-    (This is not an example of good object-oriented design.)
+    Produces custom `get_gradient` functions that are accepted by adversaries. (This is not an example of good
+    object-oriented design.)
 
     :param classifier: Classifier for which to get the gradient function.
     :param label: True label of the current image.
@@ -112,8 +110,8 @@ def get_get_gradient(
 
 def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Callable:
     """
-    Produces `perturb` functions that are accepted by `Trainer`s (classifiers).
-    Perturbations are performed in the original image space.
+    Produces `perturb` functions that are accepted by `Trainer`s (classifiers). Perturbations are performed in the
+    original image space.
 
     :param classifier: Classifier that will accept the resulting function.
     :param adversary: `Adversary` that will be used by the resulting function.
@@ -130,9 +128,7 @@ def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Calla
 
 
 class AdversarialGenerator:
-    """
-    Generates adversarial images with the provided adversary, shows them and computes perturbation statistics.
-    """
+    """Generates adversarial images with the provided adversary, shows them and computes perturbation statistics."""
 
     gm: GenerativeModel
 
@@ -149,10 +145,10 @@ class AdversarialGenerator:
 
         :param gm: Generative model to use. If `None`, it must be set later with `set_generative_model`.
         :param classifiers: List of classifiers for which to perform evaluation.
-        :param use_generated_images: When `True`, calculate generation-based metrics.
-            When `False`, calculate reconstruction-based metrics.
-        :param decay_factor: Decay factor (0..1). The latent code of the image is multiplied by `1 - decay_factor`
-            prior to adversarial search.
+        :param use_generated_images: When `True`, calculate generation-based metrics. When `False`, calculate
+            reconstruction-based metrics.
+        :param decay_factor: Decay factor (0..1). The latent code of the image is multiplied by `1 - decay_factor` prior
+            to adversarial search.
         """
         if gm is not None:
             self.gm = gm
@@ -166,17 +162,15 @@ class AdversarialGenerator:
 
     def set_generative_model(self, gm: GenerativeModel) -> None:
         """
-        Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at once),
-        but statistics need to be calculated across all models (image classes).
+        Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at
+        once), but statistics need to be calculated across all models (image classes).
 
         :param gm: Generative model to use.
         """
         self.gm = gm
 
     def _clear_stat(self) -> None:
-        """
-        Initializes (when called for the first time) or clears accumulated statistics.
-        """
+        """Initializes (when called for the first time) or clears accumulated statistics."""
 
         def create() -> list[list]:
             return [[] for c in self.classifiers]
@@ -191,9 +185,7 @@ class AdversarialGenerator:
         self.recorded_modified_successes = create()
 
     def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]) -> tuple[str, list]:
-        """
-        Convenience function.
-        """
+        """Convenience function."""
         predictions = [c.predict(img) for c in classifiers]
         if self.label_printer is None:
 
@@ -206,21 +198,17 @@ class AdversarialGenerator:
         return "\n".join(str_classes), [x.item() for x in predictions]
 
     def _l2_norm(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Scaled L2 norm of `x`.
-        """
+        """Scaled L2 norm of `x`."""
         return x.norm() / np.sqrt(x.numel())
 
     def _l1_norm(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Scaled L1 norm of `x`.
-        """
+        """Scaled L1 norm of `x`."""
         return x.norm(1) / x.numel()
 
     def print_stats(self, plot: bool = False, print_norm_statistics: bool = True) -> None:
         """
-        Prints/logs the accumulated statistics. Optionally, plots histograms of metrics computed for adversarial perturbations.
-        These are the following metrics:
+        Prints/logs the accumulated statistics. Optionally, plots histograms of metrics computed for adversarial
+        perturbations. These are the following metrics:
         - Accuracies on original/generated/reconstructed/perturbed images.
         - ║Δl║ (scaled L2): scaled L2 norms of latent perturbations.
         - ║l + Δl║ - ║l║ (scaled L2): increase of the scaled L2 norm after the initial (decayed) image is replaced with
@@ -379,9 +367,7 @@ class AdversarialGenerator:
 
 
 class EpsDTransformer:
-    """
-    Converter between noise magnitude (epsilon) and decay factor (d).
-    """
+    """Converter between noise magnitude (epsilon) and decay factor (d)."""
 
     def eps_to_d(self, eps: float) -> float:
         """
@@ -403,9 +389,7 @@ class EpsDTransformer:
 
 
 class TauRhoTransformer:
-    """
-    Converter between perturbation likelihood (tau) and norm bound (rho).
-    """
+    """Converter between perturbation likelihood (tau) and norm bound (rho)."""
 
     def __init__(self, n_l: int, eps: float) -> None:
         self.n_l = n_l
@@ -413,13 +397,9 @@ class TauRhoTransformer:
         self.c2 = (1 + eps**2) / (2 * eps**2) * np.sqrt(n_l)
 
     def rho_to_logtau(self, rho: float) -> float:
-        """
-        Converts rho to the logarithm of tau.
-        """
+        """Converts rho to the logarithm of tau."""
         return self.c1 - (rho**2) * self.n_l * self.c2
 
     def logtau_to_rho(self, tau: float) -> float:
-        """
-        Converts the logarithm of tau to rho.
-        """
+        """Converts the logarithm of tau to rho."""
         return np.sqrt((self.c1 - tau) / self.c2 / self.n_l)

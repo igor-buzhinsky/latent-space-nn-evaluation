@@ -34,9 +34,8 @@ def merge_loaders(
     parent_loader_fns: list[Callable], batch_size: int, shuffle: bool
 ) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
     """
-    Merges several dataset loaders. Batch size is preserved.
-    Labels are replaced with 0 for the first loader, 1 for the second loader and so on.
-    Items from all loaders are cycled until the end of any of them is reached.
+    Merges several dataset loaders. Batch size is preserved. Labels are replaced with 0 for the first loader, 1 for the
+    second loader and so on. Items from all loaders are cycled until the end of any of them is reached.
     """
     n_loaders = len(parent_loader_fns)
     data_generators = [iter(f(batch_size, shuffle)) for f in parent_loader_fns]
@@ -62,9 +61,9 @@ def merge_loaders(
 
 class DatasetWrapper(ABC):
     """
-    Base class for dataset wrappers. These classes specify several loading procedures with customizable
-    batch sizes, randomization, transformations (including data augmentation).
-    Class labels are given as integers (starting from 0) and string captions.
+    Base class for dataset wrappers. These classes specify several loading procedures with customizable batch sizes,
+    randomization, transformations (including data augmentation). Class labels are given as integers (starting from 0)
+    and string captions.
     """
 
     train_batch_size = 32
@@ -237,14 +236,12 @@ class DatasetWrapper(ABC):
 
 class MNISTData(DatasetWrapper):
     """
-    MNIST dataset wrapper. If the dataset is missing, it will be downloaded automatically.
-    Output images are 3-dimensional but essentially grayscale.
+    MNIST dataset wrapper. If the dataset is missing, it will be downloaded automatically. Output images are
+    3-dimensional but essentially grayscale.
     """
 
     def __init__(self) -> None:
-        """
-        Constructs `MNISTData`.
-        """
+        """Constructs `MNISTData`."""
         size = 28
         base_transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Lambda(to_device), transforms.Normalize((0.5,), (0.5,))]
@@ -272,8 +269,8 @@ class MNISTData(DatasetWrapper):
 
 class CelebAData(DatasetWrapper):
     """
-    CelebA dataset wrapper. If the dataset is missing, it will be downloaded automatically.
-    Images are center-cropped and resized to 128x128.
+    CelebA dataset wrapper. If the dataset is missing, it will be downloaded automatically. Images are center-cropped
+    and resized to 128x128.
     """
 
     def __init__(self, attribute_index: int) -> None:
@@ -357,10 +354,7 @@ class CelebAData(DatasetWrapper):
 
 
 class LSUNData(DatasetWrapper):
-    """
-    LSUN dataset wrapper. Data needs to be downloaded manually.
-    Images are center-cropped and resized to 128x128.
-    """
+    """LSUN dataset wrapper. Data needs to be downloaded manually. Images are center-cropped and resized to 128x128."""
 
     def __init__(self, unique_label: int | None = None) -> None:
         """
@@ -428,9 +422,8 @@ class LSUNData(DatasetWrapper):
 
 class ImageNetData(DatasetWrapper):
     """
-    ImageNet-1k dataset wrapper.
-    Only loading of validation data is currently implemented.
-    Images are center-cropped and resized (to 128x128 by default).
+    ImageNet-1k dataset wrapper. Only loading of validation data is currently implemented. Images are center-cropped and
+    resized (to 128x128 by default).
     """
 
     def __init__(self, size: int = 128) -> None:

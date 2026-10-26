@@ -1,6 +1,4 @@
-"""
-Logging of text and figures.
-"""
+"""Logging of text and figures."""
 
 import os
 import time
@@ -13,8 +11,8 @@ import matplotlib.pyplot as plt
 
 class LogUtil:
     """
-    Performs logging of text and images to a new timestamped directory.
-    Logs are also printed to stdout. Figures are only shown in notebooks.
+    Performs logging of text and images to a new timestamped directory. Logs are also printed to stdout. Figures are
+    only shown in notebooks.
     """
 
     def _timestamp() -> str:
@@ -25,10 +23,7 @@ class LogUtil:
 
     @staticmethod
     def set_custom_dirname(dirname: str) -> None:
-        """
-        Sets the custom name for a logging directory.
-        The previous contents of the directory will be deleted!
-        """
+        """Sets the custom name for a logging directory. The previous contents of the directory will be deleted!"""
         LogUtil._dirname = dirname
         LogUtil.ensure_dir_existence()
         for filename in os.listdir(dirname):
@@ -36,9 +31,7 @@ class LogUtil:
 
     @staticmethod
     def ensure_dir_existence() -> None:
-        """
-        Creates the directory for logging if it hasn't been created yet.
-        """
+        """Creates the directory for logging if it hasn't been created yet."""
         if not LogUtil._created:
             LogUtil._created = True
             os.makedirs(LogUtil._dirname, exist_ok=True)
@@ -60,8 +53,8 @@ class LogUtil:
     @staticmethod
     def savefig(prefix: str, pdf: bool = False) -> None:
         """
-        Saves a figure to the logging directory. The filename is generated based on the current timestamp
-        and the provided prefix.
+        Saves a figure to the logging directory. The filename is generated based on the current timestamp and the
+        provided prefix.
 
         :param prefix: To be included in the filename.
         :param pdf: If `True`, save as PDF. If `False`, save as PNG.
@@ -90,7 +83,5 @@ class LogUtil:
 
     @staticmethod
     def to_pdf() -> None:
-        """
-        Switches matplotlib backend to `'pdf'`.
-        """
+        """Switches matplotlib backend to `'pdf'`."""
         matplotlib.use("pdf", force=True)

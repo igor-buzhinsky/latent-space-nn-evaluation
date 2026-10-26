@@ -28,9 +28,7 @@ def init_conv(layer: torch.nn.Conv2d) -> None:
 
 
 class SpectralNorm:
-    """
-    Spectral normalization. Borrowed from https://github.com/heljakka/pioneer/blob/master/src/model.py.
-    """
+    """Spectral normalization. Borrowed from https://github.com/heljakka/pioneer/blob/master/src/model.py."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -75,9 +73,7 @@ def spectral_norm(module: torch.nn.Module, name: str = "weight") -> torch.nn.Mod
 
 
 class SpectralNormConv2d(torch.nn.Module):
-    """
-    Convolutional layer with spectral normalization.
-    """
+    """Convolutional layer with spectral normalization."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__()
@@ -90,9 +86,7 @@ class SpectralNormConv2d(torch.nn.Module):
 
 
 class SpectralNormLinear(torch.nn.Module):
-    """
-    Linear layer with spectral normalization.
-    """
+    """Linear layer with spectral normalization."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__()
@@ -105,9 +99,7 @@ class SpectralNormLinear(torch.nn.Module):
 
 
 class GeneratorUnit(torch.nn.Module):
-    """
-    Basic convolutional block of a generator.
-    """
+    """Basic convolutional block of a generator."""
 
     def __init__(self, in_channels: int, out_channels: int, nop_end: bool = False) -> None:
         super().__init__()
@@ -124,9 +116,7 @@ class GeneratorUnit(torch.nn.Module):
 
 
 class MNISTGenerator(torch.nn.Module):
-    """
-    MNIST generator.
-    """
+    """MNIST generator."""
 
     def __init__(self, latent_dim: int) -> None:
         super().__init__()
@@ -148,9 +138,7 @@ class MNISTGenerator(torch.nn.Module):
 
 
 class DiscriminatorUnit(torch.nn.Module):
-    """
-    Basic convolutional block of a discriminator.
-    """
+    """Basic convolutional block of a discriminator."""
 
     def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
@@ -167,9 +155,7 @@ class DiscriminatorUnit(torch.nn.Module):
 
 
 class MNISTDiscriminator(torch.nn.Module):
-    """
-    MNIST discriminator.
-    """
+    """MNIST discriminator."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -189,14 +175,12 @@ class MNISTDiscriminator(torch.nn.Module):
 
 class GAN:
     """
-    Wasserstein GAN (WGAN). Only MNIST is supported. The discriminator is made Lipschitz-continuous
-    with spectral normalization.
+    Wasserstein GAN (WGAN). Only MNIST is supported. The discriminator is made Lipschitz-continuous with spectral
+    normalization.
     """
 
     def __init__(self) -> None:
-        """
-        Constructs `GAN`.
-        """
+        """Constructs `GAN`."""
         self.latent_dim = 64
         self.generator = to_device(MNISTGenerator(self.latent_dim))
         self.discriminator = to_device(MNISTDiscriminator())
@@ -206,9 +190,7 @@ class GAN:
 
     @torch.no_grad()
     def save_params(self) -> None:
-        """
-        Saves the trainable parameters of the current WGAN.
-        """
+        """Saves the trainable parameters of the current WGAN."""
         self.params = (copy.deepcopy(self.generator.state_dict()), copy.deepcopy(self.discriminator.state_dict()))
 
     @torch.no_grad()
@@ -223,9 +205,7 @@ class GAN:
 
     @torch.no_grad()
     def restore_params(self) -> None:
-        """
-        Restores previously saved trainable parameters of the WGAN.
-        """
+        """Restores previously saved trainable parameters of the WGAN."""
         assert self.params is not None, "No saved parameters to restore."
         self.generator.load_state_dict(self.params[0])
         self.discriminator.load_state_dict(self.params[1])
@@ -246,9 +226,7 @@ class GAN:
 
     @torch.no_grad()
     def random_init(self) -> None:
-        """
-        Performs random initialization.
-        """
+        """Performs random initialization."""
         self.generator.apply(init_weights)
         self.discriminator.apply(init_weights)
 
@@ -274,9 +252,9 @@ class GAN:
     @torch.no_grad()
     def warm_spectral_norms(self, train_loader_fn: Callable) -> None:
         """
-        The currently used implementation of spectral norms has some parameters that are not saved to disk.
-        As a result, the discriminator is in an invalid state after it is loaded from disk.
-        Running spectral normalization ("warming" spectral norms) on a number of images returns it to shape.
+        The currently used implementation of spectral norms has some parameters that are not saved to disk. As a result,
+        the discriminator is in an invalid state after it is loaded from disk. Running spectral normalization ("warming"
+        spectral norms) on a number of images returns it to shape.
 
         :param train_loader_fn: Loader-returning function to be used for warming.
         """
@@ -301,8 +279,8 @@ class GAN:
         :param train_loader_fn: Loader-returning function to generate training data.
         :param epochs: Number of epochs. An epoch is a full pass over the train loader.
         :param lr: Learning rate.
-        :param n_critic: Number of steps to train the discriminator (a.k.a. critic) per each training
-            step of the generator. In WGANs, it is OK to make it large.
+        :param n_critic: Number of steps to train the discriminator (a.k.a. critic) per each training step of the
+            generator. In WGANs, it is OK to make it large.
         :param disk_backup_filename: Filename to dump trainable parameters. Dumping is done once per epoch.
         """
         set_param_requires_grad(self.generator, True)

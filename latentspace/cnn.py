@@ -36,9 +36,7 @@ class ResBlock(torch.nn.Module):
 
 
 class Unit(torch.nn.Module):
-    """
-    Basic convolutional block.
-    """
+    """Basic convolutional block."""
 
     def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0) -> None:
         """
@@ -91,9 +89,7 @@ class Unit(torch.nn.Module):
 
 
 class ColoredNet128(torch.nn.Module):
-    """
-    Simple CNN classifier to process 128x128 images.
-    """
+    """Simple CNN classifier to process 128x128 images."""
 
     def __init__(self, no_classes: int = 2, unit_type: int = 0) -> None:
         """
@@ -119,9 +115,7 @@ class ColoredNet128(torch.nn.Module):
 
 
 class MNISTNet(torch.nn.Module):
-    """
-    Simple CNN classifier for 28x28 MNIST images.
-    """
+    """Simple CNN classifier for 28x28 MNIST images."""
 
     def __init__(self, unit_type: int = 0) -> None:
         """
@@ -145,27 +139,23 @@ class MNISTNet(torch.nn.Module):
 
 
 class EarlyStoppingMonitor:
-    """
-    Performs early stopping when the supplied validation metric value starts to decrease.
-    """
+    """Performs early stopping when the supplied validation metric value starts to decrease."""
 
     def __init__(self) -> None:
-        """
-        Constructs `EarlyStoppingMonitor`.
-        """
+        """Constructs `EarlyStoppingMonitor`."""
         self.total_metric_value = -float("inf")
         self.should_stop = False
 
     def update_metric(self, trainer: "Trainer", new_value: float, epoch: int, disk_backup_filename: str) -> None:
         """
-        Sets the flag `self.should_stop` to `True` if the supplied value of the validation metric is not greater
-        than the previous one. Otherwise, saves the current trainable parameters of the classifier.
+        Sets the flag `self.should_stop` to `True` if the supplied value of the validation metric is not greater than
+        the previous one. Otherwise, saves the current trainable parameters of the classifier.
 
         :param trainer: Classifier to work with.
         :param new_value: New validation metric value.
         :param epoch: Number of the current epoch.
-        :param disk_backup_filename: Filename where to save trainable parameters of the classifier if the
-            metric still gets better.
+        :param disk_backup_filename: Filename where to save trainable parameters of the classifier if the metric still
+            gets better.
         """
         LogUtil.info(
             f"*** After E{epoch}, validation accuracy = {new_value:.6f} "
@@ -183,9 +173,7 @@ class EarlyStoppingMonitor:
 
 
 class Trainer:
-    """
-    Trainable CNN classifier.
-    """
+    """Trainable CNN classifier."""
 
     model: torch.nn.Module
 
@@ -220,9 +208,7 @@ class Trainer:
 
     @torch.no_grad()
     def save_params(self) -> None:
-        """
-        Saves the trainable parameters of the current neural network.
-        """
+        """Saves the trainable parameters of the current neural network."""
         self.params = copy.deepcopy(self.model.state_dict())
 
     @torch.no_grad()
@@ -236,9 +222,7 @@ class Trainer:
 
     @torch.no_grad()
     def restore_params(self) -> None:
-        """
-        Restores previously saved trainable parameters of the neural network.
-        """
+        """Restores previously saved trainable parameters of the neural network."""
         self.model.load_state_dict(self.params)
 
     @torch.no_grad()
@@ -253,24 +237,22 @@ class Trainer:
 
     def disable_param_gradients(self) -> None:
         """
-        Disables the gradients of the model's parameters. This saves computation time when gradients need to
-        be computed w.r.t. the input image only.
+        Disables the gradients of the model's parameters. This saves computation time when gradients need to be computed
+        w.r.t. the input image only.
         """
         set_param_requires_grad(self.model, False)
 
     @torch.no_grad()
     def random_init(self) -> None:
-        """
-        Performs random initialization.
-        """
+        """Performs random initialization."""
         self.model.apply(init_weights)
 
     def set_misclassification_gradients(self, value: bool) -> None:
         """
         Controls the behavior of `predict_with_gradient`.
 
-        :param value: If `True`, `predict_with_gradient` will return the gradient that can be used to
-            perform an untargeted attack. If `False`, `predict_with_gradient` returns the gradient of the loss.
+        :param value: If `True`, `predict_with_gradient` will return the gradient that can be used to perform an
+            untargeted attack. If `False`, `predict_with_gradient` returns the gradient of the loss.
         """
         self.misclassification_gradients = value
 
@@ -278,16 +260,15 @@ class Trainer:
         self, x: torch.Tensor, true_labels: Sequence[int | torch.Tensor]
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Predicts, computes loss and gradient.
-        If `self.misclassification_gradients` is `True`, the gradient points in the direction of a
-        possible untargeted attack: ∇_x (max(other_probabilities) - correct_probability).
-        If `self.misclassification_gradients` is `False`, the gradient is ∇_x (loss).
+        Predicts, computes loss and gradient. If `self.misclassification_gradients` is `True`, the gradient points in
+        the direction of a possible untargeted attack: ∇_x (max(other_probabilities) - correct_probability). If
+        `self.misclassification_gradients` is `False`, the gradient is ∇_x (loss).
 
-        :param x: Batch of input images. PyTorch gradients of `x` must be enabled by the caller.
-            This method will add the gradient to `x.grad`.
+        :param x: Batch of input images. PyTorch gradients of `x` must be enabled by the caller. This method will add
+            the gradient to `x.grad`.
         :param true_labels: Labels that correspond to input images.
-        :return: `(predictions, losses)`, where `predictions` is a long tensor and `losses` is a float tensor,
-            both of size [batch_dim].
+        :return: `(predictions, losses)`, where `predictions` is a long tensor and `losses` is a float tensor, both of
+            size [batch_dim].
         """
         self.model.eval()
         self.disable_param_gradients()
@@ -356,8 +337,8 @@ class Trainer:
         :param disk_backup_filename: Filename to dump trainable parameters. Dumping is done once per epoch.
         :param noise_sigma: If positive, Gaussian noise N(0, noise_sigma^2 I) will be added to training images as a form
             of data augmentation. This results in adversarial training according to [Ford, N., Gilmer, J., Carlini, N.,
-            & Cubuk, D. (2019). Adversarial examples are a natural consequence of test error in noise.
-            arXiv preprint arXiv:1901.10513].
+            & Cubuk, D. (2019). Adversarial examples are a natural consequence of test error in noise. arXiv preprint
+            arXiv:1901.10513].
         """
         set_param_requires_grad(self.model, True)
         if not self.params:
@@ -436,8 +417,8 @@ class Trainer:
         Measures accuracy on the supplied data loader.
 
         :param data_loader_fn: A function that returns the data loader to be used.
-        :param noise_sigma: If positive, Gaussian noise N(0, noise_sigma^2 I) will be added to images
-            used in accuracy evaluation.
+        :param noise_sigma: If positive, Gaussian noise N(0, noise_sigma^2 I) will be added to images used in accuracy
+            evaluation.
         :param noise_evaluation_multiplier: Evaluation on noise-corrupted images will be done
             `noise_evaluation_multiplier` times.
         :return: Tuple (accuracy, number of images used to calculate it).
@@ -504,9 +485,8 @@ class Trainer:
         :param ds: `DatasetWrapper` of the used dataset.
         :param norm_fn: Function that accepts a PyTorch tensor and returns its norm.
         :param show_images: If `True`, also shows perturbed images.
-        :return: Tuple (mean of approximately minimum adversarial perturbations,
-            standard deviation of approximately minimum adversarial perturbations,
-            number of images used to calculate these values).
+        :return: Tuple (mean of approximately minimum adversarial perturbations, standard deviation of approximately
+            minimum adversarial perturbations, number of images used to calculate these values).
         """
         self.model.eval()
         self.disable_param_gradients()

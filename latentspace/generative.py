@@ -102,9 +102,7 @@ class GenerativeModel(ABC):
     def encode_with_gradient_search(
         self, img: torch.Tensor, no_restarts: int, no_steps: int, lr: float
     ) -> torch.Tensor:
-        """
-        Implements encoding with a gradient-based approach (restarts of Adam).
-        """
+        """Implements encoding with a gradient-based approach (restarts of Adam)."""
         all_latent = to_device(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
         loss_f = torch.nn.MSELoss()
         for i in range(img.shape[0]):
@@ -125,9 +123,7 @@ class GenerativeModel(ABC):
 
 
 class WGAN(GenerativeModel):
-    """
-    Adapts `GAN` to `GenerativeModel`.
-    """
+    """Adapts `GAN` to `GenerativeModel`."""
 
     def __init__(self, dataset_info: DatasetInfo, unique_label: int, ds: DatasetWrapper) -> None:
         """
@@ -149,9 +145,7 @@ class WGAN(GenerativeModel):
         return self._maybe_detach(self.g.generate(no_img), detach)
 
     def encode(self, img: torch.Tensor) -> torch.Tensor:
-        """
-        Implements `WGAN.encode` with a gradient-based approach (4 restarts of Adam).
-        """
+        """Implements `WGAN.encode` with a gradient-based approach (4 restarts of Adam)."""
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
 
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
@@ -163,9 +157,7 @@ class WGAN(GenerativeModel):
 
 
 class BigGAN(GenerativeModel):
-    """
-    BigGAN wrapper.
-    """
+    """BigGAN wrapper."""
 
     def __init__(self, ds: DatasetWrapper, builtin_decay: float = 0.0) -> None:
         """
@@ -213,9 +205,7 @@ class BigGAN(GenerativeModel):
         return torch.cat(tensors)
 
     def encode(self, img: torch.Tensor) -> torch.Tensor:
-        """
-        Implements `BigGAN.encode` with a gradient-based approach (4 restarts of Adam).
-        """
+        """Implements `BigGAN.encode` with a gradient-based approach (4 restarts of Adam)."""
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
 
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
@@ -237,9 +227,9 @@ class BigGAN(GenerativeModel):
 class PIONEER(GenerativeModel):
     """
     PIONEER [Heljakka, Ari, Arno Solin, and Juho Kannala. "Pioneer networks: Progressively growing generative
-    autoencoder." Asian Conference on Computer Vision. Springer, Cham, 2018] model wrapper.
-    A copy of PIONEER's source code (https://github.com/heljakka/pioneer/) is located in `pioneer/src` and is
-    slightly modified for the purpose of this project.
+    autoencoder." Asian Conference on Computer Vision. Springer, Cham, 2018] model wrapper. A copy of PIONEER's source
+    code (https://github.com/heljakka/pioneer/) is located in `pioneer/src` and is slightly modified for the purpose of
+    this project.
     """
 
     def __init__(
@@ -255,8 +245,8 @@ class PIONEER(GenerativeModel):
         :param dataset_info: `DatasetInfo`.
         :param unique_label: Label of the data class for which the PIONEER model is created.
         :param ds: `DatasetWrapper`.
-        :param spectral_norm_warming_no_images: Number of images for spectral norm warming.
-            See `GAN.warm_spectral_norms`.
+        :param spectral_norm_warming_no_images: Number of images for spectral norm warming. See
+            `GAN.warm_spectral_norms`.
         """
 
         super().__init__(128, 511, unique_label, ds)
@@ -343,8 +333,8 @@ class PIONEER(GenerativeModel):
 
     def destroy(self) -> None:
         """
-        When PIONEER models are constructed for different classes but only one model is needed at a time,
-        this method is useful to free some memory.
+        When PIONEER models are constructed for different classes but only one model is needed at a time, this method is
+        useful to free some memory.
         """
         LogUtil.info("*** Cleaning up PIONEER...")
         del self.config, self.evaluate, self.model, self.data, self.utils, self.train, self.session
@@ -352,9 +342,9 @@ class PIONEER(GenerativeModel):
 
     def generate_plain(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
         """
-        Originally, PIONEER generates images from normalized (divided by L2 norm) latent vectors.
-        In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
-        vector and dividing it by sqrt(latent_dim).
+        Originally, PIONEER generates images from normalized (divided by L2 norm) latent vectors. In a multidimensional
+        space, this is approximately the same as taking an N(0, I)-distributed vector and dividing it by
+        sqrt(latent_dim).
         """
         return self.decode_plain(self.utils.normalize(torch.randn(no_img, self.latent_dim)), detach)
 
@@ -363,9 +353,9 @@ class PIONEER(GenerativeModel):
 
     def encode_plain(self, img: torch.Tensor) -> torch.Tensor:
         """
-        The PIONEER encoder always generates a normalized vector (scaled L2 norm == 1).
-        This is not very important in a multidimensional space, since N(0, sigma^2 I)-distributed
-        vectors are concentrated around a sphere of radius sigma.
+        The PIONEER encoder always generates a normalized vector (scaled L2 norm == 1). This is not very important in a
+        multidimensional space, since N(0, sigma^2 I)-distributed vectors are concentrated around a sphere of radius
+        sigma.
         """
         ex = self.session.encoder(img, self.session.phase, self.session.alpha, self.data.args.use_ALQ).detach()
         return self.utils.split_labels_out_of_latent(ex)[0]
@@ -375,9 +365,9 @@ class PIONEER(GenerativeModel):
 
     def decode_plain(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         """
-        Originally, PIONEER decodes images from normalized (divided by L2 norm) latent vectors.
-        In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
-        vector and dividing it by sqrt(latent_dim).
+        Originally, PIONEER decodes images from normalized (divided by L2 norm) latent vectors. In a multidimensional
+        space, this is approximately the same as taking an N(0, I)-distributed vector and dividing it by
+        sqrt(latent_dim).
         """
         label = to_device(torch.zeros(latent_code.shape[0], 1, dtype=torch.float32))
         generated = self.session.generator(latent_code, label, self.session.phase, self.session.alpha)

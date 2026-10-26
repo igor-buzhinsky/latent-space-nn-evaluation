@@ -37,8 +37,8 @@ class EvaluationUtil:
         noise_evaluation_multiplier: int = 1,
     ) -> None:
         """
-        Evaluates the conventional accuracy of the supplied classifiers.
-        This is done for clean images and for images corrupted with Gaussian noise N(0, 0.8^2 I).
+        Evaluates the conventional accuracy of the supplied classifiers. This is done for clean images and for images
+        corrupted with Gaussian noise N(0, 0.8^2 I).
 
         :param classifiers: List of classifiers.
         :param ds: `DatasetWrapper` from which test images will be taken.
@@ -68,8 +68,8 @@ class EvaluationUtil:
         l_inf_bounds: list[float],
     ) -> None:
         """
-        Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations.
-        Uses L2 and L-inf norms.
+        Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations. Uses
+        L2 and L-inf norms.
 
         :param classifiers: List of classifiers.
         :param ds: `DatasetWrapper` from which test images will be taken.
@@ -96,8 +96,8 @@ class EvaluationUtil:
         classifiers: list[Trainer], ds: DatasetWrapper, max_imgs: int, l_2_bound: float, l_inf_bound: float
     ) -> None:
         """
-        Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations)
-        of the supplied classifiers. Uses L2 and L-inf norms.
+        Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations) of the supplied
+        classifiers. Uses L2 and L-inf norms.
 
         :param classifiers: List of classifiers.
         :param ds: `DatasetWrapper` from which test images will be taken.
@@ -135,9 +135,9 @@ class EvaluationUtil:
         nrow: int = 8,
     ) -> None:
         """
-        Uses a classifier to generate images of each class. Starts from a mean of a number of actual images
-        with added Gaussian noise. For robust classifiers, this procedure should result in images resembling
-        correct class instances.
+        Uses a classifier to generate images of each class. Starts from a mean of a number of actual images with added
+        Gaussian noise. For robust classifiers, this procedure should result in images resembling correct class
+        instances.
 
         :param classifiers: List of classifiers.
         :param ds: `DatasetWrapper` from which test images will be taken.
@@ -185,8 +185,8 @@ class EvaluationUtil:
     @staticmethod
     def show_reconstruction_distance_statistics(gm: GenerativeModel, no_images: int) -> None:
         """
-        Shows statistics on the distance of reconstructed images (based on the supplied generative model)
-        from the original ones.
+        Shows statistics on the distance of reconstructed images (based on the supplied generative model) from the
+        original ones.
 
         :param gm: Generative model to use.
         :param no_images: Number of images to construct statistics for.

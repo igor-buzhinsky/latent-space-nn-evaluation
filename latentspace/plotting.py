@@ -1,6 +1,4 @@
-"""
-Showing and saving images, and helpers for plots.
-"""
+"""Showing and saving images, and helpers for plots."""
 
 from typing import Any
 
@@ -62,9 +60,7 @@ def imshow_tensors(
     if captions is not None:
 
         def multiline_puttext(img: np.ndarray, caption: str) -> np.ndarray:
-            """
-            `cv2.putText` does not support line breaks on its own.
-            """
+            """`cv2.putText` does not support line breaks on its own."""
             scale = 0.8
             y0 = img.shape[0] * 0.15
             dy = img.shape[0] * 0.20
@@ -88,8 +84,8 @@ def imshow_tensors(
 
 def get_kde_bandwidth(x: np.ndarray) -> float:
     """
-    This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth and
-    provide it as argument `bw`.
+    This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth and provide it as
+    argument `bw`.
     https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
 
     :param x: Input (NumPy array).
@@ -99,9 +95,7 @@ def get_kde_bandwidth(x: np.ndarray) -> float:
 
 
 class ImageSet:
-    """
-    Accumulates images and captions. Shows them in blocks of size `max_num`.
-    """
+    """Accumulates images and captions. Shows them in blocks of size `max_num`."""
 
     def __init__(self, max_num: int) -> None:
         """
@@ -126,8 +120,8 @@ class ImageSet:
 
     def maybe_show(self, force: bool = False, nrow: int = 8) -> None:
         """
-        Shows the images and their captions if a sufficient number of them has been accumulated.
-        If the images and captions are shown, they are removed from the memory of `ImageSet`.
+        Shows the images and their captions if a sufficient number of them has been accumulated. If the images and
+        captions are shown, they are removed from the memory of `ImageSet`.
 
         :param force: If `True`, shows everything anyway. This may be useful to make the last call of `maybe_show`.
         :param nrow: `nrow` passed to `imshow_tensors`.

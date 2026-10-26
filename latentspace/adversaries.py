@@ -1,6 +1,4 @@
-"""
-Adversaries that search for adversarial perturbations given gradients, e.g., with projected gradient descent.
-"""
+"""Adversaries that search for adversarial perturbations given gradients, e.g., with projected gradient descent."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -13,8 +11,8 @@ from latentspace.torch_util import normalize_latent, to_device
 
 class Adversary(ABC):
     """
-    Base class for adversaries. Adversaries can perturb vectors given the gradient pointing to the direction
-    of making the prediction worse.
+    Base class for adversaries. Adversaries can perturb vectors given the gradient pointing to the direction of making
+    the prediction worse.
     """
 
     @abstractmethod
@@ -24,18 +22,16 @@ class Adversary(ABC):
         """
         Perturb the given vector.
 
-        :param initial_vector: Initial vector. If this is the original image representation, it must be flattened
-            prior to the call (more precisely, it must be of size [1, the_rest]).
-        :param get_gradient: A `get_gradient` function. It accepts the current vector and returns a tuple
-            (gradient pointing to the direction of the adversarial attack, the corresponding loss function value).
+        :param initial_vector: Initial vector. If this is the original image representation, it must be flattened prior
+            to the call (more precisely, it must be of size [1, the_rest]).
+        :param get_gradient: A `get_gradient` function. It accepts the current vector and returns a tuple (gradient
+            pointing to the direction of the adversarial attack, the corresponding loss function value).
         :return: The perturbed vector of the same size as `initial_vector`.
         """
 
 
 class NopAdversary(Adversary):
-    """
-    Dummy adversary that acts like an identity function.
-    """
+    """Dummy adversary that acts like an identity function."""
 
     def perturb(
         self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], tuple[torch.Tensor, float]]
@@ -44,9 +40,7 @@ class NopAdversary(Adversary):
 
 
 class PGDAdversary(Adversary):
-    """
-    Performs Projected Gradient Descent (PGD), or, more precisely, PG ascent according to the provided gradient.
-    """
+    """Performs Projected Gradient Descent (PGD), or, more precisely, PG ascent according to the provided gradient."""
 
     def __init__(
         self,
@@ -67,15 +61,15 @@ class PGDAdversary(Adversary):
         :param rho: Bound on the perturbation norm (positive number).
         :param steps: Number of steps to perform in each run. Fewer steps can be done if `stop_loss` is reached.
         :param step_size: Step size. Each step will be of magnitude `rho * step_size`.
-        :param random_start: If `True`, start the search in a vector with a uniformly random radius within the
-            rho-ball. Otherwise, start in the center of the rho-ball.
+        :param random_start: If `True`, start the search in a vector with a uniformly random radius within the rho-ball.
+            Otherwise, start in the center of the rho-ball.
         :param stop_loss: The search will stop when this value of the "loss" function is exceeded.
         :param verbose: 0 (silent), 1 (regular), 2 (verbose).
         :param norm: One of `'scaled_l_2'` (default), `'l_2'` or `'l_inf'`.
         :param n_repeat: Number of times to run PGD.
-        :param repeat_mode: `'any'` or `'min'`. In mode `'any'`, `n_repeat` runs are identical, and any run that
-            reaches `stop_loss` will prevent subsequent runs. In mode `'min'`, all runs will be performed, and if a
-            run finds a smaller perturbation according to `norm`, it will tighten `rho` on the next run.
+        :param repeat_mode: `'any'` or `'min'`. In mode `'any'`, `n_repeat` runs are identical, and any run that reaches
+            `stop_loss` will prevent subsequent runs. In mode `'min'`, all runs will be performed, and if a run finds a
+            smaller perturbation according to `norm`, it will tighten `rho` on the next run.
         :param unit_sphere_normalization: Search perturbations on the unit sphere (according to the scaled L2 norm)
             instead of the entire latent space.
         """
@@ -103,24 +97,20 @@ class PGDAdversary(Adversary):
         ), "unit_sphere_normalization is only compatible with scaled_l_2 norm"
 
     def _norm(self, x: torch.Tensor) -> float:
-        """
-        (Possibly scaled) norm of `x`.
-        """
+        """(Possibly scaled) norm of `x`."""
         return x.norm(np.inf if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
 
     def _normalize_gradient(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Normalizes the vector of gradients.
-        In the L2 space, this is done by dividing the vector by its norm.
-        In the L-inf space, this is done by taking the sign of the gradient.
+        Normalizes the vector of gradients. In the L2 space, this is done by dividing the vector by its norm. In the
+        L-inf space, this is done by taking the sign of the gradient.
         """
         return x.sign() if self.inf_norm else (x / self._norm(x))
 
     def _project(self, x: torch.Tensor, rho: float) -> torch.Tensor:
         """
-        Projects the vector onto the rho-ball.
-        In the L2 space, this is done by scaling the vector.
-        In the L-inf space, this is done by clamping all components independently.
+        Projects the vector onto the rho-ball. In the L2 space, this is done by scaling the vector. In the L-inf space,
+        this is done by clamping all components independently.
         """
         return x.clamp(-rho, rho) if self.inf_norm else (x / self._norm(x) * rho)
 
@@ -214,8 +204,8 @@ class PGDAdversary(Adversary):
         self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
-        and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
+        If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere, and the
+        perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
 
         :param perturbed_vector: Perturbed vector (initial vector + perturbation).
         :param perturbation: Perturbation vector.

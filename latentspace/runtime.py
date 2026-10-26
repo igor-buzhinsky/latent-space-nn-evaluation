@@ -1,6 +1,4 @@
-"""
-Process-level configuration of scripts.
-"""
+"""Process-level configuration of scripts."""
 
 import os
 
@@ -11,9 +9,7 @@ if os.name == "posix":
 
 
 def set_memory_limit(mb: int) -> None:
-    """
-    Sets memory limit in megabytes (this has effect only on Linux).
-    """
+    """Sets memory limit in megabytes (this has effect only on Linux)."""
     if os.name == "posix":
         rsrc = resource.RLIMIT_DATA
         _, hard = resource.getrlimit(rsrc)
@@ -21,9 +17,7 @@ def set_memory_limit(mb: int) -> None:
 
 
 def configure_runtime(memory_limit_mb: int) -> None:
-    """
-    Sets memory limit in megabytes (this has effect only on Linux). Configures matplotlib fonts.
-    """
+    """Sets memory limit in megabytes (this has effect only on Linux). Configures matplotlib fonts."""
     set_memory_limit(memory_limit_mb)
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["mathtext.fontset"] = "dejavuserif"

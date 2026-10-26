@@ -121,8 +121,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dataset_info: DatasetInfo) -> None:
     """
-    Experimental check of ratio (1) in [Ford, N., Gilmer, J., Carlini, N., & Cubuk, D. (2019). Adversarial examples
-    are a natural consequence of test error in noise].
+    Experimental check of ratio (1) in [Ford, N., Gilmer, J., Carlini, N., & Cubuk, D. (2019). Adversarial examples are
+    a natural consequence of test error in noise].
     """
     loader = iter(ds.get_test_loader(batch_size=1))
     for i in range(args.local_eval_no_img):
