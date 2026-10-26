@@ -214,4 +214,4 @@ elif args.command in ["generate_conventional_from_gan", "generate_conventional_f
                 f"(std = {std:.8f}, #images = {total})"
             )
 else:
-    raise RuntimeError(f"Unknown command {args.command}.")
+    parser.error(f"unknown command {args.command}")

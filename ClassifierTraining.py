@@ -21,7 +21,7 @@ from latentspace.ml_util import DatasetInfo, LogUtil, PGDAdversary, Util
 Util.configure(10500)
 LogUtil.to_pdf()
 
-parser = argparse.ArgumentParser(description="Generator of latent adversarial examples.")
+parser = argparse.ArgumentParser(description="Classifier training and evaluation in the original image space.")
 parser.add_argument("--command", type=str, required=True, help="one of train, evaluate, local_evaluate")
 parser.add_argument(
     "--dataset", type=str, required=True, help="one of MNIST, CelebA128Gender, LSUN128, ImageNetAnimals"
@@ -79,7 +79,7 @@ LogUtil.info(args)
 try:
     dataset_info = DatasetInfo[args.dataset]
 except KeyError:
-    raise AssertionError(f"Unsupported dataset name {args.dataset}.")
+    parser.error(f"unsupported dataset name {args.dataset}")
 
 # evaluation on noise-corrupted images will be done noise_evaluation_multiplier times
 noise_evaluation_multiplier = 1
@@ -99,7 +99,7 @@ elif dataset_info == DatasetInfo.LSUN128:
     # partially overcoming the problem of small (600) validation set:
     noise_evaluation_multiplier = 20
 else:
-    raise AssertionError()
+    parser.error(f"dataset {args.dataset} is not supported by this script")
 
 class_weights = [1 / no_classes] * no_classes
 train_loader = ds.get_train_loader if args.conventional_augmentation else ds.get_unaugmented_train_loader
@@ -118,7 +118,8 @@ if args.command == "train":
     )
     c.save_params_to_disk(args.save_filename)
 elif args.command == "evaluate":
-    assert args.load_filename is not None, "Missing argument --load_filename."
+    if args.load_filename is None:
+        parser.error("missing argument --load_filename")
     c.restore_params_from_disk(args.load_filename)
     if dataset_info == DatasetInfo.MNIST:
         l_2_bound, l_inf_bound = MNIST_L2_UPPER_BOUND, MNIST_LINF_UPPER_BOUND
@@ -130,7 +131,8 @@ elif args.command == "evaluate":
         EvaluationUtil.evaluate_conventional_adversarial_severity([c], ds, args.img_robustness, l_2_bound, l_inf_bound)
 elif args.command == "local_evaluate":
     # Experimental check of ratio (1) in Adversarial Examples Are a Natural Consequence of Test Error in Noise
-    assert args.load_filename is not None, "Missing argument --load_filename."
+    if args.load_filename is None:
+        parser.error("missing argument --load_filename")
     c.restore_params_from_disk(args.load_filename)
     loader = iter(ds.get_test_loader(batch_size=1))
     for i in range(args.local_eval_no_img):
@@ -162,8 +164,11 @@ elif args.command == "local_evaluate":
             error = (
                 sum(
                     (
-                        (c.predict(image + torch.randn(*image.shape) * noise_sigma) != label).item()
-                        for j in range(no_corruptions)
+                        (
+                            c.predict(image + Util.conditional_to_cuda(torch.randn(*image.shape)) * noise_sigma)
+                            != label
+                        ).item()
+                        for _ in range(no_corruptions)
                     )
                 )
                 / no_corruptions
@@ -175,4 +180,4 @@ elif args.command == "local_evaluate":
                 f"i = {i:3d}, σ = {noise_sigma:.1f} | μ = {error:.4f} | d = {dist:.5f} ?= {right_part:.5f} = -σ * Φ^{{-1}}(μ)"
             )
 else:
-    raise RuntimeError(f"Unknown command {args.command}.")
+    parser.error(f"unknown command {args.command}")

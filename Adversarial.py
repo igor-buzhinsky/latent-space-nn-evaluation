@@ -83,7 +83,7 @@ LogUtil.info(args)
 try:
     dataset_info = DatasetInfo[args.dataset]
 except KeyError:
-    raise AssertionError(f"Unsupported dataset name {args.dataset}.")
+    parser.error(f"unsupported dataset name {args.dataset}")
 
 if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
     no_classes = 2
@@ -109,7 +109,7 @@ elif dataset_info == DatasetInfo.MNIST:
         return generative.WGAN(dataset_info, label, ds)
 
 else:
-    raise AssertionError()
+    parser.error(f"dataset {args.dataset} is not supported by this script")
 
 
 def load_classifier(weights_filename: str):
@@ -124,7 +124,8 @@ LOCAL_NOISE_EPSILONS = np.linspace(0.25, 1.00, 4)
 
 
 def advgen_experiments(adversary: Adversary, total_no_images: int):
-    assert args.noise_epsilon is not None, "Missing argument --noise_epsilon."
+    if args.noise_epsilon is None:
+        parser.error("missing argument --noise_epsilon")
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
     if args.search_mode == "reconstruction":
         values = [False]
@@ -133,7 +134,7 @@ def advgen_experiments(adversary: Adversary, total_no_images: int):
     elif args.search_mode == "both":
         values = [False, True]
     else:
-        raise AssertionError("Argument --search_modes must be one of 'reconstruction', 'generation', 'both'.")
+        parser.error("argument --search_mode must be one of 'reconstruction', 'generation', 'both'")
     for use_generated_images in values:
         advgen = AdversarialGenerator(None, classifiers, use_generated_images, decay_factor)
         no_images = np.round(class_proportions * total_no_images)
@@ -165,7 +166,8 @@ if args.command == "test":
         gm.destroy()
 elif args.command == "generate_noise":
     # measure resistance to noise
-    assert args.noise_perturbations_per_image is not None, "Missing argument --noise_perturbations_per_image."
+    if args.noise_perturbations_per_image is None:
+        parser.error("missing argument --noise_perturbations_per_image")
     for i in range(no_classes):
         LogUtil.info(f"*** {classifier_d.upper()}, CLASS {i} ***")
         gm = gm_loader(i)
@@ -222,4 +224,4 @@ elif args.command == "generate_bounded":
         )
     advgen_experiments(adversary, args.no_images)
 else:
-    raise RuntimeError(f"Unknown command {args.command}.")
+    parser.error(f"unknown command {args.command}")
