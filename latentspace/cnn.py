@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch.autograd
@@ -22,7 +22,7 @@ class ResBlock(torch.nn.Module):
             torch.nn.BatchNorm2d(base_map_num, track_running_stats=False),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.relu(x + self.layer(x))
 
 
@@ -41,14 +41,14 @@ class Unit(torch.nn.Module):
         """
         super().__init__()
 
-        def block(in_ch):
+        def block(in_ch: int) -> List[torch.nn.Module]:
             return [
                 torch.nn.Conv2d(in_ch, out_channels, kernel_size=3, stride=1, padding=1),
                 torch.nn.ReLU(),
                 torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
             ]
 
-        def end():
+        def end() -> List[torch.nn.Module]:
             return [
                 torch.nn.MaxPool2d(kernel_size=2, padding=0),
                 torch.nn.Dropout(p_dropout),
@@ -76,7 +76,7 @@ class Unit(torch.nn.Module):
         else:
             raise ValueError(f"Unexpected unit type {unit_type}")
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -103,7 +103,7 @@ class ColoredNet128(torch.nn.Module):
             torch.nn.Linear(16 * base_map_num * 4 * 4, no_classes),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -128,7 +128,7 @@ class MNISTNet(torch.nn.Module):
             torch.nn.Linear(4 * base_map_num * 4 * 4, 10),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -144,7 +144,7 @@ class EarlyStoppingMonitor:
         self.total_metric_value = -float("inf")
         self.should_stop = False
 
-    def update_metric(self, trainer, new_value: float, epoch: int, disk_backup_filename: str) -> None:
+    def update_metric(self, trainer: "Trainer", new_value: float, epoch: int, disk_backup_filename: str) -> None:
         """
         Sets the flag self.should_stop to True, if the supplied value of the validation metric is not greater
         than the previous one. Otherwise, saves the current trainable parameters of the classifier.
@@ -258,7 +258,9 @@ class Trainer:
         """
         self.misclassification_gradients = value
 
-    def predict_with_gradient(self, x: torch.Tensor, true_labels: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_with_gradient(
+        self, x: torch.Tensor, true_labels: Sequence[Union[int, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts, computes loss and gradient.
         If self.misclassification_gradients is True, the gradient points in the direction of a

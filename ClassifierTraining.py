@@ -1,4 +1,5 @@
 import argparse
+from typing import Iterator, Tuple
 
 import numpy as np
 import scipy.stats
@@ -89,15 +90,15 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
         # measure local robustness
         bound = MNIST_L2_UPPER_BOUND if dataset_info == DatasetInfo.MNIST else OTHER_L2_UPPER_BOUND
 
-        def single_loader():
-            def single_loader_():
+        def single_loader() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
+            def single_loader_() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
                 yield image, label
 
             return single_loader_()
 
         adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm="scaled_l_2")
 
-        def perturb(image, true_label):
+        def perturb(image: torch.Tensor, true_label: torch.Tensor) -> torch.Tensor:
             get_gradient = get_get_gradient(
                 c, true_label, lambda x: x.view(1, *image.shape), lambda x: x, lambda x: x.view(1, -1)
             )

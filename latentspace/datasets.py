@@ -2,7 +2,7 @@ import json
 import os
 from abc import ABC
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -79,11 +79,11 @@ class DatasetWrapper(ABC):
     )
 
     @staticmethod
-    def resize_crop_transform(size: int):
+    def resize_crop_transform(size: int) -> transforms.Compose:
         return transforms.Compose([transforms.Resize(size), transforms.CenterCrop(size), DatasetWrapper.base_transform])
 
     @staticmethod
-    def augmentation_transform(size: int):
+    def augmentation_transform(size: int) -> transforms.Compose:
         return transforms.Compose(
             [
                 transforms.Resize(size),
@@ -105,7 +105,12 @@ class DatasetWrapper(ABC):
         )
 
     def __init__(
-        self, img_size: int, classes: Sequence[str], printed_classes: Sequence[str], test_transform, train_transform
+        self,
+        img_size: int,
+        classes: Sequence[str],
+        printed_classes: Sequence[str],
+        test_transform: Callable,
+        train_transform: Callable,
     ) -> None:
         """
         Constructs a DatasetWrapper.
@@ -123,7 +128,7 @@ class DatasetWrapper(ABC):
         # for datasets producing elements of a single label
         self.unique_label = None
 
-    def preprocess_batch(self, xs):
+    def preprocess_batch(self, xs: List[Tuple[torch.Tensor, Any]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Ensures that each image in the batch is paired with a single integer label.
         :param xs: batch.
@@ -143,21 +148,23 @@ class DatasetWrapper(ABC):
         """
         return x
 
-    def prediction_indices_to_classes(self, indices: Iterable):
+    def prediction_indices_to_classes(self, indices: Iterable) -> List[str]:
         """
         :param indices: input class indices.
         :return: full class names, to be used in model filenames.
         """
         return [self.classes[int(i)] for i in indices]
 
-    def prediction_indices_to_printed_classes(self, indices: Iterable):
+    def prediction_indices_to_printed_classes(self, indices: Iterable) -> List[str]:
         """
         :param indices: input class indices.
         :return: short class names, to be printed on top of images.
         """
         return [self.printed_classes[int(i)] for i in indices]
 
-    def _get_loader(self, torchvision_dataset, batch_size: int, shuffle: bool) -> torch.utils.data.DataLoader:
+    def _get_loader(
+        self, torchvision_dataset: Optional[torch.utils.data.Dataset], batch_size: int, shuffle: bool
+    ) -> torch.utils.data.DataLoader:
         """
         Get a torch.utils.data.DataLoader for this dataset.
         :param torchvision_dataset: TorchVision dataset.
@@ -165,6 +172,7 @@ class DatasetWrapper(ABC):
         :param shuffle: whether to shuffle.
         :return: torch.utils.data.DataLoader.
         """
+        assert torchvision_dataset is not None, "This part of the dataset is not available."
         return torch.utils.data.DataLoader(
             torchvision_dataset,
             batch_size=batch_size,
@@ -357,7 +365,7 @@ class LSUNData(DatasetWrapper):
             DatasetWrapper.augmentation_transform(size),
         )
 
-        def class_dataset(train: bool, transform):
+        def class_dataset(train: bool, transform: Callable) -> torchvision.datasets.LSUNClass:
             assert unique_label is not None
             dirname = f"./data/LSUN/{labels[unique_label]}_{'train' if train else 'val'}_lmdb/"
             return torchvision.datasets.LSUNClass(root=dirname, transform=transform)
@@ -436,7 +444,7 @@ class ImageNetData(DatasetWrapper):
                 self.val_labels[tokens[0]] = int(tokens[1])
         self.trainset, self.unaugmented_trainset = [None] * 2
 
-    def get_unaugmented_train_loader(self, *args, **kwargs) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+    def get_unaugmented_train_loader(self, *args: Any, **kwargs: Any) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
         print("Warning: loading validation data while training data was requested.")
         return self.get_test_loader(*args, **kwargs)
 

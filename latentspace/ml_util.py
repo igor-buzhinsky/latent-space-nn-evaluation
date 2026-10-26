@@ -3,7 +3,7 @@ import random
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Generator, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Generator, Iterator, List, Optional, Tuple, TypeVar, Union, cast
 
 import cv2
 import matplotlib
@@ -25,26 +25,26 @@ DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 
 class Lambda(torch.nn.Module):
-    def __init__(self, forward) -> None:
+    def __init__(self, forward: Callable[[torch.Tensor], torch.Tensor]) -> None:
         super().__init__()
         self.lambda_forward = forward
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.lambda_forward(x)
 
 
 class NopLayer(torch.nn.Module):
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x
 
 
 class Flatten(torch.nn.Module):
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x.view(x.shape[0], -1)
 
 
 class Upsample(torch.nn.Module):
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.nn.functional.interpolate(x, size=None, scale_factor=2, mode="bilinear", align_corners=False)
 
 
@@ -53,7 +53,7 @@ class Resize(torch.nn.Module):
         super().__init__()
         self.side = side
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.nn.functional.interpolate(x, size=(self.side, self.side), mode="bicubic", align_corners=False)
 
 
@@ -245,7 +245,7 @@ class PGDAdversary(Adversary):
 
     ### projections on the unit sphere: ###
 
-    def _optional_normalize(self, x: torch.Tensor):
+    def _optional_normalize(self, x: torch.Tensor) -> torch.Tensor:
         """
         Optional unit sphere normalization.
         :param x: vector of shape 1*dim to normalize.
@@ -253,7 +253,9 @@ class PGDAdversary(Adversary):
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
 
-    def _recompute_with_unit_sphere_normalization(self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor):
+    def _recompute_with_unit_sphere_normalization(
+        self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
@@ -264,7 +266,9 @@ class PGDAdversary(Adversary):
         effective_perturbed_vector = self._optional_normalize(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
 
-    def _adjust_step_for_unit_sphere(self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor):
+    def _adjust_step_for_unit_sphere(
+        self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor
+    ) -> torch.Tensor:
         """
         If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
         compensates for the reduction of the learning step due to projection of a unit sphere.
@@ -392,7 +396,7 @@ class Util:
         # adding textual captions if they are given (this involves rescaling)
         if captions is not None:
 
-            def multiline_puttext(img, caption: str):
+            def multiline_puttext(img: np.ndarray, caption: str) -> np.ndarray:
                 """
                 cv2.putText does not support line breaks on its own.
                 """
@@ -426,7 +430,7 @@ class Util:
         :return: decorated parent_loader_fn.
         """
 
-        def loader():
+        def loader() -> Iterator[Tuple[torch.Tensor, List[int]]]:
             data_generator = iter(parent_loader_fn())
             result = []
             while True:
@@ -454,7 +458,7 @@ class Util:
         :return: decorated parent_loader_fn.
         """
 
-        def loader():
+        def loader() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
             generated = 0
             while generated < no_images:
                 data_generator = iter(parent_loader_fn())
@@ -629,7 +633,7 @@ class LogUtil:
     Logs are also printed to stdout. Figures are only shown in notebooks.
     """
 
-    def _timestamp():
+    def _timestamp() -> str:
         return str(int(round(time.time() * 1000)))
 
     _dirname = "logdir_" + _timestamp()
@@ -684,7 +688,7 @@ class LogUtil:
         LogUtil.info(f"[produced a figure: {fname}]", False)
 
     @staticmethod
-    def metacall(fn: Callable, fn_name: str, *args, **kwargs) -> None:
+    def metacall(fn: Callable, fn_name: str, *args: Any, **kwargs: Any) -> None:
         """
         Makes a function call and logs it with concrete argument values.
         :param fn: function to call.

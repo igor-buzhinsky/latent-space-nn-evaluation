@@ -1,5 +1,5 @@
 import argparse
-from typing import List
+from typing import Iterator, List, Tuple
 
 import numpy as np
 import torch
@@ -74,7 +74,7 @@ CLASSIFIER_D = "none"
 
 # normalize input + wrap the robust classifier
 class RobustnessClassifierWrapper(Trainer):
-    def __init__(self, model, ds: datasets.DatasetWrapper) -> None:
+    def __init__(self, model: torch.nn.Module, ds: datasets.DatasetWrapper) -> None:
         super().__init__(CLASSIFIER_D, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(224),
@@ -91,12 +91,12 @@ class ModelZooClassifierWrapper(Trainer):
     )
 
     @staticmethod
-    def normalize_modelzoo(x):
+    def normalize_modelzoo(x: torch.Tensor) -> torch.Tensor:
         # [-1, 1] -> [0, 1], then normalize
         # https://pytorch.org/docs/stable/torchvision/models.html
         return ModelZooClassifierWrapper.modelzoo_normalize_transform((x[0] + 1) / 2).unsqueeze(0)
 
-    def __init__(self, model, side: int, ds: datasets.DatasetWrapper) -> None:
+    def __init__(self, model: torch.nn.Module, side: int, ds: datasets.DatasetWrapper) -> None:
         super().__init__(CLASSIFIER_D, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(side),
@@ -165,7 +165,7 @@ def conventional_experiments(
 ) -> None:
     if args.command == "generate_conventional_from_gan":
 
-        def loader():
+        def loader() -> Iterator[Tuple[List[torch.Tensor], List[int]]]:
             label_array = get_target_labels(args.no_images)
             images, labels = [], []
             for label in label_array:

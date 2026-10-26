@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import torch
 from tensorboardX import SummaryWriter
@@ -7,12 +7,12 @@ from tensorboardX import SummaryWriter
 from .ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
 
 
-def init_linear(layer) -> None:
+def init_linear(layer: torch.nn.Linear) -> None:
     torch.nn.init.xavier_normal_(layer.weight)
     layer.bias.data.zero_()
 
 
-def init_conv(layer) -> None:
+def init_conv(layer: torch.nn.Conv2d) -> None:
     torch.nn.init.kaiming_normal_(layer.weight)
     if layer.bias is not None:
         layer.bias.data.zero_()
@@ -23,10 +23,10 @@ class SpectralNorm:
     Spectral normalization. Borrowed from https://github.com/heljakka/pioneer/blob/master/src/model.py.
     """
 
-    def __init__(self, name) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def compute_weight(self, module):
+    def compute_weight(self, module: torch.nn.Module) -> Tuple[torch.Tensor, torch.Tensor]:
         weight = getattr(module, self.name + "_orig")
         u = getattr(module, self.name + "_u")
         size = weight.size()
@@ -42,7 +42,7 @@ class SpectralNorm:
         return weight_sn, u.detach()
 
     @staticmethod
-    def apply(module, name):
+    def apply(module: torch.nn.Module, name: str) -> "SpectralNorm":
         fn = SpectralNorm(name)
         weight = getattr(module, name)
         del module._parameters[name]
@@ -54,13 +54,13 @@ class SpectralNorm:
         module.register_forward_pre_hook(fn)
         return fn
 
-    def __call__(self, module, input):
+    def __call__(self, module: torch.nn.Module, input: Any) -> None:
         weight_sn, u = self.compute_weight(module)
         setattr(module, self.name, weight_sn)
         setattr(module, self.name + "_u", u)
 
 
-def spectral_norm(module, name="weight"):
+def spectral_norm(module: torch.nn.Module, name: str = "weight") -> torch.nn.Module:
     SpectralNorm.apply(module, name)
     return module
 
@@ -70,13 +70,13 @@ class SpectralNormConv2d(torch.nn.Module):
     Convolutional layer with spectral normalization.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__()
         conv = torch.nn.Conv2d(*args, **kwargs)
         init_conv(conv)
         self.conv = spectral_norm(conv)
 
-    def forward(self, input):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.conv(input)
 
 
@@ -85,13 +85,13 @@ class SpectralNormLinear(torch.nn.Module):
     Linear layer with spectral normalization.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__()
         linear = torch.nn.Linear(*args, **kwargs)
         init_linear(linear)
         self.linear = spectral_norm(linear)
 
-    def forward(self, input):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         return self.linear(input)
 
 
@@ -110,7 +110,7 @@ class GeneratorUnit(torch.nn.Module):
             NopLayer() if nop_end else torch.nn.ReLU(),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -134,7 +134,7 @@ class MNISTGenerator(torch.nn.Module):
             Lambda(lambda x: (x - 0.5) * 2),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -153,7 +153,7 @@ class DiscriminatorUnit(torch.nn.Module):
             torch.nn.MaxPool2d(kernel_size=2, padding=0),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 
@@ -174,7 +174,7 @@ class MNISTDiscriminator(torch.nn.Module):
             SpectralNormLinear(4 * base_map_num * 4 * 4, 1),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
 

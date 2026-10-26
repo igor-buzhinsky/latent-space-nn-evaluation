@@ -4,7 +4,7 @@ import sys
 from abc import ABC, abstractmethod
 from importlib import reload
 from pathlib import Path
-from typing import Optional
+from typing import Iterable, Iterator, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -77,14 +77,14 @@ class GenerativeModel(ABC):
         :return: batch of decoded images.
         """
 
-    def get_sampler(self, batch_size: int = 1):
+    def get_sampler(self, batch_size: int = 1) -> Iterator[Tuple[torch.Tensor, List[int]]]:
         """
         Get a data loader for this data class.
         :param batch_size: batch size to be used by the loader.
         :return: data loader (not a function).
         """
 
-        def f():
+        def f() -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
             return self.ds.get_unaugmented_train_loader(batch_size=batch_size)
 
         assert self.unique_label is not None

@@ -183,7 +183,7 @@ class EvaluationUtil:
         sampler = gm.get_sampler()
         norms, distances = np.empty(no_images), np.empty(no_images)
 
-        def norm(x):
+        def norm(x: torch.Tensor) -> torch.Tensor:
             return x.flatten().norm() / np.sqrt(x.numel())
 
         for i in range(no_images):

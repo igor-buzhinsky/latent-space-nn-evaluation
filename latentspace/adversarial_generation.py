@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Sequence, Tuple, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -81,11 +81,11 @@ class RandomPerturbationStatistician:
 
 def get_get_gradient(
     classifier: Trainer,
-    label: int,
+    label: Union[int, torch.Tensor],
     vector_transform_1: Callable,
     vector_transform_2: Callable,
     grad_transform: Callable,
-):
+) -> Callable[[torch.Tensor], Tuple[torch.Tensor, float]]:
     """
     Produces custom "get_gradient" functions that are accepted by Adversaries.
     (This is not an example of good object-oriented design.)
@@ -170,7 +170,7 @@ class AdversarialGenerator:
         Initializes (when called first time) or clears accumulated statistics.
         """
 
-        def create():
+        def create() -> List[list]:
             return [[] for c in self.classifiers]
 
         self.recorded_original_l2_norms = create()
@@ -182,14 +182,14 @@ class AdversarialGenerator:
         self.recorded_decayed_successes = create()
         self.recorded_modified_successes = create()
 
-    def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]):
+    def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]) -> Tuple[str, list]:
         """
         Convenience function.
         """
         predictions = [c.predict(img) for c in classifiers]
         if self.label_printer is None:
 
-            def label_printer(x):
+            def label_printer(x: torch.Tensor) -> str:
                 return self.gm.ds.prediction_indices_to_printed_classes(x)[0]
 
         else:

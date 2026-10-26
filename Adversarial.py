@@ -81,7 +81,9 @@ LOCAL_NOISE_EPSILONS = np.linspace(0.25, 1.00, 4)
 SEARCH_MODES = {"reconstruction": [False], "generation": [True], "both": [False, True]}
 
 
-def load_classifier(weights_filename: str, classifier_d: str, ds: datasets.DatasetWrapper, unit_type: int):
+def load_classifier(
+    weights_filename: str, classifier_d: str, ds: datasets.DatasetWrapper, unit_type: int
+) -> cnn.Trainer:
     c = cnn.Trainer(classifier_d, ds.get_train_loader, ds.get_test_loader, unit_type)
     c.restore_params_from_disk(weights_filename)
     return c
@@ -151,7 +153,7 @@ def main() -> None:
             classifier_d = "lsun-128"
             class_proportions = np.repeat(1 / no_classes, no_classes)
 
-        def gm_loader(label):
+        def gm_loader(label: int) -> generative.GenerativeModel:
             return generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_no_images=25)
 
     elif dataset_info == DatasetInfo.MNIST:
@@ -160,7 +162,7 @@ def main() -> None:
         classifier_d = "mnist"
         class_proportions = np.repeat(1 / no_classes, no_classes)
 
-        def gm_loader(label):
+        def gm_loader(label: int) -> generative.GenerativeModel:
             return generative.WGAN(dataset_info, label, ds)
 
     else:
