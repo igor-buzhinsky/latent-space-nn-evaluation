@@ -109,6 +109,4 @@ def normalize_latent(x: torch.Tensor) -> torch.Tensor:
     :param x: Batch of latent vectors.
     :return: Normalized batch.
     """
-    norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
-    norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
-    return norm_vector @ x
+    return x * (np.sqrt(x.shape[1]) / torch.norm(x, dim=1, keepdim=True))
