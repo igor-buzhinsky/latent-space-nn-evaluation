@@ -14,7 +14,15 @@ For CelebA and LSUN, here are some examples of approximately minimum adversarial
 
 ## Dependencies
 
-To run the toolset, you need Python 3 and PyTorch. Dependencies are listed in [requirements.txt](requirements.txt). To reproduce some of our experiments with ImageNet, you will also need the [robustness](https://pypi.org/project/robustness/) package. To install all the dependencies, you may run [install.sh](install.sh). Alternatively, if you would like to minimize the size of the installation, you may try installing packages only when you run into import errors. Many packages are needed for PIONEER generative autoencoder training which you may not need to run.
+The toolset requires Python 3.11 or newer and uses [Poetry](https://python-poetry.org/) for dependency management. Dependencies are declared in [pyproject.toml](pyproject.toml) and pinned in [poetry.lock](poetry.lock).
+
+```bash
+poetry install                    # core dependencies (PyTorch, torchvision, etc.)
+poetry install --with notebooks   # also install Jupyter/IPython to run the notebooks
+poetry install --extras imagenet  # also install the robustness package for the ImageNet experiments
+```
+
+Then run scripts inside the environment, e.g. `poetry run python Adversarial.py --help`, or start the notebooks with `poetry run jupyter notebook`.
 
 ## Running: MNIST
 

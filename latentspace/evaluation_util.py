@@ -112,7 +112,7 @@ class EvaluationUtil:
         """
         mean_image = torch.stack([batch.mean(dim=0) for batch, _
                                   in itertools.islice(ds.get_test_loader(), 0, estimation_batches)]).mean(dim=0)
-        image_optimizer = PGDAdversary(norm_bound, 50, 0.05, False, np.infty, verbose=0, norm=norm)
+        image_optimizer = PGDAdversary(norm_bound, 50, 0.05, False, np.inf, verbose=0, norm=norm)
         for i, classifier in enumerate(classifiers):
             LogUtil.info(f"classifier {i}:")
             classifier.set_misclassification_gradients(False)

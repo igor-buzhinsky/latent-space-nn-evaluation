@@ -98,7 +98,7 @@ class GenerativeModel(ABC):
         all_latent = Util.conditional_to_cuda(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
         loss_f = torch.nn.MSELoss()
         for i in range(img.shape[0]):
-            best_loss = np.infty
+            best_loss = np.inf
             for attempt in range(no_restarts):
                 latent = Util.optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
                 optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)

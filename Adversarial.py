@@ -11,7 +11,7 @@ import latentspace.datasets as datasets
 import latentspace.generative as generative
 import latentspace.cnn as cnn
 
-Util.set_memory_limit(5000)
+Util.set_memory_limit(10000)
 LogUtil.to_pdf()
 
 parser = argparse.ArgumentParser(description="Generator of latent adversarial examples.")

@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+
+# Run outputs
+logdir_*/
+LOG_*/
+
+# Downloaded datasets and models
+mnist/

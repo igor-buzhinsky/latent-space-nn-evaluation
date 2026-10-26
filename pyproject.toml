@@ -1,0 +1,41 @@
+[project]
+name = "latent-space-nn-evaluation"
+version = "0.1.0"
+description = "Metrics and methods for robustness evaluation of neural network image classifiers with generative models."
+authors = [{ name = "Igor Buzhinsky", email = "igorbuz@gmail.com" }]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "seaborn",
+    "pillow",
+    "tqdm",
+    "tensorboardx",
+    "h5py",
+    "statsmodels",
+    "opencv-python (<5)",
+    "python-dateutil",
+    "lmdb",
+]
+
+[project.urls]
+Paper = "https://arxiv.org/abs/2003.01993"
+
+[project.optional-dependencies]
+# Needed only for the robust ImageNet classifier (AdversarialImageNet.py/.ipynb).
+imagenet = ["robustness"]
+
+[dependency-groups]
+notebooks = ["jupyter", "ipython"]
+
+[tool.poetry]
+packages = [{ include = "latentspace" }]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

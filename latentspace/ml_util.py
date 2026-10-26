@@ -139,7 +139,7 @@ class PGDAdversary(Adversary):
         """
         (Possibly scaled) norm of x.
         """
-        return x.norm(np.infty if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
+        return x.norm(np.inf if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
     
     def _normalize_gradient(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -160,7 +160,7 @@ class PGDAdversary(Adversary):
     def perturb(self, initial_vector: torch.Tensor,
                 get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
         best_perturbation = None
-        best_perturbation_norm = np.infty
+        best_perturbation_norm = np.inf
         # rho may potentially shrink with repeat_mode == "min":
         rho = self.rho
         random_start = self.random_start
@@ -651,4 +651,4 @@ class LogUtil:
         """
         Switches matplotlib backend to 'pdf'.
         """
-        matplotlib.use("pdf", warn=False, force=True)
+        matplotlib.use("pdf", force=True)

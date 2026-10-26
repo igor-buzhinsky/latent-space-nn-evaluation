@@ -9,7 +9,7 @@ from latentspace.cnn import *
 from latentspace.adversarial_generation import *
 from latentspace.evaluation_util import EvaluationUtil
 
-Util.configure(5500)
+Util.configure(10500)
 LogUtil.to_pdf()
 
 parser = argparse.ArgumentParser(description="Generator of latent adversarial examples.")
