@@ -2,8 +2,7 @@ import copy
 from collections.abc import Callable, Sequence
 
 import numpy as np
-import torch.autograd
-import torch.nn
+import torch
 from tensorboardX import SummaryWriter
 
 from latentspace.datasets import DatasetWrapper
