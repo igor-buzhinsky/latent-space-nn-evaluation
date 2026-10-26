@@ -11,7 +11,7 @@ import statsmodels.nonparametric.bandwidths
 import torch
 import torchvision
 
-from latentspace.ml_util import LogUtil
+from latentspace.logging_util import LogUtil
 from latentspace.torch_util import to_numpy
 
 

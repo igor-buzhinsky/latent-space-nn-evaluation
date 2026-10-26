@@ -9,10 +9,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from latentspace.datasets import DatasetWrapper
+from latentspace.datasets import DatasetInfo, DatasetWrapper
 from latentspace.gan import GAN
 from latentspace.loaders import class_specific_loader
-from latentspace.ml_util import DatasetInfo, LogUtil
+from latentspace.logging_util import LogUtil
 from latentspace.torch_util import DEVICE, optimizable_clone, set_param_requires_grad, to_device
 
 

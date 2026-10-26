@@ -6,6 +6,7 @@ import scipy.stats
 import torch
 
 from latentspace.adversarial_generation import get_get_gradient
+from latentspace.adversaries import PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import (
     MNIST_L2_UPPER_BOUND,
@@ -13,13 +14,14 @@ from latentspace.datasets import (
     OTHER_L2_UPPER_BOUND,
     OTHER_LINF_UPPER_BOUND,
     CelebAData,
+    DatasetInfo,
     DatasetWrapper,
     LSUNData,
     MNISTData,
 )
 from latentspace.evaluation_util import EvaluationUtil
 from latentspace.loaders import fixed_length_loader
-from latentspace.ml_util import DatasetInfo, LogUtil, PGDAdversary
+from latentspace.logging_util import LogUtil
 from latentspace.runtime import configure_runtime
 from latentspace.torch_util import to_device
 

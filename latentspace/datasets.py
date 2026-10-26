@@ -2,6 +2,7 @@ import json
 import os
 from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Sequence
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,9 @@ if os.name == "posix":
 
     # this may prevent an error in DataLoader with num_workers > 0
     resource.setrlimit(resource.RLIMIT_NOFILE, (2048 * 2, resource.getrlimit(resource.RLIMIT_NOFILE)[1]))
+
+# An enumeration of all supported datasets.
+DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 # norm bounds for conventional robustness evaluation
 MNIST_L2_UPPER_BOUND = 0.6

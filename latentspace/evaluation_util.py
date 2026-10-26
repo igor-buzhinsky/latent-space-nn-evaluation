@@ -5,11 +5,12 @@ import numpy as np
 import torch
 
 from latentspace.adversarial_generation import get_conventional_perturb
+from latentspace.adversaries import PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import DatasetWrapper
 from latentspace.generative import GenerativeModel
 from latentspace.loaders import fixed_length_loader
-from latentspace.ml_util import LogUtil, PGDAdversary
+from latentspace.logging_util import LogUtil
 from latentspace.plotting import ImageSet, imshow_tensors
 from latentspace.torch_util import to_device
 

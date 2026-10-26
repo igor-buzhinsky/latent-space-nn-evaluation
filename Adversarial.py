@@ -6,9 +6,11 @@ import numpy as np
 import latentspace.cnn as cnn
 import latentspace.datasets as datasets
 import latentspace.generative as generative
-from latentspace.adversarial_generation import AdversarialGenerator, RandomPerturbationStatistician
+from latentspace.adversarial_generation import AdversarialGenerator, EpsDTransformer, RandomPerturbationStatistician
+from latentspace.adversaries import Adversary, NopAdversary, PGDAdversary
+from latentspace.datasets import DatasetInfo
 from latentspace.evaluation_util import EvaluationUtil
-from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil, NopAdversary, PGDAdversary
+from latentspace.logging_util import LogUtil
 from latentspace.runtime import set_memory_limit
 
 # values of --search_mode and the corresponding values of use_generated_images

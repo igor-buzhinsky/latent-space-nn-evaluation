@@ -5,9 +5,10 @@ import numpy as np
 import seaborn as sns
 import torch
 
+from latentspace.adversaries import Adversary
 from latentspace.cnn import Trainer
 from latentspace.generative import GenerativeModel
-from latentspace.ml_util import Adversary, LogUtil
+from latentspace.logging_util import LogUtil
 from latentspace.plotting import ImageSet, get_kde_bandwidth, imshow_tensors
 from latentspace.torch_util import optimizable_clone, to_device
 
@@ -375,3 +376,50 @@ class AdversarialGenerator:
 
         if produce_images:
             result.maybe_show(True, nrow=nrow)
+
+
+class EpsDTransformer:
+    """
+    Converter between noise magnitude (epsilon) and decay factor (d).
+    """
+
+    def eps_to_d(self, eps: float) -> float:
+        """
+        Converts epsilon to d.
+
+        :param eps: Noise magnitude.
+        :return: Decay factor.
+        """
+        return 1 - 1 / np.sqrt(1 + eps**2)
+
+    def d_to_eps(self, d: float) -> float:
+        """
+        Converts d to epsilon.
+
+        :param d: Decay factor.
+        :return: Noise magnitude.
+        """
+        return np.sqrt((1 / (1 - d)) ** 2 - 1)
+
+
+class TauRhoTransformer:
+    """
+    Converter between perturbation likelihood (tau) and norm bound (rho).
+    """
+
+    def __init__(self, n_l: int, eps: float) -> None:
+        self.n_l = n_l
+        self.c1 = n_l * np.log(np.sqrt((1 + eps**2) / (2 * np.pi * eps**2)))
+        self.c2 = (1 + eps**2) / (2 * eps**2) * np.sqrt(n_l)
+
+    def rho_to_logtau(self, rho: float) -> float:
+        """
+        Converts rho to the logarithm of tau.
+        """
+        return self.c1 - (rho**2) * self.n_l * self.c2
+
+    def logtau_to_rho(self, tau: float) -> float:
+        """
+        Converts the logarithm of tau to rho.
+        """
+        return np.sqrt((self.c1 - tau) / self.c2 / self.n_l)

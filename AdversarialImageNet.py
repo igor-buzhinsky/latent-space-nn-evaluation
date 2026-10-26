@@ -8,19 +8,13 @@ import torchvision.models as models
 
 import latentspace.datasets as datasets
 import latentspace.generative as generative
-from latentspace.adversarial_generation import AdversarialGenerator, get_conventional_perturb
+from latentspace.adversarial_generation import AdversarialGenerator, EpsDTransformer, get_conventional_perturb
+from latentspace.adversaries import Adversary, NopAdversary, PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.compat import patch_torchvision_for_robustness
+from latentspace.layers import Lambda, Resize
 from latentspace.loaders import fixed_length_loader
-from latentspace.ml_util import (
-    Adversary,
-    EpsDTransformer,
-    Lambda,
-    LogUtil,
-    NopAdversary,
-    PGDAdversary,
-    Resize,
-)
+from latentspace.logging_util import LogUtil
 from latentspace.runtime import configure_runtime
 from latentspace.torch_util import DEVICE, to_device
 

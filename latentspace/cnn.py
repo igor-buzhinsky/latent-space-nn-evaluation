@@ -7,8 +7,9 @@ import torch.nn
 from tensorboardX import SummaryWriter
 
 from latentspace.datasets import DatasetWrapper
+from latentspace.layers import Flatten, Lambda
 from latentspace.loaders import leakless_cycle
-from latentspace.ml_util import Flatten, Lambda, LogUtil
+from latentspace.logging_util import LogUtil
 from latentspace.plotting import imshow_tensors
 from latentspace.torch_util import (
     DEVICE,

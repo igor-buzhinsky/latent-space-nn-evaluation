@@ -5,7 +5,8 @@ from typing import Any
 import torch
 from tensorboardX import SummaryWriter
 
-from latentspace.ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample
+from latentspace.layers import Flatten, Lambda, NopLayer, Upsample
+from latentspace.logging_util import LogUtil
 from latentspace.torch_util import (
     DEVICE,
     init_weights,
