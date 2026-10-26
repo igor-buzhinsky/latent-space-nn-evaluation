@@ -12,67 +12,94 @@ from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generator of latent adversarial examples.")
-    parser.add_argument(
-        "--command", type=str, required=True, help="one of test, generate_noise, generate_minimum, generate_bounded"
-    )
-    parser.add_argument("--dataset", type=str, required=True, help="one of MNIST, CelebA128Gender, LSUN128")
-    parser.add_argument(
-        "--no_images", type=int, required=True, help="total number of images for noise/adversarial generation"
+    parser = argparse.ArgumentParser(
+        description="Evaluates image classifiers with latent space performance metrics computed with generative models "
+        "(MNIST, CelebA, LSUN)."
     )
     parser.add_argument(
-        "--pgd_verbosity", type=int, default=0, help="PGD verbosity: 0 = silent (default), 1, or 2 = most verbose"
+        "--command",
+        required=True,
+        help="Command to run: test (show reconstructed and generated images and run quick checks), generate_noise "
+        "(measure accuracy under random latent noise), generate_minimum (search for minimum latent adversarial "
+        "perturbations), or generate_bounded (measure latent adversarial accuracy within the norm bound "
+        "--bounded_search_rho).",
+    )
+    parser.add_argument("--dataset", required=True, help="Dataset: MNIST, CelebA128Gender, or LSUN128.")
+    parser.add_argument(
+        "--no_images",
+        type=int,
+        required=True,
+        help="Number of images to process. For generate_minimum and generate_bounded, this is the total number, split "
+        "across classes in proportion to class frequencies. For test and generate_noise, this is the number per class.",
+    )
+    parser.add_argument(
+        "--pgd_verbosity",
+        type=int,
+        default=0,
+        help="Verbosity of the PGD search: 0 = silent, 1, or 2 = most verbose (default: %(default)s).",
     )
     parser.add_argument(
         "--noise_perturbations_per_image",
         type=int,
-        required=False,
-        help="how many noise addition sequences is done for each image (command = generate_noise)",
+        help="Number of random latent perturbations per image and noise magnitude (required for generate_noise).",
     )
     parser.add_argument(
         "--noise_epsilon",
         type=float,
-        required=False,
         default=1.0,
-        help="noise magnitude (positive number) for adversarial generation, default = 1.0",
+        help="Noise magnitude epsilon (positive number): before the adversarial search, latent codes are multiplied "
+        "by 1 / sqrt(1 + epsilon^2) (commands generate_minimum and generate_bounded, default: %(default)s).",
     )
     parser.add_argument(
-        "--classifier_filenames", type=str, nargs="+", required=True, help="filenames with classifier models"
+        "--classifier_filenames",
+        nargs="+",
+        required=True,
+        help="One or more files with classifier weights, e.g. classifiers_architecture0/robust_MNIST.bin. "
+        "Their architecture must match --unit_type.",
     )
     parser.add_argument(
-        "--search_mode", type=str, default="both", help="one of 'reconstruction', 'generation', 'both' (default)"
+        "--search_mode",
+        default="both",
+        help="Which latent codes to search from: reconstruction (codes of real images obtained by the generative "
+        "model's encoder), generation (random codes), or both (commands generate_minimum and generate_bounded, "
+        "default: %(default)s).",
     )
     parser.add_argument(
         "--force_search_with_restarts",
         action="store_true",
-        help="to find latent perturbations, search with restarts will be used always and not only on MNIST "
-        "(command = generate_minimum)",
+        help="Always use the slower search with restarts to find minimum latent perturbations, not only on MNIST "
+        "(command generate_minimum).",
     )
     parser.add_argument(
         "--no_adversary",
         action="store_true",
-        help="use an adversary that does nothing - this is useful to just measure latent "
-        "reconstruction/generation accuracy (this overrides --force_search_with_restarts)",
+        help="Use an adversary that does nothing. This is useful to only measure the accuracy of classifiers on "
+        "reconstructed or generated images. Overrides --force_search_with_restarts.",
     )
     parser.add_argument(
         "--bounded_search_rho",
         type=float,
         default=0.2,
-        help="scaled norm bound to check latent adversarial accuracy " "(command = generate_bounded), default = 0.2",
+        help="Scaled norm bound for latent perturbations when measuring latent adversarial accuracy "
+        "(command generate_bounded, default: %(default)s).",
     )
-    parser.add_argument("--unit_type", type=int, default=0, help="architecture choice (0..2), default = 0")
+    parser.add_argument(
+        "--unit_type",
+        type=int,
+        default=0,
+        help="Classifier architecture: 0 = basic, 1 = with residual blocks, 2 = deeper version of 0 "
+        "(default: %(default)s).",
+    )
     parser.add_argument(
         "--unit_sphere_normalization",
         action="store_true",
-        help="(experimental, not described in the paper) search perturbations on the unit sphere instead "
-        "of the entire latent space",
+        help="Experimental, not described in the paper: search for perturbations on the unit sphere instead of the "
+        "entire latent space.",
     )
     parser.add_argument(
         "--logdir",
-        type=str,
-        default=None,
-        help="set a custom logging directory and remove its previous contents (by default, a new "
-        " name will be generated based on the timestamp)",
+        help="Directory for logs and figures. Its previous contents are deleted. By default, a new directory named "
+        "after the current timestamp is created.",
     )
     return parser
 

@@ -13,5 +13,6 @@ mnist/
 
 # Training outputs (TensorBoard logs and weight backups)
 cnn_training/
+cnn_training_noise/
 gan_training/
 dumped_weights.bin*

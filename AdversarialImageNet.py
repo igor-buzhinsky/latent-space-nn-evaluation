@@ -24,45 +24,50 @@ from latentspace.ml_util import (
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generator of latent adversarial examples for ImageNet.")
+    parser = argparse.ArgumentParser(
+        description="Evaluates ImageNet classifiers with latent space performance metrics computed with BigGAN, "
+        "and with conventional metrics."
+    )
     parser.add_argument(
         "--command",
-        type=str,
         required=True,
-        help="one of generate_minimum, generate_bounded, measure_accuracy, "
-        "generate_conventional_from_gan, generate_conventional_from_validation",
+        help="Command to run: generate_minimum (search for minimum latent adversarial perturbations), "
+        "generate_bounded (measure latent adversarial accuracy within the norm bound --bounded_search_rho), "
+        "measure_accuracy (accuracy on validation images), generate_conventional_from_gan or "
+        "generate_conventional_from_validation (robustness to conventional adversarial perturbations of "
+        "BigGAN-generated or validation images).",
     )
     parser.add_argument(
         "--no_images",
         type=int,
         required=True,
-        help="total number of images for adversarial generation or accuracy evaluation",
+        help="Total number of images to process. For BigGAN-generated images, if this is a multiple of 1000, "
+        "each class is used equally often; otherwise, classes are chosen randomly.",
     )
     parser.add_argument(
         "--bounded_search_rho",
         type=float,
         default=0.2,
-        help="scaled norm bound to check latent adversarial accuracy " "(command = generate_bounded), default = 0.2",
+        help="Scaled norm bound for latent perturbations when measuring latent adversarial accuracy "
+        "(command generate_bounded, default: %(default)s).",
     )
     parser.add_argument(
         "--noise_epsilon",
         type=float,
-        required=False,
         default=1.0,
-        help="noise magnitude (positive number) for adversarial generation, default = 1.0",
+        help="Noise magnitude epsilon (positive number): before the adversarial search, latent codes are multiplied "
+        "by 1 / sqrt(1 + epsilon^2) (commands generate_minimum and generate_bounded, default: %(default)s).",
     )
     parser.add_argument(
         "--no_adversary",
         action="store_true",
-        help="use an adversary that does nothing - this is useful to just measure latent "
-        "reconstruction/generation accuracy",
+        help="Use an adversary that does nothing. This is useful to only measure the accuracy of classifiers on "
+        "generated images.",
     )
     parser.add_argument(
         "--logdir",
-        type=str,
-        default=None,
-        help="set a custom logging directory and remove its previous contents (by default, a new "
-        " name will be generated based on the timestamp)",
+        help="Directory for logs and figures. Its previous contents are deleted. By default, a new directory named "
+        "after the current timestamp is created.",
     )
     return parser
 

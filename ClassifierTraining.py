@@ -22,57 +22,90 @@ from latentspace.ml_util import DatasetInfo, LogUtil, PGDAdversary, Util
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Classifier training and evaluation in the original image space.")
-    parser.add_argument("--command", type=str, required=True, help="one of train, evaluate, local_evaluate")
-    parser.add_argument(
-        "--dataset", type=str, required=True, help="one of MNIST, CelebA128Gender, LSUN128, ImageNetAnimals"
+    parser = argparse.ArgumentParser(
+        description="Trains image classifiers and evaluates them in the original image space (MNIST, CelebA, LSUN)."
     )
     parser.add_argument(
+        "--command",
+        required=True,
+        help="Command to run: train (train a classifier), evaluate (measure accuracy and robustness to conventional "
+        "adversarial perturbations), or local_evaluate (experimental: for individual images, compare the error rate "
+        "under Gaussian noise with the distance to the nearest adversarial example, following Ford et al., "
+        "'Adversarial examples are a natural consequence of test error in noise', 2019).",
+    )
+    parser.add_argument("--dataset", required=True, help="Dataset: MNIST, CelebA128Gender, or LSUN128.")
+    parser.add_argument(
         "--load_filename",
-        type=str,
-        required=False,
-        help="classifier to load for evaluation or taking pretrained parameters",
+        help="File with classifier weights to load. Required for evaluate and local_evaluate. "
+        "For train, training continues from these weights.",
     )
     # train-specific arguments
     parser.add_argument(
-        "--save_filename", type=str, required=False, help="classifier to write after training (command = train)"
+        "--save_filename", help="File to save the classifier weights to after training (required for train)."
     )
     parser.add_argument(
-        "--conventional_augmentation", action="store_true", help="use conventional data augmentation (command = train)"
+        "--conventional_augmentation",
+        action="store_true",
+        help="Train with conventional data augmentation: random affine transformations and random erasing, plus "
+        "flips and color jitter for color datasets (command train).",
     )
     parser.add_argument(
-        "--noise_augmentation", action="store_true", help="augment with N(0, 0.8^2)-noise (command = train)"
+        "--noise_augmentation",
+        action="store_true",
+        help="Add Gaussian noise N(0, 0.8^2 I) to training images to improve robustness (command train).",
     )
-    parser.add_argument("--start_lr", type=float, default=4e-4, help="initial learning rate (command = train)")
-    parser.add_argument("--lr_decay", type=float, default=0.25, help="learning rate decay per epoch (command = train)")
-    parser.add_argument("--img_in_epoch", type=int, default=100000, help="number of images per epoch (command = train)")
-    parser.add_argument("--no_epochs", type=int, default=8, help="number of epochs (command = train)")
-    parser.add_argument("--unit_type", type=int, default=0, help="architecture choice (0..2), default = 0")
+    parser.add_argument(
+        "--start_lr", type=float, default=4e-4, help="Initial learning rate (command train, default: %(default)s)."
+    )
+    parser.add_argument(
+        "--lr_decay",
+        type=float,
+        default=0.25,
+        help="After each epoch, the learning rate is multiplied by (1 - lr_decay) (command train, default: %(default)s).",
+    )
+    parser.add_argument(
+        "--img_in_epoch",
+        type=int,
+        default=100000,
+        help="Number of training images per epoch (command train, default: %(default)s).",
+    )
+    parser.add_argument(
+        "--no_epochs", type=int, default=8, help="Number of epochs (command train, default: %(default)s)."
+    )
+    parser.add_argument(
+        "--unit_type",
+        type=int,
+        default=0,
+        help="Classifier architecture: 0 = basic, 1 = with residual blocks, 2 = deeper version of 0 "
+        "(default: %(default)s).",
+    )
     # evaluation-specific arguments
     parser.add_argument(
         "--img_accuracy",
         type=int,
         default=10**10,
-        help="limit accuracy evaluation to this number of images (command = evaluate)",
+        help="Maximum number of test images for accuracy evaluation; 0 skips it (command evaluate). "
+        "By default, all test images are used.",
     )
     parser.add_argument(
         "--img_robustness",
         type=int,
         default=10**10,
-        help="limit robustness evaluation to this number of images (command = evaluate)",
+        help="Maximum number of test images for robustness evaluation, which measures the mean norm of minimum "
+        "adversarial perturbations found with PGD; 0 skips it (command evaluate). By default, all test images are used.",
     )
     # local evaluation: checking noise / adversarial distance relationship
     parser.add_argument(
         "--local_eval_no_img",
         type=int,
         default=10,
-        help="number of images to perform local evaluation on (command = local_evaluate)",
+        help="Number of test images to evaluate (command local_evaluate, default: %(default)s).",
     )
     parser.add_argument(
         "--local_eval_no_corruptions",
         type=int,
         default=2000,
-        help="noise corruptions per each sigma (command = local_evaluate)",
+        help="Number of noise corruptions per image and noise level (command local_evaluate, default: %(default)s).",
     )
     return parser
 
@@ -137,7 +170,10 @@ def main() -> None:
     if args.command in ["evaluate", "local_evaluate"]:
         if args.load_filename is None:
             parser.error("missing argument --load_filename")
-    elif args.command != "train":
+    elif args.command == "train":
+        if args.save_filename is None:
+            parser.error("missing argument --save_filename")
+    else:
         parser.error(f"unknown command {args.command}")
     LogUtil.info(args)
 
