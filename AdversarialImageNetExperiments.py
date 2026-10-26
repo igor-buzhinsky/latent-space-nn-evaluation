@@ -8,7 +8,7 @@ noise_epsilons = [0.5, 1.0]
 run_latent_search = False
 
 
-def run(args: str):
+def run(args: str) -> None:
     subprocess.run([sys.executable, "AdversarialImageNet.py", *shlex.split(args)])
 
 

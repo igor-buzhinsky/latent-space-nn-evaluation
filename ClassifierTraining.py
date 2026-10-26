@@ -76,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dataset_info: DatasetInfo):
+def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dataset_info: DatasetInfo) -> None:
     """
     Experimental check of ratio (1) in Adversarial Examples Are a Natural Consequence of Test Error in Noise.
     """
@@ -127,7 +127,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
             )
 
 
-def main():
+def main() -> None:
     Util.configure(10500)
     LogUtil.to_pdf()
 

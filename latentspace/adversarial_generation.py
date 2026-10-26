@@ -24,7 +24,7 @@ class RandomPerturbationStatistician:
         perturbations_per_image: int,
         visualize: bool,
         epsilons: Union[Sequence[float], np.ndarray],
-    ):
+    ) -> None:
         """
         Constructs RandomPerturbationStatistician.
         :param gm: generative model to use.
@@ -43,7 +43,7 @@ class RandomPerturbationStatistician:
         self.stat_len = 2 + len(epsilons)
 
     @torch.no_grad()
-    def process(self):
+    def process(self) -> None:
         """
         Does actual processing.
         """
@@ -137,7 +137,7 @@ class AdversarialGenerator:
         use_generated_images: bool,
         decay_factor: float,
         label_printer: Optional[Callable] = None,
-    ):
+    ) -> None:
         """
         Constructs AdversarialGenerator.
         :param gm: generative model to use. If None, it must be later set with set_generative_model.
@@ -157,7 +157,7 @@ class AdversarialGenerator:
         self._clear_stat()
         self.label_printer = label_printer
 
-    def set_generative_model(self, gm: GenerativeModel):
+    def set_generative_model(self, gm: GenerativeModel) -> None:
         """
         Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at once),
         but statistics need to be calculated across all models (image classes).
@@ -165,7 +165,7 @@ class AdversarialGenerator:
         """
         self.gm = gm
 
-    def _clear_stat(self):
+    def _clear_stat(self) -> None:
         """
         Initializes (when called first time) or clears accumulated statistics.
         """
@@ -209,7 +209,7 @@ class AdversarialGenerator:
         """
         return x.norm(1) / x.numel()
 
-    def print_stats(self, plot: bool = False, print_norm_statistics: bool = True):
+    def print_stats(self, plot: bool = False, print_norm_statistics: bool = True) -> None:
         """
         Prints/logs the accumulated statistics. Optionally, plots histograms of metrics computed for adversarial perturbations.
         These are the following metrics:
@@ -281,7 +281,7 @@ class AdversarialGenerator:
         show_perturbations: bool = False,
         clear_stat: bool = True,
         produce_images: bool = True,
-    ):
+    ) -> None:
         """
         Does actual processing.
         :param adversary: Adversary to be used (e.g., PGDAdversary).

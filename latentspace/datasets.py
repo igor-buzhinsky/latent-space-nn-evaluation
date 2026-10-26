@@ -106,7 +106,7 @@ class DatasetWrapper(ABC):
 
     def __init__(
         self, img_size: int, classes: Sequence[str], printed_classes: Sequence[str], test_transform, train_transform
-    ):
+    ) -> None:
         """
         Constructs a DatasetWrapper.
         :param img_size: image resolution (img_size == width == height).
@@ -221,7 +221,7 @@ class MNISTData(DatasetWrapper):
     Output images are 3-dimensional but essentially grayscale.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructs MNISTData.
         """
@@ -256,7 +256,7 @@ class CelebAData(DatasetWrapper):
     Images are center-cropped as resized to 128x128.
     """
 
-    def __init__(self, attribute_index: int):
+    def __init__(self, attribute_index: int) -> None:
         """
         Constructs CelebAData.
         :param attribute_index: CelebA attribute index (non-negative integer), e.g., 20 = 'Male'.
@@ -341,7 +341,7 @@ class LSUNData(DatasetWrapper):
     Images are center-cropped and resized to 128x128.
     """
 
-    def __init__(self, unique_label: Optional[int] = None):
+    def __init__(self, unique_label: Optional[int] = None) -> None:
         """
         Constructs LSUNData.
         :param unique_label: 0 (bedroom), 1 (church outdoor) or None. If None, then items of both labels will be produced.
@@ -410,7 +410,7 @@ class ImageNetData(DatasetWrapper):
     Images are center-cropped and resized (to 128x128 by default).
     """
 
-    def __init__(self, size: int = 128):
+    def __init__(self, size: int = 128) -> None:
         """
         Constructs ImageNetData (only validation data is supported).
         :param size: size = width = height.

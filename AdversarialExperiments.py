@@ -14,7 +14,7 @@ datasets = ["MNIST"]
 commands = ["generate_minimum"]
 
 
-def run(args: str):
+def run(args: str) -> None:
     subprocess.run([sys.executable, "Adversarial.py", *shlex.split(args)])
 
 

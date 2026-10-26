@@ -7,12 +7,12 @@ from tensorboardX import SummaryWriter
 from .ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
 
 
-def init_linear(layer):
+def init_linear(layer) -> None:
     torch.nn.init.xavier_normal_(layer.weight)
     layer.bias.data.zero_()
 
 
-def init_conv(layer):
+def init_conv(layer) -> None:
     torch.nn.init.kaiming_normal_(layer.weight)
     if layer.bias is not None:
         layer.bias.data.zero_()
@@ -23,7 +23,7 @@ class SpectralNorm:
     Spectral normalization. Borrowed from https://github.com/heljakka/pioneer/blob/master/src/model.py.
     """
 
-    def __init__(self, name):
+    def __init__(self, name) -> None:
         self.name = name
 
     def compute_weight(self, module):
@@ -70,7 +70,7 @@ class SpectralNormConv2d(torch.nn.Module):
     Convolutional layer with spectral normalization.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         conv = torch.nn.Conv2d(*args, **kwargs)
         init_conv(conv)
@@ -85,7 +85,7 @@ class SpectralNormLinear(torch.nn.Module):
     Linear layer with spectral normalization.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         linear = torch.nn.Linear(*args, **kwargs)
         init_linear(linear)
@@ -100,7 +100,7 @@ class GeneratorUnit(torch.nn.Module):
     Basic convolutional block of a generator.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, nop_end: bool = False):
+    def __init__(self, in_channels: int, out_channels: int, nop_end: bool = False) -> None:
         super().__init__()
         self.model = torch.nn.Sequential(
             Upsample(),
@@ -119,7 +119,7 @@ class MNISTGenerator(torch.nn.Module):
     MNIST generator.
     """
 
-    def __init__(self, latent_dim: int):
+    def __init__(self, latent_dim: int) -> None:
         super().__init__()
         base_map_num = 8
         self.model = torch.nn.Sequential(
@@ -143,7 +143,7 @@ class DiscriminatorUnit(torch.nn.Module):
     Basic convolutional block of a discriminator.
     """
 
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.model = torch.nn.Sequential(
             SpectralNormConv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
@@ -162,7 +162,7 @@ class MNISTDiscriminator(torch.nn.Module):
     MNIST discriminator.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         base_map_num = 12
         self.model = torch.nn.Sequential(
@@ -184,7 +184,7 @@ class GAN:
     with spectral normalization.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructs GAN.
         """
@@ -196,14 +196,14 @@ class GAN:
         LogUtil.info(f"discriminator: {Util.number_of_trainable_parameters(self.discriminator)} trainable parameters")
 
     @torch.no_grad()
-    def save_params(self):
+    def save_params(self) -> None:
         """
         Saves the trainable parameters of the current WGAN.
         """
         self.params = (copy.deepcopy(self.generator.state_dict()), copy.deepcopy(self.discriminator.state_dict()))
 
     @torch.no_grad()
-    def save_params_to_disk(self, filename: str):
+    def save_params_to_disk(self, filename: str) -> None:
         """
         Saves current trainable parameters to disk.
         :param filename: target filename.
@@ -212,7 +212,7 @@ class GAN:
         torch.save(self.discriminator.state_dict(), filename + ".discriminator")
 
     @torch.no_grad()
-    def restore_params(self):
+    def restore_params(self) -> None:
         """
         Restores previously saved trainable parameters of the WGAN.
         """
@@ -221,7 +221,7 @@ class GAN:
         self.discriminator.load_state_dict(self.params[1])
 
     @torch.no_grad()
-    def restore_params_from_disk(self, filename: str):
+    def restore_params_from_disk(self, filename: str) -> None:
         """
         Restores previously saved trainable parameters from disk.
         :param filename: target filename.
@@ -234,7 +234,7 @@ class GAN:
         self.restore_params()
 
     @torch.no_grad()
-    def random_init(self):
+    def random_init(self) -> None:
         """
         Performs random initialization.
         """
@@ -259,7 +259,7 @@ class GAN:
         return self.generator(Util.conditional_to_cuda(torch.randn(no_samples, self.latent_dim)))
 
     @torch.no_grad()
-    def warm_spectral_norms(self, train_loader_fn: Callable):
+    def warm_spectral_norms(self, train_loader_fn: Callable) -> None:
         """
         The currently used implementation of spectral norms has some parameters that are not saved to disk.
         As a result, the discriminator is in an invalid state after it is loaded from disk.
@@ -280,7 +280,7 @@ class GAN:
         lr: float = 1e-3,
         n_critic: int = 5,
         disk_backup_filename: str = "dumped_weights.bin",
-    ):
+    ) -> None:
         """
         Trains this WGAN.
         :param train_loader_fn: loader-returning function to generate training data.

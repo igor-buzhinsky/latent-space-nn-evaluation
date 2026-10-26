@@ -25,7 +25,7 @@ DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 
 class Lambda(torch.nn.Module):
-    def __init__(self, forward):
+    def __init__(self, forward) -> None:
         super().__init__()
         self.lambda_forward = forward
 
@@ -49,7 +49,7 @@ class Upsample(torch.nn.Module):
 
 
 class Resize(torch.nn.Module):
-    def __init__(self, side: int):
+    def __init__(self, side: int) -> None:
         super().__init__()
         self.side = side
 
@@ -105,7 +105,7 @@ class PGDAdversary(Adversary):
         n_repeat: int = 1,
         repeat_mode: Optional[str] = None,
         unit_sphere_normalization: bool = False,
-    ):
+    ) -> None:
         """
         Constructs PGDAdversary.
         :param rho > 0: bound on perturbation norm.
@@ -283,7 +283,7 @@ class ImageSet:
     Accumulates images and captions. Shows them in blocks of size `max_num'.
     """
 
-    def __init__(self, max_num: int):
+    def __init__(self, max_num: int) -> None:
         """
         Constructs ImageSet.
         :param max_num: number of images and captions to accumulate until they can be shown.
@@ -291,7 +291,7 @@ class ImageSet:
         self.images, self.captions = [], []
         self.max_num = max_num
 
-    def append(self, images: List[torch.Tensor], captions: Optional[List[str]] = None):
+    def append(self, images: List[torch.Tensor], captions: Optional[List[str]] = None) -> None:
         """
         Appends the given images and captions.
         :param images: list of images (PyTorch tensors).
@@ -302,7 +302,7 @@ class ImageSet:
             captions = [""] * len(images)
         self.captions += [captions]
 
-    def maybe_show(self, force: bool = False, nrow: int = 8):
+    def maybe_show(self, force: bool = False, nrow: int = 8) -> None:
         """
         Shows the images and their captions if a sufficient number of them has been accumulated.
         If the images and captions are shown, they are removed from the memory of ImageSet.
@@ -325,7 +325,7 @@ class Util:
     using_cuda = cuda_enabled and torch.cuda.is_available()
 
     @staticmethod
-    def set_memory_limit(mb: int):
+    def set_memory_limit(mb: int) -> None:
         """
         Sets memory limit in megabytes (this has effect only on Linux).
         """
@@ -335,7 +335,7 @@ class Util:
             resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
 
     @staticmethod
-    def configure(memory_limit_mb: int):
+    def configure(memory_limit_mb: int) -> None:
         """
         Sets memory limit in megabytes (this has effect only on Linux). Configures matplotlib fonts.
         """
@@ -348,7 +348,7 @@ class Util:
         return x.detach().cpu().numpy()
 
     @staticmethod
-    def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)):
+    def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)) -> None:
         """
         Shows the image and saves the produced figure.
         :param img: image to show (PyTorch tensor).
@@ -370,7 +370,7 @@ class Util:
         captions: Optional[List[str]] = None,
         nrow: int = 8,
         pad_value: float = 1,
-    ):
+    ) -> None:
         """
         Enhanced torchvision.utils.make_grid(). Supports image captions. Also saves the produced figure.
         :param tensors: images to show.
@@ -496,7 +496,7 @@ class Util:
 
     @staticmethod
     @torch.no_grad()
-    def init_weights(m: torch.nn.Module):
+    def init_weights(m: torch.nn.Module) -> None:
         """
         Randomly initializes the weights of a convolutional or linear layer. To be used with torch.nn.Module.apply.
         :param m: PyTorch module.
@@ -514,7 +514,7 @@ class Util:
                 m.bias.uniform_(0, 0)
 
     @staticmethod
-    def set_param_requires_grad(m: torch.nn.Module, value: bool):
+    def set_param_requires_grad(m: torch.nn.Module, value: bool) -> None:
         """
         Sets requires_grad_(value) for all parameters of the module.
         :param m: PyTorch module.
@@ -542,7 +542,7 @@ class Util:
         return int(sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad]))
 
     @staticmethod
-    def set_random_seed(seed: Optional[int] = None):
+    def set_random_seed(seed: Optional[int] = None) -> None:
         """
         Set random seed of random, numpy and pytorch.
         :param seed seed value. If None, it is replaced with the current timestamp.
@@ -605,7 +605,7 @@ class TauRhoTransformer:
     Converter between perturbation likelihood (tau) and norm bound (rho).
     """
 
-    def __init__(self, n_l: int, eps: float):
+    def __init__(self, n_l: int, eps: float) -> None:
         self.n_l = n_l
         self.c1 = n_l * np.log(np.sqrt((1 + eps**2) / (2 * np.pi * eps**2)))
         self.c2 = (1 + eps**2) / (2 * eps**2) * np.sqrt(n_l)
@@ -636,7 +636,7 @@ class LogUtil:
     _created = False
 
     @staticmethod
-    def set_custom_dirname(dirname: str):
+    def set_custom_dirname(dirname: str) -> None:
         """
         Set the custom name for a logging directory.
         The previous contents of the directory will be deleted!
@@ -647,7 +647,7 @@ class LogUtil:
             os.remove(os.path.join(dirname, filename))
 
     @staticmethod
-    def ensure_dir_existence():
+    def ensure_dir_existence() -> None:
         """
         Creates the directory for logging if it hasn't been created yet.
         """
@@ -656,7 +656,7 @@ class LogUtil:
             os.makedirs(LogUtil._dirname, exist_ok=True)
 
     @staticmethod
-    def info(msg: Any, regular_print: bool = True):
+    def info(msg: Any, regular_print: bool = True) -> None:
         """
         Log/print a message to <log directory>/log.txt.
         :param msg: message to log and, optionally, print to console.
@@ -669,7 +669,7 @@ class LogUtil:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
 
     @staticmethod
-    def savefig(prefix: str, pdf: bool = False):
+    def savefig(prefix: str, pdf: bool = False) -> None:
         """
         Saves a figure to the logging directory. Filename is generated based on the current timestamp
         and the provided prefix.
@@ -684,7 +684,7 @@ class LogUtil:
         LogUtil.info(f"[produced a figure: {fname}]", False)
 
     @staticmethod
-    def metacall(fn: Callable, fn_name: str, *args, **kwargs):
+    def metacall(fn: Callable, fn_name: str, *args, **kwargs) -> None:
         """
         Makes a function call and logs it with concrete argument values.
         :param fn: function to call.
@@ -698,7 +698,7 @@ class LogUtil:
         fn(*args, **kwargs)
 
     @staticmethod
-    def to_pdf():
+    def to_pdf() -> None:
         """
         Switches matplotlib backend to 'pdf'.
         """

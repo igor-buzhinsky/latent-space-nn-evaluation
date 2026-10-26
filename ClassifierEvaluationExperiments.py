@@ -12,7 +12,7 @@ datasets = ["MNIST", "CelebA128Gender", "LSUN128"]
 # datasets = ["LSUN128"]
 
 
-def run(args: str):
+def run(args: str) -> None:
     subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)])
 
 

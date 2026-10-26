@@ -17,7 +17,7 @@ for unit_type in unit_types:
     os.makedirs(dirname, exist_ok=True)
     for dataset in datasets:
 
-        def run(load_prefix: Optional[str], save_prefix: str, more: str):
+        def run(load_prefix: Optional[str], save_prefix: str, more: str) -> None:
             load_filename = f"{dirname}/{load_prefix}_{dataset}.bin"
             save_filename = f"{dirname}/{save_prefix}_{dataset}.bin"
             load_cmd = f'--load_filename "{load_filename}"' if load_prefix else ""

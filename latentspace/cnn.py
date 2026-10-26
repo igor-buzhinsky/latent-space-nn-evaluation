@@ -11,7 +11,7 @@ from .ml_util import Flatten, Lambda, LogUtil, Util
 
 
 class ResBlock(torch.nn.Module):
-    def __init__(self, base_map_num: int):
+    def __init__(self, base_map_num: int) -> None:
         super().__init__()
         self.relu = torch.nn.ReLU()
         self.layer = torch.nn.Sequential(
@@ -31,7 +31,7 @@ class Unit(torch.nn.Module):
     Basic convolutional block.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0):
+    def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0) -> None:
         """
         Constructs Unit.
         :param in_channels: number of input channels.
@@ -85,7 +85,7 @@ class ColoredNet128(torch.nn.Module):
     Simple CNN classifier to process 128x128 images.
     """
 
-    def __init__(self, no_classes: int = 2, unit_type: int = 0):
+    def __init__(self, no_classes: int = 2, unit_type: int = 0) -> None:
         """
         Constructs ColoredNet128.
         :param no_classes: number of output classes.
@@ -112,7 +112,7 @@ class MNISTNet(torch.nn.Module):
     Simple CNN classifier for 28x28 MNIST images.
     """
 
-    def __init__(self, unit_type: int = 0):
+    def __init__(self, unit_type: int = 0) -> None:
         """
         Constructs MNISTNet.
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
@@ -137,7 +137,7 @@ class EarlyStoppingMonitor:
     Performs early stopping when the supplied validation metric value starts to decrease.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Constructs EarlyStoppingMonitor.
         """
@@ -176,7 +176,7 @@ class Trainer:
 
     model: torch.nn.Module
 
-    def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0):
+    def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0) -> None:
         """
         Constructs Trainer.
         :param dataset: one of 'celeba-128', 'lsun-128', 'mnist', 'none'. This determines network architecture.
@@ -206,14 +206,14 @@ class Trainer:
         self.misclassification_gradients = True
 
     @torch.no_grad()
-    def save_params(self):
+    def save_params(self) -> None:
         """
         Saves the trainable parameters of the current neural network.
         """
         self.params = copy.deepcopy(self.model.state_dict())
 
     @torch.no_grad()
-    def save_params_to_disk(self, filename: str):
+    def save_params_to_disk(self, filename: str) -> None:
         """
         Saves current trainable parameters to disk.
         :param filename: target filename.
@@ -221,14 +221,14 @@ class Trainer:
         torch.save(self.model.state_dict(), filename)
 
     @torch.no_grad()
-    def restore_params(self):
+    def restore_params(self) -> None:
         """
         Restores previously saved trainable parameters of the neural network.
         """
         self.model.load_state_dict(self.params)
 
     @torch.no_grad()
-    def restore_params_from_disk(self, filename: str):
+    def restore_params_from_disk(self, filename: str) -> None:
         """
         Restores previously saved trainable parameters from disk.
         :param filename: target filename.
@@ -236,7 +236,7 @@ class Trainer:
         self.params = torch.load(filename, map_location=("cuda:0" if Util.using_cuda else "cpu"))
         self.restore_params()
 
-    def disable_param_gradients(self):
+    def disable_param_gradients(self) -> None:
         """
         Disables the gradients of model's parameters. This saves computation time when gradients need to
         be computed w.r.t. the input image only.
@@ -244,13 +244,13 @@ class Trainer:
         Util.set_param_requires_grad(self.model, False)
 
     @torch.no_grad()
-    def random_init(self):
+    def random_init(self) -> None:
         """
         Performs random initialization.
         """
         self.model.apply(Util.init_weights)
 
-    def set_misclassification_gradients(self, value: bool):
+    def set_misclassification_gradients(self, value: bool) -> None:
         """
         Controls the behavior of predict_with_gradient.
         :param value: if True, predict_with_gradient will return the gradient that can be used to
@@ -352,7 +352,7 @@ class Trainer:
         writer = SummaryWriter("cnn_training" if noise_sigma == 0 else "cnn_training_noise")
 
         class EvaluatedPrediction:
-            def __init__(self, trainer: Trainer, image: torch.Tensor, label: torch.Tensor):
+            def __init__(self, trainer: Trainer, image: torch.Tensor, label: torch.Tensor) -> None:
                 if noise_sigma > 0:
                     # augmentation with noise for robust optimization
                     image += Util.conditional_to_cuda(torch.randn(*image.shape)) * noise_sigma

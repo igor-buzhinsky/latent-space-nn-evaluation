@@ -74,7 +74,7 @@ CLASSIFIER_D = "none"
 
 # normalize input + wrap the robust classifier
 class RobustnessClassifierWrapper(Trainer):
-    def __init__(self, model, ds: datasets.DatasetWrapper):
+    def __init__(self, model, ds: datasets.DatasetWrapper) -> None:
         super().__init__(CLASSIFIER_D, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(224),
@@ -96,7 +96,7 @@ class ModelZooClassifierWrapper(Trainer):
         # https://pytorch.org/docs/stable/torchvision/models.html
         return ModelZooClassifierWrapper.modelzoo_normalize_transform((x[0] + 1) / 2).unsqueeze(0)
 
-    def __init__(self, model, side: int, ds: datasets.DatasetWrapper):
+    def __init__(self, model, side: int, ds: datasets.DatasetWrapper) -> None:
         super().__init__(CLASSIFIER_D, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
             Resize(side),
@@ -147,7 +147,7 @@ def advgen_experiments(
     classifiers: List[Trainer],
     gm: generative.BigGAN,
     ds: datasets.ImageNetData,
-):
+) -> None:
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
     advgen = AdversarialGenerator(None, classifiers, True, decay_factor)
     advgen.set_generative_model(gm)
@@ -162,7 +162,7 @@ def advgen_experiments(
 
 def conventional_experiments(
     args: argparse.Namespace, classifiers: List[Trainer], gm: generative.BigGAN, ds: datasets.ImageNetData
-):
+) -> None:
     if args.command == "generate_conventional_from_gan":
 
         def loader():
@@ -193,7 +193,7 @@ def conventional_experiments(
             )
 
 
-def main():
+def main() -> None:
     Util.configure(11000)
     LogUtil.to_pdf()
 

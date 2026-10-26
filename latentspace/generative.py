@@ -24,7 +24,7 @@ class GenerativeModel(ABC):
     # may be None for class-conditional models before a class is configured
     unique_label: Optional[int]
 
-    def __init__(self, resolution: int, latent_dim: int, unique_label: int, ds: DatasetWrapper):
+    def __init__(self, resolution: int, latent_dim: int, unique_label: int, ds: DatasetWrapper) -> None:
         """
         Constructs GenerativeModel.
         :param resolution: image resolution (resolution == width == height).
@@ -38,7 +38,7 @@ class GenerativeModel(ABC):
         self.ds = ds
         self.subclass = ds.prediction_indices_to_classes([unique_label])[0]
 
-    def destroy(self):  # noqa: B027 (optional hook, not abstract)
+    def destroy(self) -> None:  # noqa: B027 (optional hook, not abstract)
         """
         Free memory, or at least try. Does nothing by default; subclasses holding large models override this.
         """
@@ -121,7 +121,7 @@ class WGAN(GenerativeModel):
     Adapts GAN to GenerativeModel.
     """
 
-    def __init__(self, dataset_info: DatasetInfo, unique_label: int, ds: DatasetWrapper):
+    def __init__(self, dataset_info: DatasetInfo, unique_label: int, ds: DatasetWrapper) -> None:
         """
         Constructs WGAN.
         :param dataset_info: DatasetInfo.
@@ -148,7 +148,7 @@ class WGAN(GenerativeModel):
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         return self._maybe_detach(self.g.decode(latent_code), detach)
 
-    def destroy(self):
+    def destroy(self) -> None:
         del self.g
         gc.collect()
 
@@ -158,7 +158,7 @@ class BigGAN(GenerativeModel):
     BigGAN wrapper.
     """
 
-    def __init__(self, ds: DatasetWrapper, builtin_decay: float = 0.0):
+    def __init__(self, ds: DatasetWrapper, builtin_decay: float = 0.0) -> None:
         """
         Constructs BigGAN for several ImageNet classes.
         :param ds: DatasetWrapper.
@@ -186,7 +186,7 @@ class BigGAN(GenerativeModel):
         self.unique_label = None
         self.builtin_decay = builtin_decay
 
-    def configure_label(self, unique_label: int):
+    def configure_label(self, unique_label: int) -> None:
         """
         Sets the ImageNet-1k class to generate.
         :param unique_label: ImageNet class label (0..999)
@@ -219,7 +219,7 @@ class BigGAN(GenerativeModel):
             ]
         )
 
-    def destroy(self):
+    def destroy(self) -> None:
         gc.collect()
 
 
@@ -237,7 +237,7 @@ class PIONEER(GenerativeModel):
         unique_label: int,
         ds: DatasetWrapper,
         spectral_norm_warming_no_images: int = 50,
-    ):
+    ) -> None:
         """
         Constructs PIONEER. This call is memory-intensive.
         :param dataset_info: DatasetInfo.
@@ -329,7 +329,7 @@ class PIONEER(GenerativeModel):
 
         LogUtil.info("*** Done!")
 
-    def destroy(self):
+    def destroy(self) -> None:
         """
         When PIONEER models are constructed for different classes but only one model is needed at a time,
         this method is useful to free some memory.

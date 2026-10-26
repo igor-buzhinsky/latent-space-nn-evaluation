@@ -94,7 +94,7 @@ def advgen_experiments(
     gm_loader: Callable[[int], generative.GenerativeModel],
     class_proportions: np.ndarray,
     classifier_d: str,
-):
+) -> None:
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
     no_classes = len(class_proportions)
     for use_generated_images in SEARCH_MODES[args.search_mode]:
@@ -114,7 +114,7 @@ def advgen_experiments(
         advgen.print_stats(plot=(not args.no_adversary), print_norm_statistics=(not args.no_adversary))
 
 
-def main():
+def main() -> None:
     Util.set_memory_limit(10000)
     LogUtil.to_pdf()
 
