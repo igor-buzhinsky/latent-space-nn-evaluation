@@ -28,7 +28,7 @@ class RandomPerturbationStatistician:
         """
         Constructs RandomPerturbationStatistician.
         :param gm: generative model to use.
-        :param classifiers: list of clasifiers for which to perform evaluation.
+        :param classifiers: list of classifiers for which to perform evaluation.
         :param no_images: number of images for which to perform local evaluation.
         :param perturbations_per_image: number of perturbation to perform for each image and epsilon.
         :param visualize: if True, produce images of original and perturbed images.
@@ -125,7 +125,7 @@ def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Calla
 
 class AdversarialGenerator:
     """
-    Generates adversarial images with the provided adversary, shows them and computes peturbation statistics.
+    Generates adversarial images with the provided adversary, shows them and computes perturbation statistics.
     """
 
     gm: GenerativeModel
@@ -141,7 +141,7 @@ class AdversarialGenerator:
         """
         Constructs AdversarialGenerator.
         :param gm: generative model to use. If None, it must be later set with set_generative_model.
-        :param classifiers: list of clasifiers for which to perform evaluation.
+        :param classifiers: list of classifiers for which to perform evaluation.
         :param use_generated_images: when True, calculate generation-based metrics.
             When False, calculate reconstruction-based methods.
         :param decay_factor: decay factor: Float 0..1. The latent code of the image is multiplied by 1 - decay_factor
@@ -160,7 +160,7 @@ class AdversarialGenerator:
     def set_generative_model(self, gm: GenerativeModel):
         """
         Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at once),
-        but statistics needs to be calculated across all models (image classes).
+        but statistics need to be calculated across all models (image classes).
         :param gm: generative model to use.
         """
         self.gm = gm

@@ -34,7 +34,7 @@ class EvaluationUtil:
     ):
         """
         Evaluates the conventional accuracy of the supplied classifiers.
-        This is done for clean images and for images corrupted witt Gaussian noise N(0, 0.8^2 I).
+        This is done for clean images and for images corrupted with Gaussian noise N(0, 0.8^2 I).
         :param classifiers: list of classifiers.
         :param ds: DatasetWrapper from which test images will be taken.
         :param max_imgs: limits the number of images used in evaluation (the actual number of images will be a multiple

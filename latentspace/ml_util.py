@@ -18,7 +18,7 @@ if os.name == "posix":
 
 TensorOrModule = TypeVar("TensorOrModule", bound=Union[torch.Tensor, torch.nn.Module])
 
-# A enumeration of all supported datasets.
+# An enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 ### PyTorch utils ###
@@ -91,7 +91,7 @@ class NopAdversary(Adversary):
 
 class PGDAdversary(Adversary):
     """
-    Performes Projected Gradient Descent (PGD), or, more precisely, PG ascent according to the provided gradient.
+    Performs Projected Gradient Descent (PGD), or, more precisely, PG ascent according to the provided gradient.
     """
 
     def __init__(
@@ -108,7 +108,7 @@ class PGDAdversary(Adversary):
         unit_sphere_normalization: bool = False,
     ):
         """
-        Constrauts PGDAdversary.
+        Constructs PGDAdversary.
         :param rho > 0: bound on perturbation norm.
         :param steps: number of steps to perform in each run. Less steps can be done if stop_loss is reached.
         :param step_size: step size. Each step will be of magnitude rho * step_size.
@@ -269,7 +269,7 @@ class PGDAdversary(Adversary):
         """
         If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
         compensates for the reduction of the learning step due to projection of a unit sphere.
-        :param perturbation_step: unmodified pertubation step.
+        :param perturbation_step: unmodified perturbation step.
         :param previous_perturbed_vector: previous perturbed vector.
         :return: altered perturbation_step.
         """
@@ -375,7 +375,7 @@ class Util:
         """
         Enhanced torchvision.utils.make_grid(). Supports image captions. Also saves the produced figure.
         :param tensors: images to show.
-        :param clamp: of True, clamp all pixels to [-1, 1].
+        :param clamp: if True, clamp all pixels to [-1, 1].
         :param figsize: matplotlib figsize.
         :param captions: list of string captions to be printed on top of images.
         :param nrow: nrow to be passed to torchvision.utils.make_grid.
@@ -390,7 +390,7 @@ class Util:
             t = torch.clamp(t, -1, 1)
         images: List[Any] = list(t)
 
-        # adding textual captions if they are given (this involes rescaling)
+        # adding textual captions if they are given (this involves rescaling)
         if captions is not None:
 
             def multiline_puttext(img, caption: str):

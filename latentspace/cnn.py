@@ -439,7 +439,7 @@ class Trainer:
         show_images: bool = True,
     ) -> Tuple[float, int]:
         """
-        Measures robustness on the supplied data loader as accuracy on perturned images.
+        Measures robustness on the supplied data loader as accuracy on perturbed images.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.
         :param data_loader_fn: a function that returns the data loader to be used.
         :param ds: DatasetWrapper of the used dataset.

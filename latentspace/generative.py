@@ -237,7 +237,7 @@ class PIONEER(GenerativeModel):
     """
     PIONEER [Heljakka, Ari, Arno Solin, and Juho Kannala. "Pioneer networks: Progressively growing generative
     autoencoder." Asian Conference on Computer Vision. Springer, Cham, 2018] model wrapper.
-    A copy of PIONEER's sourse code (https://github.com/heljakka/pioneer/) is located in pioneer/src and is
+    A copy of PIONEER's source code (https://github.com/heljakka/pioneer/) is located in pioneer/src and is
     slightly modified for the purpose of this project.
     """
 

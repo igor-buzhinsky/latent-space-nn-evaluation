@@ -252,8 +252,8 @@ class GAN:
     @torch.no_grad()
     def generate(self, no_samples: int) -> torch.Tensor:
         """
-        Generated new images.
-        :param no_samples: nimber of images to generate.
+        Generates new images.
+        :param no_samples: number of images to generate.
         :return: batch of generated images.
         """
         return self.generator(Util.conditional_to_cuda(torch.randn(no_samples, self.latent_dim)))

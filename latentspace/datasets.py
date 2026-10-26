@@ -111,7 +111,7 @@ class DatasetWrapper(ABC):
         Constructs a DatasetWrapper.
         :param img_size: image resolution (img_size == width == height).
         :param classes: list of full class names.
-        :param printed_classes: list of possibly shortended class names (to be printed on top of images).
+        :param printed_classes: list of possibly shortened class names (to be printed on top of images).
         :param test_transform: torchvision.transforms transformation for test data.
         :param train_transform: torchvision.transforms transformation for train data.
         """
@@ -410,7 +410,7 @@ class LSUNData(DatasetWrapper):
 class ImageNetData(DatasetWrapper):
     """
     ImageNet-1k dataset wrapper.
-    Only loading of validation data is currentlty implemented.
+    Only loading of validation data is currently implemented.
     Images are center-cropped and resized (to 128x128 by default).
     """
 
