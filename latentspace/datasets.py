@@ -32,7 +32,7 @@ def merge_loaders(
     """
     Merges several dataset loaders. Batch size is preserved.
     Labels are replaced with 0 for the first loader, 1 for the second loader and so on.
-    Items from both are cycled until the end of any of them is reached.
+    Items from all loaders are cycled until the end of any of them is reached.
     """
     n_loaders = len(parent_loader_fns)
     data_generators = [iter(f(batch_size, shuffle)) for f in parent_loader_fns]
@@ -114,12 +114,13 @@ class DatasetWrapper(ABC):
         train_transform: Callable,
     ) -> None:
         """
-        Constructs a DatasetWrapper.
-        :param img_size: image resolution (img_size == width == height).
-        :param classes: list of full class names.
-        :param printed_classes: list of possibly shortened class names (to be printed on top of images).
-        :param test_transform: torchvision.transforms transformation for test data.
-        :param train_transform: torchvision.transforms transformation for train data.
+        Constructs a `DatasetWrapper`.
+
+        :param img_size: Image resolution (`img_size` == width == height).
+        :param classes: List of full class names.
+        :param printed_classes: List of possibly shortened class names (to be printed on top of images).
+        :param test_transform: `torchvision.transforms` transformation for test data.
+        :param train_transform: `torchvision.transforms` transformation for train data.
         """
         self.img_size = img_size
         self.classes = classes
@@ -132,8 +133,9 @@ class DatasetWrapper(ABC):
     def preprocess_batch(self, xs: list[tuple[torch.Tensor, Any]]) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Ensures that each image in the batch is paired with a single integer label.
-        :param xs: batch.
-        :return: transformed xs.
+
+        :param xs: Batch.
+        :return: Transformed `xs`.
         """
         if self.unique_label is None:
             labels = [self.get_label(x[1]) for x in xs]
@@ -143,23 +145,24 @@ class DatasetWrapper(ABC):
 
     def get_label(self, x):
         """
-        Get the actual (possibly projected) label from the one given by the dataset.
-        :param x: original label.
-        :return: possibly transformed label.
+        Gets the actual (possibly projected) label from the one given by the dataset.
+
+        :param x: Original label.
+        :return: Possibly transformed label.
         """
         return x
 
     def prediction_indices_to_classes(self, indices: Iterable) -> list[str]:
         """
-        :param indices: input class indices.
-        :return: full class names, to be used in model filenames.
+        :param indices: Input class indices.
+        :return: Full class names, to be used in model filenames.
         """
         return [self.classes[int(i)] for i in indices]
 
     def prediction_indices_to_printed_classes(self, indices: Iterable) -> list[str]:
         """
-        :param indices: input class indices.
-        :return: short class names, to be printed on top of images.
+        :param indices: Input class indices.
+        :return: Short class names, to be printed on top of images.
         """
         return [self.printed_classes[int(i)] for i in indices]
 
@@ -167,11 +170,12 @@ class DatasetWrapper(ABC):
         self, torchvision_dataset: torch.utils.data.Dataset | None, batch_size: int, shuffle: bool
     ) -> torch.utils.data.DataLoader:
         """
-        Get a torch.utils.data.DataLoader for this dataset.
+        Gets a `torch.utils.data.DataLoader` for this dataset.
+
         :param torchvision_dataset: TorchVision dataset.
-        :param batch_size: batch size.
-        :param shuffle: whether to shuffle.
-        :return: torch.utils.data.DataLoader.
+        :param batch_size: Batch size.
+        :param shuffle: Whether to shuffle.
+        :return: `torch.utils.data.DataLoader`.
         """
         assert torchvision_dataset is not None, "This part of the dataset is not available."
         return torch.utils.data.DataLoader(
@@ -188,10 +192,11 @@ class DatasetWrapper(ABC):
         self, batch_size: int | None = None, shuffle: bool = True
     ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
-        Get a train data loader without data augmentation.
-        :param batch_size: batch size.
-        :param shuffle: whether to shuffle.
-        :return: torch.utils.data.DataLoader.
+        Gets a train data loader without data augmentation.
+
+        :param batch_size: Batch size.
+        :param shuffle: Whether to shuffle.
+        :return: `torch.utils.data.DataLoader`.
         """
         if batch_size is None:
             batch_size = self.train_batch_size
@@ -201,10 +206,11 @@ class DatasetWrapper(ABC):
         self, batch_size: int | None = None, shuffle: bool = True
     ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
-        Get a train data loader with data augmentation.
-        :param batch_size: batch size.
-        :param shuffle: whether to shuffle.
-        :return: torch.utils.data.DataLoader.
+        Gets a train data loader with data augmentation.
+
+        :param batch_size: Batch size.
+        :param shuffle: Whether to shuffle.
+        :return: `torch.utils.data.DataLoader`.
         """
         if batch_size is None:
             batch_size = self.train_batch_size
@@ -214,10 +220,11 @@ class DatasetWrapper(ABC):
         self, batch_size: int | None = None, shuffle: bool = True
     ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
-        Get a test data loader without data augmentation.
-        :param batch_size: batch size.
-        :param shuffle: whether to shuffle.
-        :return: torch.utils.data.DataLoader.
+        Gets a test data loader without data augmentation.
+
+        :param batch_size: Batch size.
+        :param shuffle: Whether to shuffle.
+        :return: `torch.utils.data.DataLoader`.
         """
         if batch_size is None:
             batch_size = self.test_batch_size
@@ -232,7 +239,7 @@ class MNISTData(DatasetWrapper):
 
     def __init__(self) -> None:
         """
-        Constructs MNISTData.
+        Constructs `MNISTData`.
         """
         size = 28
         base_transform = transforms.Compose(
@@ -262,13 +269,14 @@ class MNISTData(DatasetWrapper):
 class CelebAData(DatasetWrapper):
     """
     CelebA dataset wrapper. If the dataset is missing, it will be downloaded automatically.
-    Images are center-cropped as resized to 128x128.
+    Images are center-cropped and resized to 128x128.
     """
 
     def __init__(self, attribute_index: int) -> None:
         """
-        Constructs CelebAData.
-        :param attribute_index: CelebA attribute index (non-negative integer), e.g., 20 = 'Male'.
+        Constructs `CelebAData`.
+
+        :param attribute_index: CelebA attribute index (non-negative integer), e.g., 20 = `'Male'`.
         """
         size = 128
         attributes = {}
@@ -352,8 +360,10 @@ class LSUNData(DatasetWrapper):
 
     def __init__(self, unique_label: int | None = None) -> None:
         """
-        Constructs LSUNData.
-        :param unique_label: 0 (bedroom), 1 (church outdoor) or None. If None, then items of both labels will be produced.
+        Constructs `LSUNData`.
+
+        :param unique_label: 0 (bedroom), 1 (church outdoor) or `None`. If `None`, then items of both labels will be
+            produced.
         """
         size = 128
         labels = ("bedroom", "church_outdoor")
@@ -421,8 +431,9 @@ class ImageNetData(DatasetWrapper):
 
     def __init__(self, size: int = 128) -> None:
         """
-        Constructs ImageNetData (only validation data is supported).
-        :param size: size = width = height.
+        Constructs `ImageNetData` (only validation data is supported).
+
+        :param size: Image resolution (`size` == width == height).
         """
         labels = [str(i) for i in range(1000)]
         self.base_path = Path("./data/ImageNet/")

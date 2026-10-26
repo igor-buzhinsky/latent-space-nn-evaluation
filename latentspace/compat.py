@@ -11,9 +11,9 @@ import torch.hub
 
 def patch_torchvision_for_robustness() -> None:
     """
-    The robustness package (version 1.2.1) imports load_state_dict_from_url from torchvision.models.utils,
-    which was removed in newer torchvision versions. This recreates that module, so robustness can be imported.
-    Call this before importing robustness.
+    The `robustness` package (version 1.2.1) imports `load_state_dict_from_url` from `torchvision.models.utils`,
+    which was removed in newer torchvision versions. This recreates that module, so `robustness` can be imported.
+    Call this before importing `robustness`.
     """
     if importlib.util.find_spec("torchvision.models.utils") is None:
         module = types.ModuleType("torchvision.models.utils")

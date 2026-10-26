@@ -16,8 +16,9 @@ class EvaluationUtil:
     def show_some_predictions(classifiers: list[Trainer], ds: DatasetWrapper) -> None:
         """
         Shows several images, and prints/logs several predictions of the supplied classifiers on them.
-        :param classifiers: list of classifiers.
-        :param ds: DatasetWrapper from which test images will be taken.
+
+        :param classifiers: List of classifiers.
+        :param ds: `DatasetWrapper` from which test images will be taken.
         """
         images, labels = next(iter(ds.get_test_loader()))
         Util.imshow_tensors(images, captions=ds.prediction_indices_to_printed_classes(labels))
@@ -34,12 +35,14 @@ class EvaluationUtil:
         """
         Evaluates the conventional accuracy of the supplied classifiers.
         This is done for clean images and for images corrupted with Gaussian noise N(0, 0.8^2 I).
-        :param classifiers: list of classifiers.
-        :param ds: DatasetWrapper from which test images will be taken.
-        :param max_imgs: limits the number of images used in evaluation (the actual number of images will be a multiple
-            of batch size). If None, evaluation will be done for the full number of images produced by the test loader.
-        :param noise_evaluation_multiplier: evaluation on noise-corrupted images will be done noise_evaluation_multiplier
-            times.
+
+        :param classifiers: List of classifiers.
+        :param ds: `DatasetWrapper` from which test images will be taken.
+        :param max_imgs: Limits the number of images used in evaluation (the actual number of images will be a multiple
+            of batch size). If `None`, evaluation will be done for the full number of images produced by the test
+            loader.
+        :param noise_evaluation_multiplier: Evaluation on noise-corrupted images will be done
+            `noise_evaluation_multiplier` times.
         """
         loader = ds.get_test_loader
         if max_imgs is not None:
@@ -63,12 +66,13 @@ class EvaluationUtil:
         """
         Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations.
         Uses L2 and L-inf norms.
-        :param classifiers: list of classifiers.
-        :param ds: DatasetWrapper from which test images will be taken.
-        :param max_imgs: limits the number of images used in evaluation (the actual number of images will be a multiple
-            of batch size). If None, evaluation will be done for the full number of images produced by the test loader.
-        :param l_2_bounds: perturbation L2 norm bounds for which to perform accuracy evaluation.
-        :param l_2_bounds: perturbation L-inf norm bounds for which to perform accuracy evaluation.
+
+        :param classifiers: List of classifiers.
+        :param ds: `DatasetWrapper` from which test images will be taken.
+        :param max_imgs: Limits the number of images used in evaluation (the actual number of images will be a multiple
+            of batch size).
+        :param l_2_bounds: Perturbation L2 norm bounds for which to perform accuracy evaluation.
+        :param l_inf_bounds: Perturbation L-inf norm bounds for which to perform accuracy evaluation.
         """
         loader = Util.fixed_length_loader(max_imgs, ds.get_test_loader, False)
         for norm, bounds in [("scaled_l_2", l_2_bounds), ("l_inf", l_inf_bounds)]:
@@ -89,15 +93,16 @@ class EvaluationUtil:
     ) -> None:
         """
         Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations)
-            of the supplied classifiers. Uses L2 and L-inf norms.
-        :param classifiers: list of classifiers.
-        :param ds: DatasetWrapper from which test images will be taken.
-        :param max_imgs: limits the number of images used in evaluation (the actual number of images will be a multiple
-            of batch size). If None, evaluation will be done for the full number of images produced by the test loader.
-        :param l_2_bound: maximum possible L2 norm of adverarial perturbation (should be set to a number somewhat more
-            than the norms of typical perturbations).
-        :param l_inf_bound: maximum possible L-inf norm of adverarial perturbation (should be set to a number somewhat more
-            than the norms of typical perturbations).
+        of the supplied classifiers. Uses L2 and L-inf norms.
+
+        :param classifiers: List of classifiers.
+        :param ds: `DatasetWrapper` from which test images will be taken.
+        :param max_imgs: Limits the number of images used in evaluation (the actual number of images will be a multiple
+            of batch size).
+        :param l_2_bound: Maximum possible L2 norm of an adversarial perturbation (should be set to a number somewhat
+            greater than the norms of typical perturbations).
+        :param l_inf_bound: Maximum possible L-inf norm of an adversarial perturbation (should be set to a number
+            somewhat greater than the norms of typical perturbations).
         """
         loader = Util.fixed_length_loader(max_imgs, ds.get_test_loader, False)
         for norm, norm_fn, bound in [
@@ -129,15 +134,16 @@ class EvaluationUtil:
         Uses a classifier to generate images of each class. Starts from a mean of a number of actual images
         with added Gaussian noise. For robust classifiers, this procedure should result in images resembling
         correct class instances.
-        :param classifiers: list of classifiers.
-        :param ds: DatasetWrapper from which test images will be taken.
-        :param no_classes: the number of classes in the dataset.
-        :param noise_sigma: noise of magnitude N(0, noise_sigma^2 I) will be added to initial images.
-        :param norm: a string specifying a norm as accepted by PGDAdversary.
-        :param norm_bound: norm bound for PGDAdversary.
-        :param pairs_in_line: pairs of images (original - generated) to present in each row.
-        :param estimation_batches: number of batches to use to compute the initial mean image.
-        :param nrow: nrow to be passed to ImageSet.
+
+        :param classifiers: List of classifiers.
+        :param ds: `DatasetWrapper` from which test images will be taken.
+        :param no_classes: The number of classes in the dataset.
+        :param noise_sigma: Noise of magnitude N(0, noise_sigma^2 I) will be added to initial images.
+        :param norm: A string specifying a norm as accepted by `PGDAdversary`.
+        :param norm_bound: Norm bound for `PGDAdversary`.
+        :param pairs_in_line: Pairs of images (original - generated) to present in each row.
+        :param estimation_batches: Number of batches to use to compute the initial mean image.
+        :param nrow: `nrow` to be passed to `ImageSet`.
         """
         mean_image = torch.stack(
             [batch.mean(dim=0) for batch, _ in itertools.islice(ds.get_test_loader(), 0, estimation_batches)]
@@ -159,9 +165,10 @@ class EvaluationUtil:
     def show_reconstructed_images(gm: GenerativeModel, lines: int, images_in_line: int) -> None:
         """
         Shows several images reconstructed by the supplied generative model.
-        :param gm: generative model to use.
-        :param lines: lines of images to show.
-        :param images_in_line: number of (original, reconstructed) image pairs in each line.
+
+        :param gm: Generative model to use.
+        :param lines: Lines of images to show.
+        :param images_in_line: Number of (original, reconstructed) image pairs in each line.
         """
         sampler = gm.get_sampler()
         for _ in range(lines):
@@ -176,8 +183,9 @@ class EvaluationUtil:
         """
         Shows statistics on the distance of reconstructed images (based on the supplied generative model)
         from the original ones.
-        :param gm: generative model to use.
-        :param no_images: number of images to construct statistics for.
+
+        :param gm: Generative model to use.
+        :param no_images: Number of images to construct statistics for.
         """
         sampler = gm.get_sampler()
         norms, distances = np.empty(no_images), np.empty(no_images)
@@ -207,9 +215,10 @@ class EvaluationUtil:
     def show_generated_images(gm: GenerativeModel, lines: int, images_in_line: int) -> None:
         """
         Shows several images generated by the supplied generative model.
-        :param gm: generative model to use.
-        :param lines: lines of images to show.
-        :param images_in_line: number of generated images in each line.
+
+        :param gm: Generative model to use.
+        :param lines: Lines of images to show.
+        :param images_in_line: Number of generated images in each line.
         """
         for _ in range(lines):
             Util.imshow_tensors(gm.generate(images_in_line, detach=True), nrow=images_in_line)

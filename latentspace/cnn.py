@@ -33,10 +33,11 @@ class Unit(torch.nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0) -> None:
         """
-        Constructs Unit.
-        :param in_channels: number of input channels.
-        :param out_channels: number of output channels.
-        :param p_dropout: probability of dropout at the end of the layer.
+        Constructs `Unit`.
+
+        :param in_channels: Number of input channels.
+        :param out_channels: Number of output channels.
+        :param p_dropout: Probability of dropout at the end of the layer.
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
@@ -87,8 +88,9 @@ class ColoredNet128(torch.nn.Module):
 
     def __init__(self, no_classes: int = 2, unit_type: int = 0) -> None:
         """
-        Constructs ColoredNet128.
-        :param no_classes: number of output classes.
+        Constructs `ColoredNet128`.
+
+        :param no_classes: Number of output classes.
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
@@ -114,7 +116,8 @@ class MNISTNet(torch.nn.Module):
 
     def __init__(self, unit_type: int = 0) -> None:
         """
-        Constructs MNISTNet.
+        Constructs `MNISTNet`.
+
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
@@ -139,19 +142,20 @@ class EarlyStoppingMonitor:
 
     def __init__(self) -> None:
         """
-        Constructs EarlyStoppingMonitor.
+        Constructs `EarlyStoppingMonitor`.
         """
         self.total_metric_value = -float("inf")
         self.should_stop = False
 
     def update_metric(self, trainer: "Trainer", new_value: float, epoch: int, disk_backup_filename: str) -> None:
         """
-        Sets the flag self.should_stop to True, if the supplied value of the validation metric is not greater
+        Sets the flag `self.should_stop` to `True` if the supplied value of the validation metric is not greater
         than the previous one. Otherwise, saves the current trainable parameters of the classifier.
-        :param trainer: classifier to work with.
-        :param new_value: new validation metric value.
-        :param epoch: number of the current epoch.
-        :param disk_backup_filename: filename where to save trainable parameters of the classifier if the
+
+        :param trainer: Classifier to work with.
+        :param new_value: New validation metric value.
+        :param epoch: Number of the current epoch.
+        :param disk_backup_filename: Filename where to save trainable parameters of the classifier if the
             metric still gets better.
         """
         LogUtil.info(
@@ -178,11 +182,13 @@ class Trainer:
 
     def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0) -> None:
         """
-        Constructs Trainer.
-        :param dataset: one of 'celeba-128', 'lsun-128', 'mnist', 'none'. This determines network architecture.
-        :param train_loader_fn: function that returns a TorchVision loader of (possibly augmented) training data.
-        :param val_loader_fn: function that returns a TorchVision loader of validation/test data.
-        :param unit_type: unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
+        Constructs `Trainer`.
+
+        :param dataset: One of `'celeba-128'`, `'lsun-128'`, `'mnist'`, `'none'`. This determines the network
+            architecture.
+        :param train_loader_fn: Function that returns a TorchVision loader of (possibly augmented) training data.
+        :param val_loader_fn: Function that returns a TorchVision loader of validation/test data.
+        :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         model: torch.nn.Module | None
         if dataset in ["celeba-128", "lsun-128"]:
@@ -216,7 +222,8 @@ class Trainer:
     def save_params_to_disk(self, filename: str) -> None:
         """
         Saves current trainable parameters to disk.
-        :param filename: target filename.
+
+        :param filename: Target filename.
         """
         torch.save(self.model.state_dict(), filename)
 
@@ -231,14 +238,15 @@ class Trainer:
     def restore_params_from_disk(self, filename: str) -> None:
         """
         Restores previously saved trainable parameters from disk.
-        :param filename: target filename.
+
+        :param filename: Target filename.
         """
         self.params = torch.load(filename, map_location=("cuda:0" if Util.using_cuda else "cpu"))
         self.restore_params()
 
     def disable_param_gradients(self) -> None:
         """
-        Disables the gradients of model's parameters. This saves computation time when gradients need to
+        Disables the gradients of the model's parameters. This saves computation time when gradients need to
         be computed w.r.t. the input image only.
         """
         Util.set_param_requires_grad(self.model, False)
@@ -252,9 +260,10 @@ class Trainer:
 
     def set_misclassification_gradients(self, value: bool) -> None:
         """
-        Controls the behavior of predict_with_gradient.
-        :param value: if True, predict_with_gradient will return the gradient that can be used to
-            perform an untargeted attack. If False, predict_with_gradient returns the gradient of the loss.
+        Controls the behavior of `predict_with_gradient`.
+
+        :param value: If `True`, `predict_with_gradient` will return the gradient that can be used to
+            perform an untargeted attack. If `False`, `predict_with_gradient` returns the gradient of the loss.
         """
         self.misclassification_gradients = value
 
@@ -263,13 +272,15 @@ class Trainer:
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts, computes loss and gradient.
-        If self.misclassification_gradients is True, the gradient points in the direction of a
-        possible untargeted attack: ∇_x (max(other_probabilities) - correct_probability)
-        If self.misclassification_gradients is False, the gradient is ∇_x (loss).
-        :param x: batch of input images. PyTorch gradients of x must be enabled by the caller.
-            This method will add the gradient to x.grad.
-        :param true_labels: labels that correspond to input images.
-        :return: (predictions: LongTensor[batch_dim], losses: FloatTensor[batch_dim]).
+        If `self.misclassification_gradients` is `True`, the gradient points in the direction of a
+        possible untargeted attack: ∇_x (max(other_probabilities) - correct_probability).
+        If `self.misclassification_gradients` is `False`, the gradient is ∇_x (loss).
+
+        :param x: Batch of input images. PyTorch gradients of `x` must be enabled by the caller.
+            This method will add the gradient to `x.grad`.
+        :param true_labels: Labels that correspond to input images.
+        :return: `(predictions, losses)`, where `predictions` is a long tensor and `losses` is a float tensor,
+            both of size [batch_dim].
         """
         self.model.eval()
         self.disable_param_gradients()
@@ -296,9 +307,10 @@ class Trainer:
     @torch.no_grad()
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Predict on a batch of input images.
-        :param x: batch of input images.
-        :return: LongTensor of predictions.
+        Predicts on a batch of input images.
+
+        :param x: Batch of input images.
+        :return: Long tensor of predictions.
         """
         self.model.eval()  # set prediction mode
         # predicting separately for each item
@@ -311,8 +323,9 @@ class Trainer:
     def predict_probs(self, x: torch.Tensor) -> torch.Tensor:
         """
         Returns soft predictions for a batch of input images.
-        :param x: batch of input images.
-        :return: FloatTensor of soft ("probability") predictions.
+
+        :param x: Batch of input images.
+        :return: Float tensor of soft ("probability") predictions.
         """
         self.model.eval()  # set prediction mode
         # predicting separately for each item
@@ -330,12 +343,13 @@ class Trainer:
     ) -> None:
         """
         Trains the classifier using the cross-entropy loss and RMSProp.
-        :param class_weights: weights (importance values) of each image class.
-        :param epochs: number of epochs. An epoch is a full pass over the train loader.
-        :param lr: learning rate.
-        :param lr_decay: after each epoch, the learning rate is multiplied by 1 - lr_decay.
-        :param disk_backup_filename: filename to dump trainable parameters. Dumping is done once per epoch.
-        :param noise_sigma: if positive, Gaussian noise N(0, noise_sigma^2 I) will be added to training images as a form
+
+        :param class_weights: Weights (importance values) of each image class.
+        :param epochs: Number of epochs. An epoch is a full pass over the train loader.
+        :param lr: Learning rate.
+        :param lr_decay: After each epoch, the learning rate is multiplied by `1 - lr_decay`.
+        :param disk_backup_filename: Filename to dump trainable parameters. Dumping is done once per epoch.
+        :param noise_sigma: If positive, Gaussian noise N(0, noise_sigma^2 I) will be added to training images as a form
             of data augmentation. This results in adversarial training according to [Ford, N., Gilmer, J., Carlini, N.,
             & Cubuk, D. (2019). Adversarial examples are a natural consequence of test error in noise.
             arXiv preprint arXiv:1901.10513].
@@ -415,12 +429,13 @@ class Trainer:
     ) -> tuple[float, int]:
         """
         Measures accuracy on the supplied data loader.
-        :param data_loader_fn: a function that returns the data loader to be used.
-        :param noise_sigma: if positive, Gaussian noise N(0, noise_sigma^2 I) will be added to images
+
+        :param data_loader_fn: A function that returns the data loader to be used.
+        :param noise_sigma: If positive, Gaussian noise N(0, noise_sigma^2 I) will be added to images
             used in accuracy evaluation.
-        :param noise_evaluation_multiplier: evaluation on noise-corrupted images will be done noise_evaluation_multiplier
-            times.
-        :return: (accuracy, number of images used to calculate it).
+        :param noise_evaluation_multiplier: Evaluation on noise-corrupted images will be done
+            `noise_evaluation_multiplier` times.
+        :return: Tuple (accuracy, number of images used to calculate it).
         """
         correct = total = 0
         for images, labels in data_loader_fn():
@@ -442,11 +457,12 @@ class Trainer:
     ) -> tuple[float, int]:
         """
         Measures robustness on the supplied data loader as accuracy on perturbed images.
-        :param perturb_fn: function that accepts an image and its true label and perturbs this image.
-        :param data_loader_fn: a function that returns the data loader to be used.
-        :param ds: DatasetWrapper of the used dataset.
-        :param show_images: if True, also shows perturbed images.
-        :return: (accuracy, number of images used to calculate it).
+
+        :param perturb_fn: Function that accepts an image and its true label and perturbs this image.
+        :param data_loader_fn: A function that returns the data loader to be used.
+        :param ds: `DatasetWrapper` of the used dataset.
+        :param show_images: If `True`, also shows perturbed images.
+        :return: Tuple (accuracy, number of images used to calculate it).
         """
         self.model.eval()
         self.disable_param_gradients()
@@ -477,12 +493,13 @@ class Trainer:
     ) -> tuple[torch.Tensor, torch.Tensor, int]:
         """
         Measures adversarial severity (mean norm of minimum adversarial perturbations) on the supplied data loader.
-        :param perturb_fn: function that accepts an image and its true label and perturbs this image.
-        :param data_loader_fn: a function that returns the data loader to be used.
-        :param ds: DatasetWrapper of the used dataset.
-        :param norm_fn: function that accepts a PyTorch tensor and returns its norm.
-        :param show_images: if True, also shows perturbed images.
-        :return: (mean of approximately minimum adversarial perturbations,
+
+        :param perturb_fn: Function that accepts an image and its true label and perturbs this image.
+        :param data_loader_fn: A function that returns the data loader to be used.
+        :param ds: `DatasetWrapper` of the used dataset.
+        :param norm_fn: Function that accepts a PyTorch tensor and returns its norm.
+        :param show_images: If `True`, also shows perturbed images.
+        :return: Tuple (mean of approximately minimum adversarial perturbations,
             standard deviation of approximately minimum adversarial perturbations,
             number of images used to calculate these values).
         """

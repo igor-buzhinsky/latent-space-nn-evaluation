@@ -187,7 +187,7 @@ class GAN:
 
     def __init__(self) -> None:
         """
-        Constructs GAN.
+        Constructs `GAN`.
         """
         self.latent_dim = 64
         self.generator = Util.conditional_to_cuda(MNISTGenerator(self.latent_dim))
@@ -207,7 +207,8 @@ class GAN:
     def save_params_to_disk(self, filename: str) -> None:
         """
         Saves current trainable parameters to disk.
-        :param filename: target filename.
+
+        :param filename: Target filename.
         """
         torch.save(self.generator.state_dict(), filename + ".generator")
         torch.save(self.discriminator.state_dict(), filename + ".discriminator")
@@ -225,7 +226,8 @@ class GAN:
     def restore_params_from_disk(self, filename: str) -> None:
         """
         Restores previously saved trainable parameters from disk.
-        :param filename: target filename.
+
+        :param filename: Target filename.
         """
         loc = "cuda:0" if Util.using_cuda else "cpu"
         self.params = (
@@ -245,8 +247,9 @@ class GAN:
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Decodes latent vectors into images.
-        :param x: batch of latent vectors.
-        :return: batch of generated images.
+
+        :param x: Batch of latent vectors.
+        :return: Batch of generated images.
         """
         return self.generator(x)
 
@@ -254,8 +257,9 @@ class GAN:
     def generate(self, no_samples: int) -> torch.Tensor:
         """
         Generates new images.
-        :param no_samples: number of images to generate.
-        :return: batch of generated images.
+
+        :param no_samples: Number of images to generate.
+        :return: Batch of generated images.
         """
         return self.generator(Util.conditional_to_cuda(torch.randn(no_samples, self.latent_dim)))
 
@@ -265,7 +269,8 @@ class GAN:
         The currently used implementation of spectral norms has some parameters that are not saved to disk.
         As a result, the discriminator is in an invalid state after it is loaded from disk.
         Running spectral normalization ("warming" spectral norms) on a number of images returns it to shape.
-        :param train_loader_fn: loader-returning function to be used for warming.
+
+        :param train_loader_fn: Loader-returning function to be used for warming.
         """
         data_sampler = iter(train_loader_fn())
         while True:
@@ -284,12 +289,13 @@ class GAN:
     ) -> None:
         """
         Trains this WGAN.
-        :param train_loader_fn: loader-returning function to generate training data.
-        :param epochs: number of epochs. An epoch is a full pass over the train loader.
-        :param lr: learning rate.
-        :param n_critic: number of steps to train the discriminator (a.k.a. critic) per each training
+
+        :param train_loader_fn: Loader-returning function to generate training data.
+        :param epochs: Number of epochs. An epoch is a full pass over the train loader.
+        :param lr: Learning rate.
+        :param n_critic: Number of steps to train the discriminator (a.k.a. critic) per each training
             step of the generator. In WGANs, it is OK to make it large.
-        :param disk_backup_filename: filename to dump trainable parameters. Dumping is done once per epoch.
+        :param disk_backup_filename: Filename to dump trainable parameters. Dumping is done once per epoch.
         """
         Util.set_param_requires_grad(self.generator, True)
         Util.set_param_requires_grad(self.discriminator, True)

@@ -12,7 +12,7 @@ from .ml_util import Adversary, ImageSet, LogUtil, Util
 
 class RandomPerturbationStatistician:
     """
-    Measures classification performance on images with added latent noise (local latent noise accurcy - LLNA).
+    Measures classification performance on images with added latent noise (local latent noise accuracy, LLNA).
     Also shows these noisy images.
     """
 
@@ -26,13 +26,14 @@ class RandomPerturbationStatistician:
         epsilons: Sequence[float] | np.ndarray,
     ) -> None:
         """
-        Constructs RandomPerturbationStatistician.
-        :param gm: generative model to use.
-        :param classifiers: list of classifiers for which to perform evaluation.
-        :param no_images: number of images for which to perform local evaluation.
-        :param perturbations_per_image: number of perturbation to perform for each image and epsilon.
-        :param visualize: if True, produce images of original and perturbed images.
-        :param epsilons: list of noise magnitudes (non-negative numbers). Evaluation will be performed for each of them.
+        Constructs `RandomPerturbationStatistician`.
+
+        :param gm: Generative model to use.
+        :param classifiers: List of classifiers for which to perform evaluation.
+        :param no_images: Number of images for which to perform local evaluation.
+        :param perturbations_per_image: Number of perturbations to perform for each image and epsilon.
+        :param visualize: If `True`, produce images of original and perturbed images.
+        :param epsilons: List of noise magnitudes (non-negative numbers). Evaluation will be performed for each of them.
         """
         self.gm = gm
         self.classifiers = classifiers
@@ -87,13 +88,14 @@ def get_get_gradient(
     grad_transform: Callable,
 ) -> Callable[[torch.Tensor], tuple[torch.Tensor, float]]:
     """
-    Produces custom "get_gradient" functions that are accepted by Adversaries.
+    Produces custom `get_gradient` functions that are accepted by adversaries.
     (This is not an example of good object-oriented design.)
-    :param classifier: classifier for which to get gradient function.
-    :param label: true label of the current image (int).
-    :param vector_transform_1: vector transformation used to parameterize get_gradient (best to explain with the code below).
-    :param vector_transform_2: vector transformation used to parameterize get_gradient (best to explain with code below).
-    :param grad_transform: vector transformation used to parameterize get_gradient (best to explain with code below).
+
+    :param classifier: Classifier for which to get the gradient function.
+    :param label: True label of the current image.
+    :param vector_transform_1: Vector transformation used to parameterize `get_gradient` (see the code below).
+    :param vector_transform_2: Vector transformation used to parameterize `get_gradient` (see the code below).
+    :param grad_transform: Gradient transformation used to parameterize `get_gradient` (see the code below).
     """
 
     def get_gradient(vector: torch.Tensor) -> tuple[torch.Tensor, float]:
@@ -107,11 +109,12 @@ def get_get_gradient(
 
 def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Callable:
     """
-    Produces "perturb" functions that are accepted by Trainers (classifiers).
+    Produces `perturb` functions that are accepted by `Trainer`s (classifiers).
     Perturbations are performed in the original image space.
-    :param classifier: classifier that will accept the resulting function.
-    :param adversary: Adversary that will be used by the resulting function.
-    :return: a "perturb" function as described above.
+
+    :param classifier: Classifier that will accept the resulting function.
+    :param adversary: `Adversary` that will be used by the resulting function.
+    :return: A `perturb` function as described above.
     """
 
     def perturb(image: torch.Tensor, true_label: int) -> torch.Tensor:
@@ -139,12 +142,13 @@ class AdversarialGenerator:
         label_printer: Callable | None = None,
     ) -> None:
         """
-        Constructs AdversarialGenerator.
-        :param gm: generative model to use. If None, it must be later set with set_generative_model.
-        :param classifiers: list of classifiers for which to perform evaluation.
-        :param use_generated_images: when True, calculate generation-based metrics.
-            When False, calculate reconstruction-based methods.
-        :param decay_factor: decay factor: Float 0..1. The latent code of the image is multiplied by 1 - decay_factor
+        Constructs `AdversarialGenerator`.
+
+        :param gm: Generative model to use. If `None`, it must be set later with `set_generative_model`.
+        :param classifiers: List of classifiers for which to perform evaluation.
+        :param use_generated_images: When `True`, calculate generation-based metrics.
+            When `False`, calculate reconstruction-based metrics.
+        :param decay_factor: Decay factor (0..1). The latent code of the image is multiplied by `1 - decay_factor`
             prior to adversarial search.
         """
         if gm is not None:
@@ -161,13 +165,14 @@ class AdversarialGenerator:
         """
         Sets new generative model to be used. This is useful when models are memory-intensive (cannot be loaded at once),
         but statistics need to be calculated across all models (image classes).
-        :param gm: generative model to use.
+
+        :param gm: Generative model to use.
         """
         self.gm = gm
 
     def _clear_stat(self) -> None:
         """
-        Initializes (when called first time) or clears accumulated statistics.
+        Initializes (when called for the first time) or clears accumulated statistics.
         """
 
         def create() -> list[list]:
@@ -199,13 +204,13 @@ class AdversarialGenerator:
 
     def _l2_norm(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Scaled L2 norm of x.
+        Scaled L2 norm of `x`.
         """
         return x.norm() / np.sqrt(x.numel())
 
     def _l1_norm(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Scaled L1 norm of x.
+        Scaled L1 norm of `x`.
         """
         return x.norm(1) / x.numel()
 
@@ -215,12 +220,13 @@ class AdversarialGenerator:
         These are the following metrics:
         - Accuracies on original/generated/reconstructed/perturbed images.
         - ║Δl║ (scaled L2): scaled L2 norms of latent perturbations.
-        - ║l + Δl║ - ║l║ (scaled L2): increase of scaled L2 norm after the initial (decayed) images is replaced with an
-            adversarial image.
+        - ║l + Δl║ - ║l║ (scaled L2): increase of the scaled L2 norm after the initial (decayed) image is replaced with
+            an adversarial image.
         - ║Δx║ (scaled L2): scaled L2 norm of found adversarial perturbations in the original space.
         - ║Δx║ (scaled L1): scaled L1 norm of found adversarial perturbations in the original space.
-        :param plot: whether to plot histograms for each of the aforementioned metrics.
-        :param print_norm_statistics: whether to print norm statistics.
+
+        :param plot: Whether to plot histograms for each of the aforementioned metrics.
+        :param print_norm_statistics: Whether to print norm statistics.
         """
         # classification accuracy
         pairs = []
@@ -284,12 +290,13 @@ class AdversarialGenerator:
     ) -> None:
         """
         Does actual processing.
-        :param adversary: Adversary to be used (e.g., PGDAdversary).
-        :param no_images: the number of images for which to perform adversarial search.
-        :param show_perturbations: if True, shows not only adversarial examples, but the corresponding perturbations in
-            the original image space.
-        :param clear_stat: whether to clear statistics prior to adversarial search.
-        :param produce_images: whether to actually produce all images.
+
+        :param adversary: `Adversary` to be used (e.g., `PGDAdversary`).
+        :param no_images: The number of images for which to perform adversarial search.
+        :param show_perturbations: If `True`, shows not only adversarial examples, but also the corresponding
+            perturbations in the original image space.
+        :param clear_stat: Whether to clear statistics prior to adversarial search.
+        :param produce_images: Whether to actually produce all images.
         """
         if clear_stat:
             self._clear_stat()

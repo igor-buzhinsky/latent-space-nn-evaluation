@@ -26,11 +26,12 @@ class GenerativeModel(ABC):
 
     def __init__(self, resolution: int, latent_dim: int, unique_label: int, ds: DatasetWrapper) -> None:
         """
-        Constructs GenerativeModel.
-        :param resolution: image resolution (resolution == width == height).
-        :param latent_dim: number of latent components.
-        :param unique_label: class label for which a generative model is created.
-        :param ds: DatasetWrapper.
+        Constructs `GenerativeModel`.
+
+        :param resolution: Image resolution (`resolution` == width == height).
+        :param latent_dim: Number of latent components.
+        :param unique_label: Class label for which a generative model is created.
+        :param ds: `DatasetWrapper`.
         """
         self.resolution = resolution
         self.latent_dim = latent_dim
@@ -40,48 +41,53 @@ class GenerativeModel(ABC):
 
     def destroy(self) -> None:  # noqa: B027 (optional hook, not abstract)
         """
-        Free memory, or at least try. Does nothing by default; subclasses holding large models override this.
+        Frees memory, or at least tries to. Does nothing by default; subclasses holding large models override this.
         """
 
     def _maybe_detach(self, x: torch.Tensor, detach: bool) -> torch.Tensor:
         """
         Optionally detaches the supplied tensor.
-        :param x: input tensor.
-        :param detach: whether to .detach() the result.
+
+        :param x: Input tensor.
+        :param detach: Whether to `.detach()` the result.
         """
         return x.detach() if detach else x
 
     @abstractmethod
     def generate(self, no_img: int, detach: bool = False) -> torch.Tensor:
         """
-        Generate random images.
-        :param no_img: number of images to generate.
-        :param detach: whether to .detach() the result.
-        :return: batch of generated random images.
+        Generates random images.
+
+        :param no_img: Number of images to generate.
+        :param detach: Whether to `.detach()` the result.
+        :return: Batch of generated random images.
         """
 
     @abstractmethod
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
-        Encode given images into latent codes.
-        :param img: batch of images to encode.
-        :return: latent codes for input images.
+        Encodes given images into latent codes.
+
+        :param img: Batch of images to encode.
+        :return: Latent codes for input images.
         """
 
     @abstractmethod
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         """
-        Decode given latent codes into images.
-        :param latent_code: batch of latent codes to decode.
-        :param detach: whether to .detach() the result.
-        :return: batch of decoded images.
+        Decodes given latent codes into images.
+
+        :param latent_code: Batch of latent codes to decode.
+        :param detach: Whether to `.detach()` the result.
+        :return: Batch of decoded images.
         """
 
     def get_sampler(self, batch_size: int = 1) -> Iterator[tuple[torch.Tensor, list[int]]]:
         """
-        Get a data loader for this data class.
-        :param batch_size: batch size to be used by the loader.
-        :return: data loader (not a function).
+        Gets a data loader for this data class.
+
+        :param batch_size: Batch size to be used by the loader.
+        :return: Data loader (not a function).
         """
 
         def f() -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
@@ -95,7 +101,7 @@ class GenerativeModel(ABC):
         self, img: torch.Tensor, no_restarts: int, no_steps: int, lr: float
     ) -> torch.Tensor:
         """
-        Implements encoding with a gradient-based approach (4 restarts of Adam).
+        Implements encoding with a gradient-based approach (restarts of Adam).
         """
         all_latent = Util.conditional_to_cuda(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
         loss_f = torch.nn.MSELoss()
@@ -118,15 +124,16 @@ class GenerativeModel(ABC):
 
 class WGAN(GenerativeModel):
     """
-    Adapts GAN to GenerativeModel.
+    Adapts `GAN` to `GenerativeModel`.
     """
 
     def __init__(self, dataset_info: DatasetInfo, unique_label: int, ds: DatasetWrapper) -> None:
         """
-        Constructs WGAN.
-        :param dataset_info: DatasetInfo.
-        :param unique_label: label of the data class for which WGAN is created.
-        :param ds: DatasetWrapper.
+        Constructs `WGAN`.
+
+        :param dataset_info: `DatasetInfo`.
+        :param unique_label: Label of the data class for which the WGAN is created.
+        :param ds: `DatasetWrapper`.
         """
         assert dataset_info == DatasetInfo.MNIST
         self.g = GAN()
@@ -141,7 +148,7 @@ class WGAN(GenerativeModel):
 
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
-        Implements WGAN.encode with a gradient-based approach (4 restarts of Adam).
+        Implements `WGAN.encode` with a gradient-based approach (4 restarts of Adam).
         """
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
 
@@ -160,9 +167,10 @@ class BigGAN(GenerativeModel):
 
     def __init__(self, ds: DatasetWrapper, builtin_decay: float = 0.0) -> None:
         """
-        Constructs BigGAN for several ImageNet classes.
-        :param ds: DatasetWrapper.
-        :param ds: built-in latent decay (0..1) that makes images more plausible but less diverse.
+        Constructs `BigGAN` for several ImageNet classes.
+
+        :param ds: `DatasetWrapper`.
+        :param builtin_decay: Built-in latent decay (0..1) that makes images more plausible but less diverse.
         """
         super().__init__(128, 120, 0, ds)
         LogUtil.info("*** Loading BigGAN...")
@@ -189,7 +197,8 @@ class BigGAN(GenerativeModel):
     def configure_label(self, unique_label: int) -> None:
         """
         Sets the ImageNet-1k class to generate.
-        :param unique_label: ImageNet class label (0..999)
+
+        :param unique_label: ImageNet class label (0..999).
         """
         self.unique_label = unique_label
 
@@ -203,7 +212,7 @@ class BigGAN(GenerativeModel):
 
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """
-        Implements BigGAN.encode with a gradient-based approach (4 restarts of Adam).
+        Implements `BigGAN.encode` with a gradient-based approach (4 restarts of Adam).
         """
         return self.encode_with_gradient_search(img, 4, 40, 0.1)
 
@@ -227,7 +236,7 @@ class PIONEER(GenerativeModel):
     """
     PIONEER [Heljakka, Ari, Arno Solin, and Juho Kannala. "Pioneer networks: Progressively growing generative
     autoencoder." Asian Conference on Computer Vision. Springer, Cham, 2018] model wrapper.
-    A copy of PIONEER's source code (https://github.com/heljakka/pioneer/) is located in pioneer/src and is
+    A copy of PIONEER's source code (https://github.com/heljakka/pioneer/) is located in `pioneer/src` and is
     slightly modified for the purpose of this project.
     """
 
@@ -239,12 +248,13 @@ class PIONEER(GenerativeModel):
         spectral_norm_warming_no_images: int = 50,
     ) -> None:
         """
-        Constructs PIONEER. This call is memory-intensive.
-        :param dataset_info: DatasetInfo.
-        :param unique_label: label of the data class for which WGAN is created.
-        :param ds: DatasetWrapper.
-        :param spectral_norm_warming_no_images: number of images for spectral norm warming.
-            See GAN.warm_spectral_norms.
+        Constructs `PIONEER`. This call is memory-intensive.
+
+        :param dataset_info: `DatasetInfo`.
+        :param unique_label: Label of the data class for which the PIONEER model is created.
+        :param ds: `DatasetWrapper`.
+        :param spectral_norm_warming_no_images: Number of images for spectral norm warming.
+            See `GAN.warm_spectral_norms`.
         """
 
         super().__init__(128, 511, unique_label, ds)
@@ -351,7 +361,7 @@ class PIONEER(GenerativeModel):
 
     def encode_plain(self, img: torch.Tensor) -> torch.Tensor:
         """
-        PIONEER encoder always generates a normalized vector (scaled L2 norm == 1).
+        The PIONEER encoder always generates a normalized vector (scaled L2 norm == 1).
         This is not very important in a multidimensional space, since N(0, sigma^2 I)-distributed
         vectors are concentrated around a sphere of radius sigma.
         """

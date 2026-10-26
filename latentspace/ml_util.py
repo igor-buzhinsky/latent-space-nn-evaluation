@@ -70,11 +70,12 @@ class Adversary(ABC):
     ) -> torch.Tensor:
         """
         Perturb the given vector.
-        :param initial_vector: initial vector. If this is the original image representation, it must be flattened
+
+        :param initial_vector: Initial vector. If this is the original image representation, it must be flattened
             prior to the call (more precisely, it must be of size [1, the_rest]).
-        :param get_gradient: a get_gradient function. It accepts the current vector and returns a tuple
+        :param get_gradient: A `get_gradient` function. It accepts the current vector and returns a tuple
             (gradient pointing to the direction of the adversarial attack, the corresponding loss function value).
-        :return: the pertured vector of the same size as initial_vector.
+        :return: The perturbed vector of the same size as `initial_vector`.
         """
 
 
@@ -108,20 +109,21 @@ class PGDAdversary(Adversary):
         unit_sphere_normalization: bool = False,
     ) -> None:
         """
-        Constructs PGDAdversary.
-        :param rho > 0: bound on perturbation norm.
-        :param steps: number of steps to perform in each run. Less steps can be done if stop_loss is reached.
-        :param step_size: step size. Each step will be of magnitude rho * step_size.
-        :param random_start: if True, start search in a vector with a uniformly random radius within the rho-ball.
-            Otherwise, start in the center of the rho-ball.
-        :param stop_loss: the search will stop when this value of the "loss" function is exceeded.
+        Constructs `PGDAdversary`.
+
+        :param rho: Bound on the perturbation norm (positive number).
+        :param steps: Number of steps to perform in each run. Fewer steps can be done if `stop_loss` is reached.
+        :param step_size: Step size. Each step will be of magnitude `rho * step_size`.
+        :param random_start: If `True`, start the search in a vector with a uniformly random radius within the
+            rho-ball. Otherwise, start in the center of the rho-ball.
+        :param stop_loss: The search will stop when this value of the "loss" function is exceeded.
         :param verbose: 0 (silent), 1 (regular), 2 (verbose).
-        :param norm: one of 'scaled_l_2' (default), 'l_2' or 'l_inf'.
-        :param n_repeat: number of times to run PGD.
-        :param repeat_mode: 'any' or 'min': In mode 'any', n_repeat runs are identical and any run that reaches
-            stop_loss will prevent subsequent runs. In mode 'min', all runs will be performed, and if a run
-            finds a smaller perturbation according to norm, it will tighten rho on the next run.
-        :param unit_sphere_normalization: search perturbations on the unit sphere (according to the scaled L2 norm)
+        :param norm: One of `'scaled_l_2'` (default), `'l_2'` or `'l_inf'`.
+        :param n_repeat: Number of times to run PGD.
+        :param repeat_mode: `'any'` or `'min'`. In mode `'any'`, `n_repeat` runs are identical, and any run that
+            reaches `stop_loss` will prevent subsequent runs. In mode `'min'`, all runs will be performed, and if a
+            run finds a smaller perturbation according to `norm`, it will tighten `rho` on the next run.
+        :param unit_sphere_normalization: Search perturbations on the unit sphere (according to the scaled L2 norm)
             instead of the entire latent space.
         """
         super().__init__()
@@ -149,7 +151,7 @@ class PGDAdversary(Adversary):
 
     def _norm(self, x: torch.Tensor) -> float:
         """
-        (Possibly scaled) norm of x.
+        (Possibly scaled) norm of `x`.
         """
         return x.norm(np.inf if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
 
@@ -249,8 +251,9 @@ class PGDAdversary(Adversary):
     def _optional_normalize(self, x: torch.Tensor) -> torch.Tensor:
         """
         Optional unit sphere normalization.
-        :param x: vector of shape 1*dim to normalize.
-        :return: optionally normalized x.
+
+        :param x: Vector of shape 1*dim to normalize.
+        :return: Optionally normalized `x`.
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
 
@@ -260,9 +263,10 @@ class PGDAdversary(Adversary):
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
-        :param perturbed_vector: perturbed vector (initial vector + perturbation).
-        :param perturbation: perturbation vector.
-        :return: possibly recomputed (perturbed_vector, perturbation).
+
+        :param perturbed_vector: Perturbed vector (initial vector + perturbation).
+        :param perturbation: Perturbation vector.
+        :return: Possibly recomputed `(perturbed_vector, perturbation)`.
         """
         effective_perturbed_vector = self._optional_normalize(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
@@ -271,11 +275,12 @@ class PGDAdversary(Adversary):
         self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor
     ) -> torch.Tensor:
         """
-        If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
-        compensates for the reduction of the learning step due to projection of a unit sphere.
-        :param perturbation_step: unmodified perturbation step.
-        :param previous_perturbed_vector: previous perturbed vector.
-        :return: altered perturbation_step.
+        If unit sphere normalization is enabled, multiplies `perturbation_step` by a coefficient that approximately
+        compensates for the reduction of the learning step due to projection onto the unit sphere.
+
+        :param perturbation_step: Unmodified perturbation step.
+        :param previous_perturbed_vector: Previous perturbed vector.
+        :return: Altered `perturbation_step`.
         """
         new_perturbed_vector = self._optional_normalize(previous_perturbed_vector + perturbation_step)
         effective_perturbation_step = new_perturbed_vector - previous_perturbed_vector
@@ -285,13 +290,14 @@ class PGDAdversary(Adversary):
 
 class ImageSet:
     """
-    Accumulates images and captions. Shows them in blocks of size `max_num'.
+    Accumulates images and captions. Shows them in blocks of size `max_num`.
     """
 
     def __init__(self, max_num: int) -> None:
         """
-        Constructs ImageSet.
-        :param max_num: number of images and captions to accumulate until they can be shown.
+        Constructs `ImageSet`.
+
+        :param max_num: Number of images and captions to accumulate until they can be shown.
         """
         self.images, self.captions = [], []
         self.max_num = max_num
@@ -299,8 +305,9 @@ class ImageSet:
     def append(self, images: list[torch.Tensor], captions: list[str] | None = None) -> None:
         """
         Appends the given images and captions.
-        :param images: list of images (PyTorch tensors).
-        :param captions: list of string captions corresponding to the images.
+
+        :param images: List of images (PyTorch tensors).
+        :param captions: List of string captions corresponding to the images.
         """
         self.images += [images]
         if captions is None:
@@ -310,9 +317,10 @@ class ImageSet:
     def maybe_show(self, force: bool = False, nrow: int = 8) -> None:
         """
         Shows the images and their captions if a sufficient number of them has been accumulated.
-        If the images and captions are shown, they are removed from the memory of ImageSet.
-        :param force: if True, shows everything anyway. This may be useful to make the last call of maybe_show.
-        :param nrow: nrow passed to Util.imshow_tensors.
+        If the images and captions are shown, they are removed from the memory of `ImageSet`.
+
+        :param force: If `True`, shows everything anyway. This may be useful to make the last call of `maybe_show`.
+        :param nrow: `nrow` passed to `Util.imshow_tensors`.
         """
         if self.images and (force or len(self.images) >= self.max_num):
             Util.imshow_tensors(*sum(self.images, []), captions=sum(self.captions, []), nrow=nrow)
@@ -356,8 +364,9 @@ class Util:
     def imshow(img: torch.Tensor, figsize: tuple[float, float] = (12, 2)) -> None:
         """
         Shows the image and saves the produced figure.
-        :param img: image to show (PyTorch tensor).
-        :param figsize: matplotlib figsize.
+
+        :param img: Image to show (PyTorch tensor).
+        :param figsize: Matplotlib `figsize`.
         """
         plt.figure(figsize=figsize)
         img = img / 2 + 0.5  # unnormalize
@@ -377,13 +386,14 @@ class Util:
         pad_value: float = 1,
     ) -> None:
         """
-        Enhanced torchvision.utils.make_grid(). Supports image captions. Also saves the produced figure.
-        :param tensors: images to show.
-        :param clamp: if True, clamp all pixels to [-1, 1].
-        :param figsize: matplotlib figsize.
-        :param captions: list of string captions to be printed on top of images.
-        :param nrow: nrow to be passed to torchvision.utils.make_grid.
-        :param pad_value: pad_value to be passed to torchvision.utils.make_grid.
+        Enhanced `torchvision.utils.make_grid()`. Supports image captions. Also saves the produced figure.
+
+        :param tensors: Images to show.
+        :param clamp: If `True`, clamp all pixels to [-1, 1].
+        :param figsize: Matplotlib `figsize`.
+        :param captions: List of string captions to be printed on top of images.
+        :param nrow: `nrow` to be passed to `torchvision.utils.make_grid`.
+        :param pad_value: `pad_value` to be passed to `torchvision.utils.make_grid`.
         """
         t = torch.cat(tensors)
         assert len(t.shape) == 4, f"Invalid shape of tensors {t.shape}"
@@ -399,7 +409,7 @@ class Util:
 
             def multiline_puttext(img: np.ndarray, caption: str) -> np.ndarray:
                 """
-                cv2.putText does not support line breaks on its own.
+                `cv2.putText` does not support line breaks on its own.
                 """
                 scale = 0.8
                 y0 = img.shape[0] * 0.15
@@ -424,11 +434,12 @@ class Util:
     @staticmethod
     def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
         """
-        Filters the supplied loader parent_loader_fn, retaining only elements with target_label.
+        Filters the supplied loader `parent_loader_fn`, retaining only elements with `target_label`.
         Preserves batch size.
-        :param target_label: the label to retain.
-        :param parent_loader_fn: the loader-returning function to decorate.
-        :return: decorated parent_loader_fn.
+
+        :param target_label: The label to retain.
+        :param parent_loader_fn: The loader-returning function to decorate.
+        :return: Decorated `parent_loader_fn`.
         """
 
         def loader() -> Iterator[tuple[torch.Tensor, list[int]]]:
@@ -453,10 +464,11 @@ class Util:
     def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
         """
         Restarts or limits the parent loader so that the desired number of images is produced.
-        :param no_images: desired number of images (the effective number will be a multiple of batch size).
-        :param parent_loader_fn: the loader-returning function to decorate.
-        :param restarts: if False, then just limit the parent loader and do not restart it when the end is reached.
-        :return: decorated parent_loader_fn.
+
+        :param no_images: Desired number of images (the effective number will be a multiple of batch size).
+        :param parent_loader_fn: The loader-returning function to decorate.
+        :param restarts: If `False`, then just limit the parent loader and do not restart it when the end is reached.
+        :return: Decorated `parent_loader_fn`.
         """
 
         def loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
@@ -480,8 +492,9 @@ class Util:
     @staticmethod
     def leakless_cycle(iterable_fn: Callable) -> Generator:
         """
-        Fixes the memory leak problem of itertools.cycle (https://github.com/pytorch/pytorch/issues/23900).
-        :iterable_fn function that returns an iterable.
+        Fixes the memory leak problem of `itertools.cycle` (https://github.com/pytorch/pytorch/issues/23900).
+
+        :param iterable_fn: Function that returns an iterable.
         """
         iterator = iter(iterable_fn())
         while True:
@@ -494,8 +507,9 @@ class Util:
     def optimizable_clone(x: torch.Tensor) -> torch.Tensor:
         """
         Clones a PyTorch tensor and makes it suitable for optimization.
-        :param x: input tensor.
-        :return: x with enabled gradients.
+
+        :param x: Input tensor.
+        :return: `x` with enabled gradients.
         """
         return Util.conditional_to_cuda(x.clone().detach()).requires_grad_(True)
 
@@ -503,7 +517,8 @@ class Util:
     @torch.no_grad()
     def init_weights(m: torch.nn.Module) -> None:
         """
-        Randomly initializes the weights of a convolutional or linear layer. To be used with torch.nn.Module.apply.
+        Randomly initializes the weights of a convolutional or linear layer. To be used with `torch.nn.Module.apply`.
+
         :param m: PyTorch module.
         """
         if isinstance(m, torch.nn.Conv2d):
@@ -521,9 +536,10 @@ class Util:
     @staticmethod
     def set_param_requires_grad(m: torch.nn.Module, value: bool) -> None:
         """
-        Sets requires_grad_(value) for all parameters of the module.
+        Sets `requires_grad_(value)` for all parameters of the module.
+
         :param m: PyTorch module.
-        :param value: value to set.
+        :param value: Value to set.
         """
         for p in m.parameters():
             p.requires_grad_(value)
@@ -531,9 +547,10 @@ class Util:
     @staticmethod
     def conditional_to_cuda(x: TensorOrModule) -> TensorOrModule:
         """
-        Returns the tensor/module on GPU if there is at least 1 GPU, otherwise just returns the tensor.
-        :param x: a PyTorch tensor or module.
-        :return: x on GPU if there is at least 1 GPU, otherwise just x.
+        Returns the tensor/module on GPU if there is at least 1 GPU, otherwise just returns the tensor/module.
+
+        :param x: A PyTorch tensor or module.
+        :return: `x` on GPU if there is at least 1 GPU, otherwise just `x`.
         """
         return cast(TensorOrModule, x.cuda()) if Util.using_cuda else x
 
@@ -541,16 +558,18 @@ class Util:
     def number_of_trainable_parameters(model: torch.nn.Module) -> int:
         """
         Number of trainable parameters in a PyTorch module, including nested modules.
+
         :param model: PyTorch module.
-        :return: number of trainable parameters in model.
+        :return: Number of trainable parameters in `model`.
         """
         return int(sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad]))
 
     @staticmethod
     def set_random_seed(seed: int | None = None) -> None:
         """
-        Set random seed of random, numpy and pytorch.
-        :param seed seed value. If None, it is replaced with the current timestamp.
+        Sets the random seed of `random`, NumPy and PyTorch.
+
+        :param seed: Seed value. If `None`, it is replaced with the current timestamp.
         """
         if seed is None:
             seed = int(time.time())
@@ -565,8 +584,9 @@ class Util:
     def normalize_latent(x: torch.Tensor) -> torch.Tensor:
         """
         Divides each latent vector of a batch by its scaled Euclidean norm.
-        :param x: batch of latent vectors.
-        :return: normalized vector.
+
+        :param x: Batch of latent vectors.
+        :return: Normalized batch.
         """
         norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
         norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
@@ -575,9 +595,11 @@ class Util:
     @staticmethod
     def get_kde_bandwidth(x: np.ndarray) -> float:
         """
-        This fixes a peculiar problem with sns.kdeplot/distplot. Use this to compute the bandwidth and provide it as argument bw.
+        This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth and
+        provide it as argument `bw`.
         https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
-        :param x: input (numpy array).
+
+        :param x: Input (NumPy array).
         :return: KDE bandwidth computed by Scott's method.
         """
         return statsmodels.nonparametric.bandwidths.bw_scott(x)
@@ -590,17 +612,19 @@ class EpsDTransformer:
 
     def eps_to_d(self, eps: float) -> float:
         """
-        Converts d to epsilon.
-        :param eps: noise magnitude.
-        :return: decay factor.
+        Converts epsilon to d.
+
+        :param eps: Noise magnitude.
+        :return: Decay factor.
         """
         return 1 - 1 / np.sqrt(1 + eps**2)
 
     def d_to_eps(self, d: float) -> float:
         """
-        Converts epsilon to d.
-        :param d: decay factor.
-        :return: noise magnitude.
+        Converts d to epsilon.
+
+        :param d: Decay factor.
+        :return: Noise magnitude.
         """
         return np.sqrt((1 / (1 - d)) ** 2 - 1)
 
@@ -643,7 +667,7 @@ class LogUtil:
     @staticmethod
     def set_custom_dirname(dirname: str) -> None:
         """
-        Set the custom name for a logging directory.
+        Sets the custom name for a logging directory.
         The previous contents of the directory will be deleted!
         """
         LogUtil._dirname = dirname
@@ -663,9 +687,10 @@ class LogUtil:
     @staticmethod
     def info(msg: Any, regular_print: bool = True) -> None:
         """
-        Log/print a message to <log directory>/log.txt.
-        :param msg: message to log and, optionally, print to console.
-        :param regular_print: whether to print msg to console.
+        Logs a message to `<log directory>/log.txt` and optionally prints it.
+
+        :param msg: Message to log and, optionally, print to console.
+        :param regular_print: Whether to print `msg` to console.
         """
         LogUtil.ensure_dir_existence()
         if regular_print:
@@ -676,10 +701,11 @@ class LogUtil:
     @staticmethod
     def savefig(prefix: str, pdf: bool = False) -> None:
         """
-        Saves a figure to the logging directory. Filename is generated based on the current timestamp
+        Saves a figure to the logging directory. The filename is generated based on the current timestamp
         and the provided prefix.
-        :param prefix: to be included in the filename.
-        :param pdf: if True, save as PDF. If False, save as PNG.
+
+        :param prefix: To be included in the filename.
+        :param pdf: If `True`, save as PDF. If `False`, save as PNG.
         """
         LogUtil.ensure_dir_existence()
         fname = os.path.join(
@@ -692,10 +718,11 @@ class LogUtil:
     def metacall(fn: Callable, fn_name: str, *args: Any, **kwargs: Any) -> None:
         """
         Makes a function call and logs it with concrete argument values.
-        :param fn: function to call.
-        :param fn_name: the name of the function to be put to the log.
-        :param args: *args to be passed to fn.
-        :param kwargs: *kwargs to be passed to fn.
+
+        :param fn: Function to call.
+        :param fn_name: The name of the function to be put to the log.
+        :param args: `*args` to be passed to `fn`.
+        :param kwargs: `**kwargs` to be passed to `fn`.
         """
         arg_assignments = [repr(arg) for arg in args]
         kwarg_assignments = [f"{kwarg_name}={repr(kwarg_value)}" for kwarg_name, kwarg_value in kwargs.items()]
@@ -705,6 +732,6 @@ class LogUtil:
     @staticmethod
     def to_pdf() -> None:
         """
-        Switches matplotlib backend to 'pdf'.
+        Switches matplotlib backend to `'pdf'`.
         """
         matplotlib.use("pdf", force=True)
