@@ -10,3 +10,8 @@ LOG_*/
 
 # Downloaded datasets and models
 mnist/
+
+# Training outputs (TensorBoard logs and weight backups)
+cnn_training/
+gan_training/
+dumped_weights.bin*
