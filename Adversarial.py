@@ -1,5 +1,5 @@
 import argparse
-from typing import Callable, List
+from collections.abc import Callable
 
 import numpy as np
 
@@ -92,7 +92,7 @@ def load_classifier(
 def advgen_experiments(
     args: argparse.Namespace,
     adversary: Adversary,
-    classifiers: List[cnn.Trainer],
+    classifiers: list[cnn.Trainer],
     gm_loader: Callable[[int], generative.GenerativeModel],
     class_proportions: np.ndarray,
     classifier_d: str,

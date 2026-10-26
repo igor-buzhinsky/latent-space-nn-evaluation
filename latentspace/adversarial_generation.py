@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Callable, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +23,7 @@ class RandomPerturbationStatistician:
         no_images: int,
         perturbations_per_image: int,
         visualize: bool,
-        epsilons: Union[Sequence[float], np.ndarray],
+        epsilons: Sequence[float] | np.ndarray,
     ) -> None:
         """
         Constructs RandomPerturbationStatistician.
@@ -81,11 +81,11 @@ class RandomPerturbationStatistician:
 
 def get_get_gradient(
     classifier: Trainer,
-    label: Union[int, torch.Tensor],
+    label: int | torch.Tensor,
     vector_transform_1: Callable,
     vector_transform_2: Callable,
     grad_transform: Callable,
-) -> Callable[[torch.Tensor], Tuple[torch.Tensor, float]]:
+) -> Callable[[torch.Tensor], tuple[torch.Tensor, float]]:
     """
     Produces custom "get_gradient" functions that are accepted by Adversaries.
     (This is not an example of good object-oriented design.)
@@ -96,7 +96,7 @@ def get_get_gradient(
     :param grad_transform: vector transformation used to parameterize get_gradient (best to explain with code below).
     """
 
-    def get_gradient(vector: torch.Tensor) -> Tuple[torch.Tensor, float]:
+    def get_gradient(vector: torch.Tensor) -> tuple[torch.Tensor, float]:
         vector_g = Util.optimizable_clone(vector_transform_1(vector))
         image = vector_transform_2(vector_g)
         _, loss = classifier.predict_with_gradient(image, [label])
@@ -132,11 +132,11 @@ class AdversarialGenerator:
 
     def __init__(
         self,
-        gm: Optional[GenerativeModel],
+        gm: GenerativeModel | None,
         classifiers: Sequence[Trainer],
         use_generated_images: bool,
         decay_factor: float,
-        label_printer: Optional[Callable] = None,
+        label_printer: Callable | None = None,
     ) -> None:
         """
         Constructs AdversarialGenerator.
@@ -170,7 +170,7 @@ class AdversarialGenerator:
         Initializes (when called first time) or clears accumulated statistics.
         """
 
-        def create() -> List[list]:
+        def create() -> list[list]:
             return [[] for c in self.classifiers]
 
         self.recorded_original_l2_norms = create()
@@ -182,7 +182,7 @@ class AdversarialGenerator:
         self.recorded_decayed_successes = create()
         self.recorded_modified_successes = create()
 
-    def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]) -> Tuple[str, list]:
+    def _join_predictions(self, img: torch.Tensor, classifiers: Sequence[Trainer]) -> tuple[str, list]:
         """
         Convenience function.
         """

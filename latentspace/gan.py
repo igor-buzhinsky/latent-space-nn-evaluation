@@ -1,5 +1,6 @@
 import copy
-from typing import Any, Callable, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import torch
 from tensorboardX import SummaryWriter
@@ -26,7 +27,7 @@ class SpectralNorm:
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def compute_weight(self, module: torch.nn.Module) -> Tuple[torch.Tensor, torch.Tensor]:
+    def compute_weight(self, module: torch.nn.Module) -> tuple[torch.Tensor, torch.Tensor]:
         weight = getattr(module, self.name + "_orig")
         u = getattr(module, self.name + "_u")
         size = weight.size()
@@ -191,7 +192,7 @@ class GAN:
         self.latent_dim = 64
         self.generator = Util.conditional_to_cuda(MNISTGenerator(self.latent_dim))
         self.discriminator = Util.conditional_to_cuda(MNISTDiscriminator())
-        self.params: Optional[Tuple[dict, dict]] = None
+        self.params: tuple[dict, dict] | None = None
         LogUtil.info(f"generator: {Util.number_of_trainable_parameters(self.generator)} trainable parameters")
         LogUtil.info(f"discriminator: {Util.number_of_trainable_parameters(self.discriminator)} trainable parameters")
 

@@ -1,5 +1,5 @@
 import argparse
-from typing import Iterator, List, Tuple
+from collections.abc import Iterator
 
 import numpy as np
 import torch
@@ -105,7 +105,7 @@ class ModelZooClassifierWrapper(Trainer):
         )
 
 
-def load_classifiers(ds: datasets.DatasetWrapper) -> List[Trainer]:
+def load_classifiers(ds: datasets.DatasetWrapper) -> list[Trainer]:
     # load the robust classifier
     patch_torchvision_for_robustness()
     from robustness import datasets as robustness_datasets
@@ -129,7 +129,7 @@ def load_classifiers(ds: datasets.DatasetWrapper) -> List[Trainer]:
         ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side, ds)
         for m, side in nonrobust_models
     ]
-    classifiers: List[Trainer] = [*nonrobust_classifiers, *robust_classifiers]
+    classifiers: list[Trainer] = [*nonrobust_classifiers, *robust_classifiers]
     return classifiers
 
 
@@ -144,7 +144,7 @@ def get_target_labels(total_images: int) -> np.ndarray:
 def advgen_experiments(
     args: argparse.Namespace,
     adversary: Adversary,
-    classifiers: List[Trainer],
+    classifiers: list[Trainer],
     gm: generative.BigGAN,
     ds: datasets.ImageNetData,
 ) -> None:
@@ -161,11 +161,11 @@ def advgen_experiments(
 
 
 def conventional_experiments(
-    args: argparse.Namespace, classifiers: List[Trainer], gm: generative.BigGAN, ds: datasets.ImageNetData
+    args: argparse.Namespace, classifiers: list[Trainer], gm: generative.BigGAN, ds: datasets.ImageNetData
 ) -> None:
     if args.command == "generate_conventional_from_gan":
 
-        def loader() -> Iterator[Tuple[List[torch.Tensor], List[int]]]:
+        def loader() -> Iterator[tuple[list[torch.Tensor], list[int]]]:
             label_array = get_target_labels(args.no_images)
             images, labels = [], []
             for label in label_array:

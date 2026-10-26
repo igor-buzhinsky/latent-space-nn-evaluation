@@ -1,5 +1,5 @@
 import argparse
-from typing import Iterator, Tuple
+from collections.abc import Iterator
 
 import numpy as np
 import scipy.stats
@@ -90,8 +90,8 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
         # measure local robustness
         bound = MNIST_L2_UPPER_BOUND if dataset_info == DatasetInfo.MNIST else OTHER_L2_UPPER_BOUND
 
-        def single_loader() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
-            def single_loader_() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
+        def single_loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+            def single_loader_() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
                 yield image, label
 
             return single_loader_()

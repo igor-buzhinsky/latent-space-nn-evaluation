@@ -1,5 +1,4 @@
 import itertools
-from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +13,7 @@ from .ml_util import ImageSet, LogUtil, PGDAdversary, Util
 
 class EvaluationUtil:
     @staticmethod
-    def show_some_predictions(classifiers: List[Trainer], ds: DatasetWrapper) -> None:
+    def show_some_predictions(classifiers: list[Trainer], ds: DatasetWrapper) -> None:
         """
         Shows several images, and prints/logs several predictions of the supplied classifiers on them.
         :param classifiers: list of classifiers.
@@ -27,9 +26,9 @@ class EvaluationUtil:
 
     @staticmethod
     def evaluate_accuracy(
-        classifiers: List[Trainer],
+        classifiers: list[Trainer],
         ds: DatasetWrapper,
-        max_imgs: Optional[int] = None,
+        max_imgs: int | None = None,
         noise_evaluation_multiplier: int = 1,
     ) -> None:
         """
@@ -55,11 +54,11 @@ class EvaluationUtil:
 
     @staticmethod
     def evaluate_conventional_robustness(
-        classifiers: List[Trainer],
+        classifiers: list[Trainer],
         ds: DatasetWrapper,
         max_imgs: int,
-        l_2_bounds: List[float],
-        l_inf_bounds: List[float],
+        l_2_bounds: list[float],
+        l_inf_bounds: list[float],
     ) -> None:
         """
         Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations.
@@ -86,7 +85,7 @@ class EvaluationUtil:
 
     @staticmethod
     def evaluate_conventional_adversarial_severity(
-        classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int, l_2_bound: float, l_inf_bound: float
+        classifiers: list[Trainer], ds: DatasetWrapper, max_imgs: int, l_2_bound: float, l_inf_bound: float
     ) -> None:
         """
         Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations)
@@ -116,7 +115,7 @@ class EvaluationUtil:
 
     @staticmethod
     def generate_images_with_classifier(
-        classifiers: List[Trainer],
+        classifiers: list[Trainer],
         ds: DatasetWrapper,
         no_classes: int,
         noise_sigma: float,

@@ -54,8 +54,8 @@ target-version = "py311"
 extend-exclude = ["biggan", "pioneer"]
 
 [tool.ruff.lint]
-# pyflakes, basic pycodestyle errors, import sorting
-select = ["E4", "E7", "E9", "F", "I"]
+# pyflakes, basic pycodestyle errors, import sorting, modern type hint syntax (PEP 585/604)
+select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["latentspace"]

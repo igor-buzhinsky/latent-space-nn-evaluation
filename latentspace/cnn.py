@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import torch.autograd
@@ -41,14 +41,14 @@ class Unit(torch.nn.Module):
         """
         super().__init__()
 
-        def block(in_ch: int) -> List[torch.nn.Module]:
+        def block(in_ch: int) -> list[torch.nn.Module]:
             return [
                 torch.nn.Conv2d(in_ch, out_channels, kernel_size=3, stride=1, padding=1),
                 torch.nn.ReLU(),
                 torch.nn.BatchNorm2d(out_channels, track_running_stats=False),
             ]
 
-        def end() -> List[torch.nn.Module]:
+        def end() -> list[torch.nn.Module]:
             return [
                 torch.nn.MaxPool2d(kernel_size=2, padding=0),
                 torch.nn.Dropout(p_dropout),
@@ -184,7 +184,7 @@ class Trainer:
         :param val_loader_fn: function that returns a TorchVision loader of validation/test data.
         :param unit_type: unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
-        model: Optional[torch.nn.Module]
+        model: torch.nn.Module | None
         if dataset in ["celeba-128", "lsun-128"]:
             model = ColoredNet128(2, unit_type)
         elif dataset == "mnist":
@@ -259,8 +259,8 @@ class Trainer:
         self.misclassification_gradients = value
 
     def predict_with_gradient(
-        self, x: torch.Tensor, true_labels: Sequence[Union[int, torch.Tensor]]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self, x: torch.Tensor, true_labels: Sequence[int | torch.Tensor]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts, computes loss and gradient.
         If self.misclassification_gradients is True, the gradient points in the direction of a
@@ -321,7 +321,7 @@ class Trainer:
 
     def fit(
         self,
-        class_weights: List[float],
+        class_weights: list[float],
         epochs: int = 2,
         lr: float = 1e-3,
         lr_decay: float = 0.1,
@@ -412,7 +412,7 @@ class Trainer:
 
     def accuracy(
         self, data_loader_fn: Callable, noise_sigma: float = 0, noise_evaluation_multiplier: int = 1
-    ) -> Tuple[float, int]:
+    ) -> tuple[float, int]:
         """
         Measures accuracy on the supplied data loader.
         :param data_loader_fn: a function that returns the data loader to be used.
@@ -439,7 +439,7 @@ class Trainer:
         data_loader_fn: Callable,
         ds: DatasetWrapper,
         show_images: bool = True,
-    ) -> Tuple[float, int]:
+    ) -> tuple[float, int]:
         """
         Measures robustness on the supplied data loader as accuracy on perturbed images.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.
@@ -472,9 +472,9 @@ class Trainer:
         perturb_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
         data_loader_fn: Callable,
         ds: DatasetWrapper,
-        norm_fn: Callable[[torch.Tensor], Union[float, torch.Tensor]],
+        norm_fn: Callable[[torch.Tensor], float | torch.Tensor],
         show_images: bool = True,
-    ) -> Tuple[torch.Tensor, torch.Tensor, int]:
+    ) -> tuple[torch.Tensor, torch.Tensor, int]:
         """
         Measures adversarial severity (mean norm of minimum adversarial perturbations) on the supplied data loader.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.

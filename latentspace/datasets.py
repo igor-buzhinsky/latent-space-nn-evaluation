@@ -1,8 +1,9 @@
 import json
 import os
 from abc import ABC
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 import torch
@@ -26,8 +27,8 @@ OTHER_LINF_UPPER_BOUND = 0.1
 
 
 def merge_loaders(
-    parent_loader_fns: List[Callable], batch_size: int, shuffle: bool
-) -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
+    parent_loader_fns: list[Callable], batch_size: int, shuffle: bool
+) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
     """
     Merges several dataset loaders. Batch size is preserved.
     Labels are replaced with 0 for the first loader, 1 for the second loader and so on.
@@ -66,9 +67,9 @@ class DatasetWrapper(ABC):
     test_batch_size = 4
 
     # TorchVision datasets, to be assigned by subclasses
-    trainset: Optional[torch.utils.data.Dataset]
-    unaugmented_trainset: Optional[torch.utils.data.Dataset]
-    testset: Optional[torch.utils.data.Dataset]
+    trainset: torch.utils.data.Dataset | None
+    unaugmented_trainset: torch.utils.data.Dataset | None
+    testset: torch.utils.data.Dataset | None
 
     base_transform = transforms.Compose(
         [
@@ -128,7 +129,7 @@ class DatasetWrapper(ABC):
         # for datasets producing elements of a single label
         self.unique_label = None
 
-    def preprocess_batch(self, xs: List[Tuple[torch.Tensor, Any]]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def preprocess_batch(self, xs: list[tuple[torch.Tensor, Any]]) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Ensures that each image in the batch is paired with a single integer label.
         :param xs: batch.
@@ -148,14 +149,14 @@ class DatasetWrapper(ABC):
         """
         return x
 
-    def prediction_indices_to_classes(self, indices: Iterable) -> List[str]:
+    def prediction_indices_to_classes(self, indices: Iterable) -> list[str]:
         """
         :param indices: input class indices.
         :return: full class names, to be used in model filenames.
         """
         return [self.classes[int(i)] for i in indices]
 
-    def prediction_indices_to_printed_classes(self, indices: Iterable) -> List[str]:
+    def prediction_indices_to_printed_classes(self, indices: Iterable) -> list[str]:
         """
         :param indices: input class indices.
         :return: short class names, to be printed on top of images.
@@ -163,7 +164,7 @@ class DatasetWrapper(ABC):
         return [self.printed_classes[int(i)] for i in indices]
 
     def _get_loader(
-        self, torchvision_dataset: Optional[torch.utils.data.Dataset], batch_size: int, shuffle: bool
+        self, torchvision_dataset: torch.utils.data.Dataset | None, batch_size: int, shuffle: bool
     ) -> torch.utils.data.DataLoader:
         """
         Get a torch.utils.data.DataLoader for this dataset.
@@ -184,8 +185,8 @@ class DatasetWrapper(ABC):
         )
 
     def get_unaugmented_train_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
         Get a train data loader without data augmentation.
         :param batch_size: batch size.
@@ -197,8 +198,8 @@ class DatasetWrapper(ABC):
         return self._get_loader(self.unaugmented_trainset, batch_size, shuffle)
 
     def get_train_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
         Get a train data loader with data augmentation.
         :param batch_size: batch size.
@@ -210,8 +211,8 @@ class DatasetWrapper(ABC):
         return self._get_loader(self.trainset, batch_size, shuffle)
 
     def get_test_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         """
         Get a test data loader without data augmentation.
         :param batch_size: batch size.
@@ -349,7 +350,7 @@ class LSUNData(DatasetWrapper):
     Images are center-cropped and resized to 128x128.
     """
 
-    def __init__(self, unique_label: Optional[int] = None) -> None:
+    def __init__(self, unique_label: int | None = None) -> None:
         """
         Constructs LSUNData.
         :param unique_label: 0 (bedroom), 1 (church outdoor) or None. If None, then items of both labels will be produced.
@@ -381,8 +382,8 @@ class LSUNData(DatasetWrapper):
         self.unique_label = unique_label
 
     def get_unaugmented_train_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         if batch_size is None:
             batch_size = self.train_batch_size
         if self.unique_label is None:
@@ -391,8 +392,8 @@ class LSUNData(DatasetWrapper):
         return super().get_unaugmented_train_loader(batch_size, shuffle)
 
     def get_train_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         if batch_size is None:
             batch_size = self.train_batch_size
         if self.unique_label is None:
@@ -401,8 +402,8 @@ class LSUNData(DatasetWrapper):
         return super().get_train_loader(batch_size, shuffle)
 
     def get_test_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         if batch_size is None:
             batch_size = self.test_batch_size
         if self.unique_label is None:
@@ -444,18 +445,18 @@ class ImageNetData(DatasetWrapper):
                 self.val_labels[tokens[0]] = int(tokens[1])
         self.trainset, self.unaugmented_trainset = [None] * 2
 
-    def get_unaugmented_train_loader(self, *args: Any, **kwargs: Any) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+    def get_unaugmented_train_loader(self, *args: Any, **kwargs: Any) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         print("Warning: loading validation data while training data was requested.")
         return self.get_test_loader(*args, **kwargs)
 
     def get_train_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         raise NotImplementedError()
 
     def get_test_loader(
-        self, batch_size: Optional[int] = None, shuffle: bool = True
-    ) -> Iterable[Tuple[torch.Tensor, torch.Tensor]]:
+        self, batch_size: int | None = None, shuffle: bool = True
+    ) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
         if batch_size is None:
             batch_size = DatasetWrapper.test_batch_size
         filenames = self.filenames.copy()

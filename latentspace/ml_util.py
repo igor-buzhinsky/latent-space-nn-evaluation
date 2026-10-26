@@ -2,8 +2,9 @@ import os
 import random
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Generator, Iterator
 from enum import Enum
-from typing import Any, Callable, Generator, Iterator, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 import cv2
 import matplotlib
@@ -16,7 +17,7 @@ import torchvision
 if os.name == "posix":
     import resource
 
-TensorOrModule = TypeVar("TensorOrModule", bound=Union[torch.Tensor, torch.nn.Module])
+TensorOrModule = TypeVar("TensorOrModule", bound=torch.Tensor | torch.nn.Module)
 
 # An enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
@@ -65,7 +66,7 @@ class Adversary(ABC):
 
     @abstractmethod
     def perturb(
-        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], tuple[torch.Tensor, float]]
     ) -> torch.Tensor:
         """
         Perturb the given vector.
@@ -83,7 +84,7 @@ class NopAdversary(Adversary):
     """
 
     def perturb(
-        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], tuple[torch.Tensor, float]]
     ) -> torch.Tensor:
         return initial_vector
 
@@ -103,7 +104,7 @@ class PGDAdversary(Adversary):
         verbose: int = 1,
         norm: str = "scaled_l_2",
         n_repeat: int = 1,
-        repeat_mode: Optional[str] = None,
+        repeat_mode: str | None = None,
         unit_sphere_normalization: bool = False,
     ) -> None:
         """
@@ -169,7 +170,7 @@ class PGDAdversary(Adversary):
         return x.clamp(-rho, rho) if self.inf_norm else (x / self._norm(x) * rho)
 
     def perturb(
-        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], tuple[torch.Tensor, float]]
     ) -> torch.Tensor:
         best_perturbation = None
         best_perturbation_norm = np.inf
@@ -255,7 +256,7 @@ class PGDAdversary(Adversary):
 
     def _recompute_with_unit_sphere_normalization(
         self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
         and the perturbation vector is recomputed accordingly. Otherwise, returns the inputs unmodified.
@@ -295,7 +296,7 @@ class ImageSet:
         self.images, self.captions = [], []
         self.max_num = max_num
 
-    def append(self, images: List[torch.Tensor], captions: Optional[List[str]] = None) -> None:
+    def append(self, images: list[torch.Tensor], captions: list[str] | None = None) -> None:
         """
         Appends the given images and captions.
         :param images: list of images (PyTorch tensors).
@@ -352,7 +353,7 @@ class Util:
         return x.detach().cpu().numpy()
 
     @staticmethod
-    def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)) -> None:
+    def imshow(img: torch.Tensor, figsize: tuple[float, float] = (12, 2)) -> None:
         """
         Shows the image and saves the produced figure.
         :param img: image to show (PyTorch tensor).
@@ -370,8 +371,8 @@ class Util:
     def imshow_tensors(
         *tensors: torch.Tensor,
         clamp: bool = True,
-        figsize: Tuple[float, float] = (12, 2),
-        captions: Optional[List[str]] = None,
+        figsize: tuple[float, float] = (12, 2),
+        captions: list[str] | None = None,
         nrow: int = 8,
         pad_value: float = 1,
     ) -> None:
@@ -391,7 +392,7 @@ class Util:
             t = t.repeat(1, 3, 1, 1)
         if clamp:
             t = torch.clamp(t, -1, 1)
-        images: List[Any] = list(t)
+        images: list[Any] = list(t)
 
         # adding textual captions if they are given (this involves rescaling)
         if captions is not None:
@@ -430,7 +431,7 @@ class Util:
         :return: decorated parent_loader_fn.
         """
 
-        def loader() -> Iterator[Tuple[torch.Tensor, List[int]]]:
+        def loader() -> Iterator[tuple[torch.Tensor, list[int]]]:
             data_generator = iter(parent_loader_fn())
             result = []
             while True:
@@ -458,7 +459,7 @@ class Util:
         :return: decorated parent_loader_fn.
         """
 
-        def loader() -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
+        def loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
             generated = 0
             while generated < no_images:
                 data_generator = iter(parent_loader_fn())
@@ -546,7 +547,7 @@ class Util:
         return int(sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad]))
 
     @staticmethod
-    def set_random_seed(seed: Optional[int] = None) -> None:
+    def set_random_seed(seed: int | None = None) -> None:
         """
         Set random seed of random, numpy and pytorch.
         :param seed seed value. If None, it is replaced with the current timestamp.
