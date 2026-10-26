@@ -7,7 +7,16 @@ import torch.nn
 from tensorboardX import SummaryWriter
 
 from latentspace.datasets import DatasetWrapper
-from latentspace.ml_util import Flatten, Lambda, LogUtil, Util
+from latentspace.loaders import leakless_cycle
+from latentspace.ml_util import Flatten, Lambda, LogUtil
+from latentspace.plotting import imshow_tensors
+from latentspace.torch_util import (
+    DEVICE,
+    init_weights,
+    number_of_trainable_parameters,
+    set_param_requires_grad,
+    to_device,
+)
 
 
 class ResBlock(torch.nn.Module):
@@ -201,10 +210,8 @@ class Trainer:
         else:
             raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, none.")
         if model is not None:
-            self.model = Util.conditional_to_cuda(model)
-            LogUtil.info(
-                f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters"
-            )
+            self.model = to_device(model)
+            LogUtil.info(f"{dataset} classifier: {number_of_trainable_parameters(self.model)} trainable parameters")
         self.params = {}
         self.train_loader_fn = train_loader_fn
         self.val_loader_fn = val_loader_fn
@@ -241,7 +248,7 @@ class Trainer:
 
         :param filename: Target filename.
         """
-        self.params = torch.load(filename, map_location=("cuda:0" if Util.using_cuda else "cpu"))
+        self.params = torch.load(filename, map_location=DEVICE)
         self.restore_params()
 
     def disable_param_gradients(self) -> None:
@@ -249,14 +256,14 @@ class Trainer:
         Disables the gradients of the model's parameters. This saves computation time when gradients need to
         be computed w.r.t. the input image only.
         """
-        Util.set_param_requires_grad(self.model, False)
+        set_param_requires_grad(self.model, False)
 
     @torch.no_grad()
     def random_init(self) -> None:
         """
         Performs random initialization.
         """
-        self.model.apply(Util.init_weights)
+        self.model.apply(init_weights)
 
     def set_misclassification_gradients(self, value: bool) -> None:
         """
@@ -300,8 +307,8 @@ class Trainer:
             with torch.no_grad():
                 predictions += [torch.argmax(ps).item()]
         return (
-            Util.conditional_to_cuda(torch.LongTensor(predictions)),
-            Util.conditional_to_cuda(torch.FloatTensor(losses)),
+            to_device(torch.LongTensor(predictions)),
+            to_device(torch.FloatTensor(losses)),
         )
 
     @torch.no_grad()
@@ -315,9 +322,7 @@ class Trainer:
         self.model.eval()  # set prediction mode
         # predicting separately for each item
         # otherwise, prediction quality will drop due to the behavior of batch normalization
-        return Util.conditional_to_cuda(
-            torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1) for i in range(x.shape[0])])
-        )
+        return to_device(torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1) for i in range(x.shape[0])]))
 
     @torch.no_grad()
     def predict_probs(self, x: torch.Tensor) -> torch.Tensor:
@@ -354,7 +359,7 @@ class Trainer:
             & Cubuk, D. (2019). Adversarial examples are a natural consequence of test error in noise.
             arXiv preprint arXiv:1901.10513].
         """
-        Util.set_param_requires_grad(self.model, True)
+        set_param_requires_grad(self.model, True)
         if not self.params:
             self.random_init()
             self.save_params()
@@ -364,20 +369,20 @@ class Trainer:
         optimizer = torch.optim.RMSprop(self.model.parameters(), weight_decay=1e-6, lr=lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=(1 - lr_decay))
         early_stopper = EarlyStoppingMonitor()
-        loss_f = torch.nn.CrossEntropyLoss(weight=Util.conditional_to_cuda(torch.FloatTensor(class_weights)))
+        loss_f = torch.nn.CrossEntropyLoss(weight=to_device(torch.FloatTensor(class_weights)))
         writer = SummaryWriter("cnn_training" if noise_sigma == 0 else "cnn_training_noise")
 
         class EvaluatedPrediction:
             def __init__(self, trainer: Trainer, image: torch.Tensor, label: torch.Tensor) -> None:
                 if noise_sigma > 0:
                     # augmentation with noise for robust optimization
-                    image += Util.conditional_to_cuda(torch.randn(*image.shape)) * noise_sigma
+                    image += to_device(torch.randn(*image.shape)) * noise_sigma
                 outputs = trainer.model(image.unsqueeze(0))
                 self.loss = loss_f(outputs, label.unsqueeze(0))
                 prediction = torch.argmax(outputs, 1)[0]
                 self.accuracy = (prediction == label).float().item()
 
-        infinite_val_stream = Util.leakless_cycle(self.val_loader_fn)
+        infinite_val_stream = leakless_cycle(self.val_loader_fn)
         batch_index = 0
 
         for epoch in range(epochs):
@@ -442,7 +447,7 @@ class Trainer:
             times = noise_evaluation_multiplier if noise_sigma > 0 else 1
             for _ in range(times):
                 # measuring corruption robustness with Gaussian noise
-                maybe_corrupted_images = images + Util.conditional_to_cuda(torch.randn(*images.shape)) * noise_sigma
+                maybe_corrupted_images = images + to_device(torch.randn(*images.shape)) * noise_sigma
                 predicted = self.predict(maybe_corrupted_images)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
@@ -480,7 +485,7 @@ class Trainer:
                 accuracies += [accuracy]
             all_accuracies += accuracies
             if show_images:
-                Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
+                imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
         return np.array(all_accuracies).mean(), len(all_accuracies)
 
     def measure_adversarial_severity(
@@ -517,6 +522,6 @@ class Trainer:
                 predictions += [prediction]
                 severities += [norm_fn(perturbed_image - image)]
             if show_images:
-                Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
+                imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
         severities = torch.tensor(severities)
         return severities.mean(), severities.std(), len(severities)

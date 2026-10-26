@@ -8,7 +8,10 @@ from latentspace.adversarial_generation import get_conventional_perturb
 from latentspace.cnn import Trainer
 from latentspace.datasets import DatasetWrapper
 from latentspace.generative import GenerativeModel
-from latentspace.ml_util import ImageSet, LogUtil, PGDAdversary, Util
+from latentspace.loaders import fixed_length_loader
+from latentspace.ml_util import LogUtil, PGDAdversary
+from latentspace.plotting import ImageSet, imshow_tensors
+from latentspace.torch_util import to_device
 
 
 class EvaluationUtil:
@@ -21,7 +24,7 @@ class EvaluationUtil:
         :param ds: `DatasetWrapper` from which test images will be taken.
         """
         images, labels = next(iter(ds.get_test_loader()))
-        Util.imshow_tensors(images, captions=ds.prediction_indices_to_printed_classes(labels))
+        imshow_tensors(images, captions=ds.prediction_indices_to_printed_classes(labels))
         for i, c in enumerate(classifiers):
             LogUtil.info(f"Predicted {i}: {ds.prediction_indices_to_classes(c.predict(images))}")
 
@@ -46,7 +49,7 @@ class EvaluationUtil:
         """
         loader = ds.get_test_loader
         if max_imgs is not None:
-            loader = Util.fixed_length_loader(max_imgs, loader, False)
+            loader = fixed_length_loader(max_imgs, loader, False)
         for i, c in enumerate(classifiers):
             for noise_sigma in [0, 0.8]:
                 accuracy, total = c.accuracy(loader, noise_sigma, noise_evaluation_multiplier)
@@ -74,7 +77,7 @@ class EvaluationUtil:
         :param l_2_bounds: Perturbation L2 norm bounds for which to perform accuracy evaluation.
         :param l_inf_bounds: Perturbation L-inf norm bounds for which to perform accuracy evaluation.
         """
-        loader = Util.fixed_length_loader(max_imgs, ds.get_test_loader, False)
+        loader = fixed_length_loader(max_imgs, ds.get_test_loader, False)
         for norm, bounds in [("scaled_l_2", l_2_bounds), ("l_inf", l_inf_bounds)]:
             for bound in bounds:
                 adversary = PGDAdversary(bound, 25, 0.1, True, 0, verbose=0, norm=norm)
@@ -104,7 +107,7 @@ class EvaluationUtil:
         :param l_inf_bound: Maximum possible L-inf norm of an adversarial perturbation (should be set to a number
             somewhat greater than the norms of typical perturbations).
         """
-        loader = Util.fixed_length_loader(max_imgs, ds.get_test_loader, False)
+        loader = fixed_length_loader(max_imgs, ds.get_test_loader, False)
         for norm, norm_fn, bound in [
             ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), l_2_bound),
             ("l_inf", lambda x: x.abs().max(), l_inf_bound),
@@ -154,7 +157,7 @@ class EvaluationUtil:
             classifier.set_misclassification_gradients(False)
             s = ImageSet(pairs_in_line)
             for target_label in range(no_classes):
-                image = mean_image + Util.conditional_to_cuda(torch.randn(*mean_image.shape)) * noise_sigma
+                image = mean_image + to_device(torch.randn(*mean_image.shape)) * noise_sigma
                 perturb = get_conventional_perturb(classifier, image_optimizer)
                 s.append([image.unsqueeze(0), perturb(image, target_label).unsqueeze(0)])
                 s.maybe_show(nrow=nrow)
@@ -176,7 +179,7 @@ class EvaluationUtil:
             for _ in range(images_in_line):
                 img, _ = next(sampler)
                 images += [img, gm.decode(gm.encode(img), detach=True)]
-            Util.imshow_tensors(*images, nrow=(images_in_line * 2))
+            imshow_tensors(*images, nrow=(images_in_line * 2))
 
     @staticmethod
     def show_reconstruction_distance_statistics(gm: GenerativeModel, no_images: int) -> None:
@@ -221,4 +224,4 @@ class EvaluationUtil:
         :param images_in_line: Number of generated images in each line.
         """
         for _ in range(lines):
-            Util.imshow_tensors(gm.generate(images_in_line, detach=True), nrow=images_in_line)
+            imshow_tensors(gm.generate(images_in_line, detach=True), nrow=images_in_line)

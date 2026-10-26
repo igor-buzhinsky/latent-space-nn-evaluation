@@ -1,23 +1,16 @@
 import os
-import random
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, TypeVar, cast
+from typing import Any
 
-import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import statsmodels.nonparametric.bandwidths
 import torch
-import torchvision
 
-if os.name == "posix":
-    import resource
-
-TensorOrModule = TypeVar("TensorOrModule", bound=torch.Tensor | torch.nn.Module)
+from latentspace.torch_util import normalize_latent, to_device
 
 # An enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
@@ -199,7 +192,7 @@ class PGDAdversary(Adversary):
                     else:
                         perturbation *= 0
                     perturbation *= np.random.rand()
-                perturbation = Util.conditional_to_cuda(perturbation)
+                perturbation = to_device(perturbation)
 
             if self.verbose > 0:
                 print(f">> #run = {run_n}, ║x1║ = {self._norm(x1):.5f}, ρ = {rho:.5f}")
@@ -255,7 +248,7 @@ class PGDAdversary(Adversary):
         :param x: Vector of shape 1*dim to normalize.
         :return: Optionally normalized `x`.
         """
-        return Util.normalize_latent(x) if self.unit_sphere_normalization else x
+        return normalize_latent(x) if self.unit_sphere_normalization else x
 
     def _recompute_with_unit_sphere_normalization(
         self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor
@@ -286,323 +279,6 @@ class PGDAdversary(Adversary):
         effective_perturbation_step = new_perturbed_vector - previous_perturbed_vector
         coef = perturbation_step.norm() / effective_perturbation_step.norm()
         return perturbation_step * coef
-
-
-class ImageSet:
-    """
-    Accumulates images and captions. Shows them in blocks of size `max_num`.
-    """
-
-    def __init__(self, max_num: int) -> None:
-        """
-        Constructs `ImageSet`.
-
-        :param max_num: Number of images and captions to accumulate until they can be shown.
-        """
-        self.images, self.captions = [], []
-        self.max_num = max_num
-
-    def append(self, images: list[torch.Tensor], captions: list[str] | None = None) -> None:
-        """
-        Appends the given images and captions.
-
-        :param images: List of images (PyTorch tensors).
-        :param captions: List of string captions corresponding to the images.
-        """
-        self.images += [images]
-        if captions is None:
-            captions = [""] * len(images)
-        self.captions += [captions]
-
-    def maybe_show(self, force: bool = False, nrow: int = 8) -> None:
-        """
-        Shows the images and their captions if a sufficient number of them has been accumulated.
-        If the images and captions are shown, they are removed from the memory of `ImageSet`.
-
-        :param force: If `True`, shows everything anyway. This may be useful to make the last call of `maybe_show`.
-        :param nrow: `nrow` passed to `Util.imshow_tensors`.
-        """
-        if self.images and (force or len(self.images) >= self.max_num):
-            Util.imshow_tensors(*sum(self.images, []), captions=sum(self.captions, []), nrow=nrow)
-            self.images.clear()
-            self.captions.clear()
-
-
-class Util:
-    """
-    A convenience static class for everything that does not have its own class.
-    """
-
-    # if False, will use CPU even if CUDA is available
-    cuda_enabled = True
-    using_cuda = cuda_enabled and torch.cuda.is_available()
-
-    @staticmethod
-    def set_memory_limit(mb: int) -> None:
-        """
-        Sets memory limit in megabytes (this has effect only on Linux).
-        """
-        if os.name == "posix":
-            rsrc = resource.RLIMIT_DATA
-            _, hard = resource.getrlimit(rsrc)
-            resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
-
-    @staticmethod
-    def configure(memory_limit_mb: int) -> None:
-        """
-        Sets memory limit in megabytes (this has effect only on Linux). Configures matplotlib fonts.
-        """
-        Util.set_memory_limit(memory_limit_mb)
-        plt.rcParams["font.family"] = "serif"
-        plt.rcParams["mathtext.fontset"] = "dejavuserif"
-
-    @staticmethod
-    def tensor2numpy(x: torch.Tensor) -> np.ndarray:
-        return x.detach().cpu().numpy()
-
-    @staticmethod
-    def imshow(img: torch.Tensor, figsize: tuple[float, float] = (12, 2)) -> None:
-        """
-        Shows the image and saves the produced figure.
-
-        :param img: Image to show (PyTorch tensor).
-        :param figsize: Matplotlib `figsize`.
-        """
-        plt.figure(figsize=figsize)
-        img = img / 2 + 0.5  # unnormalize
-        plt.imshow(np.transpose(Util.tensor2numpy(img), (1, 2, 0)))
-        plt.axis("off")
-        LogUtil.savefig("imshow")
-        plt.show()
-        plt.close()
-
-    @staticmethod
-    def imshow_tensors(
-        *tensors: torch.Tensor,
-        clamp: bool = True,
-        figsize: tuple[float, float] = (12, 2),
-        captions: list[str] | None = None,
-        nrow: int = 8,
-        pad_value: float = 1,
-    ) -> None:
-        """
-        Enhanced `torchvision.utils.make_grid()`. Supports image captions. Also saves the produced figure.
-
-        :param tensors: Images to show.
-        :param clamp: If `True`, clamp all pixels to [-1, 1].
-        :param figsize: Matplotlib `figsize`.
-        :param captions: List of string captions to be printed on top of images.
-        :param nrow: `nrow` to be passed to `torchvision.utils.make_grid`.
-        :param pad_value: `pad_value` to be passed to `torchvision.utils.make_grid`.
-        """
-        t = torch.cat(tensors)
-        assert len(t.shape) == 4, f"Invalid shape of tensors {t.shape}"
-        # handling 1D images
-        if t.shape[1] == 1:
-            t = t.repeat(1, 3, 1, 1)
-        if clamp:
-            t = torch.clamp(t, -1, 1)
-        images: list[Any] = list(t)
-
-        # adding textual captions if they are given (this involves rescaling)
-        if captions is not None:
-
-            def multiline_puttext(img: np.ndarray, caption: str) -> np.ndarray:
-                """
-                `cv2.putText` does not support line breaks on its own.
-                """
-                scale = 0.8
-                y0 = img.shape[0] * 0.15
-                dy = img.shape[0] * 0.20
-                for i, text in enumerate(caption.split("\n")):
-                    y = int(y0 + i * dy)
-                    # green
-                    img = cv2.putText(img, text, (0, y), cv2.FONT_HERSHEY_TRIPLEX, scale, (0, 250, 0))
-                return img
-
-            default_size = (128,) * 2
-            for i in range(len(images)):
-                assert isinstance(captions[i], str), "Captions must be str"
-                images[i] = (Util.tensor2numpy(images[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
-                # shape = H*W*3
-                images[i] = cv2.resize(images[i], default_size, interpolation=cv2.INTER_NEAREST)
-                images[i] = multiline_puttext(images[i], captions[i]) / 255
-                images[i] = torch.FloatTensor(images[i].transpose(2, 0, 1) * 2 - 1)
-
-        Util.imshow(torchvision.utils.make_grid(torch.stack(images), nrow=nrow, pad_value=pad_value), figsize)
-
-    @staticmethod
-    def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
-        """
-        Filters the supplied loader `parent_loader_fn`, retaining only elements with `target_label`.
-        Preserves batch size.
-
-        :param target_label: The label to retain.
-        :param parent_loader_fn: The loader-returning function to decorate.
-        :return: Decorated `parent_loader_fn`.
-        """
-
-        def loader() -> Iterator[tuple[torch.Tensor, list[int]]]:
-            data_generator = iter(parent_loader_fn())
-            result = []
-            while True:
-                try:
-                    items, labels = next(data_generator)
-                    batch_size = len(items)
-                    # accumulate only items of target_label
-                    result += [item for item, label in zip(items, labels, strict=True) if label == target_label]
-                    if len(result) >= batch_size:
-                        yield torch.stack(result[:batch_size]), [target_label] * batch_size
-                        # save the remainder for the next yield
-                        result = result[batch_size:]
-                except StopIteration:
-                    return
-
-        return loader
-
-    @staticmethod
-    def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
-        """
-        Restarts or limits the parent loader so that the desired number of images is produced.
-
-        :param no_images: Desired number of images (the effective number will be a multiple of batch size).
-        :param parent_loader_fn: The loader-returning function to decorate.
-        :param restarts: If `False`, then just limit the parent loader and do not restart it when the end is reached.
-        :return: Decorated `parent_loader_fn`.
-        """
-
-        def loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-            generated = 0
-            while generated < no_images:
-                data_generator = iter(parent_loader_fn())
-                while generated < no_images:
-                    try:
-                        items, labels = next(data_generator)
-                    except StopIteration:
-                        if restarts:
-                            data_generator = iter(parent_loader_fn())
-                            items, labels = next(data_generator)
-                        else:
-                            return
-                    yield items, labels
-                    generated += len(items)
-
-        return loader
-
-    @staticmethod
-    def leakless_cycle(iterable_fn: Callable) -> Generator:
-        """
-        Fixes the memory leak problem of `itertools.cycle` (https://github.com/pytorch/pytorch/issues/23900).
-
-        :param iterable_fn: Function that returns an iterable.
-        """
-        iterator = iter(iterable_fn())
-        while True:
-            try:
-                yield next(iterator)
-            except StopIteration:
-                iterator = iter(iterable_fn())
-
-    @staticmethod
-    def optimizable_clone(x: torch.Tensor) -> torch.Tensor:
-        """
-        Clones a PyTorch tensor and makes it suitable for optimization.
-
-        :param x: Input tensor.
-        :return: `x` with enabled gradients.
-        """
-        return Util.conditional_to_cuda(x.clone().detach()).requires_grad_(True)
-
-    @staticmethod
-    @torch.no_grad()
-    def init_weights(m: torch.nn.Module) -> None:
-        """
-        Randomly initializes the weights of a convolutional or linear layer. To be used with `torch.nn.Module.apply`.
-
-        :param m: PyTorch module.
-        """
-        if isinstance(m, torch.nn.Conv2d):
-            m.weight.normal_(0, 0.1)
-            if m.bias is not None:
-                m.bias.normal_(0, 0.1)
-        elif isinstance(m, torch.nn.Linear):
-            fan_in: int = m.weight.size(0)
-            # heuristic
-            std = (2 / fan_in) ** 0.5 / 20
-            m.weight.uniform_(-std, std)
-            if m.bias is not None:
-                m.bias.uniform_(0, 0)
-
-    @staticmethod
-    def set_param_requires_grad(m: torch.nn.Module, value: bool) -> None:
-        """
-        Sets `requires_grad_(value)` for all parameters of the module.
-
-        :param m: PyTorch module.
-        :param value: Value to set.
-        """
-        for p in m.parameters():
-            p.requires_grad_(value)
-
-    @staticmethod
-    def conditional_to_cuda(x: TensorOrModule) -> TensorOrModule:
-        """
-        Returns the tensor/module on GPU if there is at least 1 GPU, otherwise just returns the tensor/module.
-
-        :param x: A PyTorch tensor or module.
-        :return: `x` on GPU if there is at least 1 GPU, otherwise just `x`.
-        """
-        return cast(TensorOrModule, x.cuda()) if Util.using_cuda else x
-
-    @staticmethod
-    def number_of_trainable_parameters(model: torch.nn.Module) -> int:
-        """
-        Number of trainable parameters in a PyTorch module, including nested modules.
-
-        :param model: PyTorch module.
-        :return: Number of trainable parameters in `model`.
-        """
-        return int(sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad]))
-
-    @staticmethod
-    def set_random_seed(seed: int | None = None) -> None:
-        """
-        Sets the random seed of `random`, NumPy and PyTorch.
-
-        :param seed: Seed value. If `None`, it is replaced with the current timestamp.
-        """
-        if seed is None:
-            seed = int(time.time())
-        else:
-            assert seed >= 0
-        random.seed(seed)
-        np.random.seed(seed + 1)
-        torch.manual_seed(seed + 2)
-        torch.cuda.manual_seed_all(seed + 2)
-
-    @staticmethod
-    def normalize_latent(x: torch.Tensor) -> torch.Tensor:
-        """
-        Divides each latent vector of a batch by its scaled Euclidean norm.
-
-        :param x: Batch of latent vectors.
-        :return: Normalized batch.
-        """
-        norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
-        norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
-        return norm_vector @ x
-
-    @staticmethod
-    def get_kde_bandwidth(x: np.ndarray) -> float:
-        """
-        This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth and
-        provide it as argument `bw`.
-        https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
-
-        :param x: Input (NumPy array).
-        :return: KDE bandwidth computed by Scott's method.
-        """
-        return statsmodels.nonparametric.bandwidths.bw_scott(x)
 
 
 class EpsDTransformer:

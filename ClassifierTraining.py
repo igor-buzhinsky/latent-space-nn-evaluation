@@ -18,7 +18,10 @@ from latentspace.datasets import (
     MNISTData,
 )
 from latentspace.evaluation_util import EvaluationUtil
-from latentspace.ml_util import DatasetInfo, LogUtil, PGDAdversary, Util
+from latentspace.loaders import fixed_length_loader
+from latentspace.ml_util import DatasetInfo, LogUtil, PGDAdversary
+from latentspace.runtime import configure_runtime
+from latentspace.torch_util import to_device
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -149,10 +152,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
             error = (
                 sum(
                     (
-                        (
-                            c.predict(image + Util.conditional_to_cuda(torch.randn(*image.shape)) * noise_sigma)
-                            != label
-                        ).item()
+                        (c.predict(image + to_device(torch.randn(*image.shape)) * noise_sigma) != label).item()
                         for _ in range(no_corruptions)
                     )
                 )
@@ -167,7 +167,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
 
 
 def main() -> None:
-    Util.configure(10500)
+    configure_runtime(10500)
     LogUtil.to_pdf()
 
     parser = build_parser()
@@ -202,7 +202,7 @@ def main() -> None:
 
     class_weights = [1 / no_classes] * no_classes
     train_loader = ds.get_train_loader if args.conventional_augmentation else ds.get_unaugmented_train_loader
-    train_loader = Util.fixed_length_loader(args.img_in_epoch, train_loader)
+    train_loader = fixed_length_loader(args.img_in_epoch, train_loader)
     c = Trainer(trainer_name, train_loader, ds.get_test_loader, args.unit_type)
 
     if args.command == "train":

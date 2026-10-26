@@ -11,6 +11,7 @@ import latentspace.generative as generative
 from latentspace.adversarial_generation import AdversarialGenerator, get_conventional_perturb
 from latentspace.cnn import Trainer
 from latentspace.compat import patch_torchvision_for_robustness
+from latentspace.loaders import fixed_length_loader
 from latentspace.ml_util import (
     Adversary,
     EpsDTransformer,
@@ -19,8 +20,9 @@ from latentspace.ml_util import (
     NopAdversary,
     PGDAdversary,
     Resize,
-    Util,
 )
+from latentspace.runtime import configure_runtime
+from latentspace.torch_util import DEVICE, to_device
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -126,7 +128,7 @@ def load_classifiers(ds: datasets.DatasetWrapper) -> list[Trainer]:
     dataset = robustness_datasets.ImageNet("./data/ImageNet")
     model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": "./imagenet-models/ImageNet.pt"}
     model, _ = model_utils.make_and_restore_model(**model_kwargs)
-    model = model.to("cuda:0" if Util.using_cuda else "cpu")
+    model = model.to(DEVICE)
     model.eval()
     robust_classifiers = [RobustnessClassifierWrapper(model, ds)]
 
@@ -138,8 +140,7 @@ def load_classifiers(ds: datasets.DatasetWrapper) -> list[Trainer]:
         (models.resnext50_32x4d, 224),
     ]  # ImageNet top-1 error 21.49
     nonrobust_classifiers = [
-        ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side, ds)
-        for m, side in nonrobust_models
+        ModelZooClassifierWrapper(to_device(m(pretrained=True)), side, ds) for m, side in nonrobust_models
     ]
     classifiers: list[Trainer] = [*nonrobust_classifiers, *robust_classifiers]
     return classifiers
@@ -189,7 +190,7 @@ def conventional_experiments(
                     images, labels = [], []
 
     else:
-        loader = Util.fixed_length_loader(args.no_images, ds.get_test_loader, False)
+        loader = fixed_length_loader(args.no_images, ds.get_test_loader, False)
     norms = [
         ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), datasets.OTHER_L2_UPPER_BOUND),
         ("l_inf", lambda x: x.abs().max(), datasets.OTHER_LINF_UPPER_BOUND),
@@ -206,7 +207,7 @@ def conventional_experiments(
 
 
 def main() -> None:
-    Util.configure(11000)
+    configure_runtime(11000)
     LogUtil.to_pdf()
 
     parser = build_parser()
@@ -237,7 +238,7 @@ def main() -> None:
             adversary = PGDAdversary(rho, 50, 0.05, True, 0, verbose=0, n_repeat=12, repeat_mode="any")
         advgen_experiments(args, adversary, classifiers, gm, ds)
     elif args.command == "measure_accuracy":
-        loader = Util.fixed_length_loader(args.no_images, ds.get_test_loader, False)
+        loader = fixed_length_loader(args.no_images, ds.get_test_loader, False)
         for i, c in enumerate(classifiers):
             accuracy, total = c.accuracy(loader, 0, 1)
             acc_str = f"{accuracy * 100:.2f}"

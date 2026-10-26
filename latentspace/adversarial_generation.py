@@ -7,7 +7,9 @@ import torch
 
 from latentspace.cnn import Trainer
 from latentspace.generative import GenerativeModel
-from latentspace.ml_util import Adversary, ImageSet, LogUtil, Util
+from latentspace.ml_util import Adversary, LogUtil
+from latentspace.plotting import ImageSet, get_kde_bandwidth, imshow_tensors
+from latentspace.torch_util import optimizable_clone, to_device
 
 
 class RandomPerturbationStatistician:
@@ -57,7 +59,7 @@ class RandomPerturbationStatistician:
             for _ in range(self.perturbations_per_image):
                 all_img = [orig_img, reconstr_img]
                 for eps in self.epsilons:
-                    perturbation = Util.conditional_to_cuda(torch.randn(1, self.gm.latent_dim))
+                    perturbation = to_device(torch.randn(1, self.gm.latent_dim))
                     perturbed = (latent + perturbation * eps) / np.sqrt(1 + eps**2)
                     reconstr_pert_img = self.gm.decode(perturbed)
                     all_img += [reconstr_pert_img]
@@ -66,7 +68,7 @@ class RandomPerturbationStatistician:
                 if self.visualize:
                     classes = [self.gm.ds.prediction_indices_to_printed_classes(p) for p in predictions]
                     joined = list("\n".join(t) for t in zip(*classes, strict=True))
-                    Util.imshow_tensors(*all_img, captions=joined)
+                    imshow_tensors(*all_img, captions=joined)
                 # count statistics
                 for j in range(self.stat_len):
                     for k in range(len(self.classifiers)):
@@ -99,7 +101,7 @@ def get_get_gradient(
     """
 
     def get_gradient(vector: torch.Tensor) -> tuple[torch.Tensor, float]:
-        vector_g = Util.optimizable_clone(vector_transform_1(vector))
+        vector_g = optimizable_clone(vector_transform_1(vector))
         image = vector_transform_2(vector_g)
         _, loss = classifier.predict_with_gradient(image, [label])
         return grad_transform(vector_g.grad), loss.item()
@@ -274,7 +276,7 @@ class AdversarialGenerator:
                         hist=False,
                         kde=True,
                         ax=axarr[i],
-                        kde_kws={"bw": Util.get_kde_bandwidth(norms.numpy())},
+                        kde_kws={"bw": get_kde_bandwidth(norms.numpy())},
                     )
             LogUtil.savefig("advgen_stats", True)
             plt.show()
@@ -315,7 +317,7 @@ class AdversarialGenerator:
             assert label is not None
             with torch.no_grad():
                 if self.use_generated_images:
-                    latent_code = Util.conditional_to_cuda(torch.randn(1, self.gm.latent_dim))
+                    latent_code = to_device(torch.randn(1, self.gm.latent_dim))
                     reconstr_img = self.gm.decode(latent_code)
                     # dummy copy
                     orig_img = reconstr_img

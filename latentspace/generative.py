@@ -11,7 +11,9 @@ import torch
 
 from latentspace.datasets import DatasetWrapper
 from latentspace.gan import GAN
-from latentspace.ml_util import DatasetInfo, LogUtil, Util
+from latentspace.loaders import class_specific_loader
+from latentspace.ml_util import DatasetInfo, LogUtil
+from latentspace.torch_util import DEVICE, optimizable_clone, set_param_requires_grad, to_device
 
 
 class GenerativeModel(ABC):
@@ -94,7 +96,7 @@ class GenerativeModel(ABC):
             return self.ds.get_unaugmented_train_loader(batch_size=batch_size)
 
         assert self.unique_label is not None
-        return Util.class_specific_loader(self.unique_label, f)()
+        return class_specific_loader(self.unique_label, f)()
 
     @torch.enable_grad()
     def encode_with_gradient_search(
@@ -103,12 +105,12 @@ class GenerativeModel(ABC):
         """
         Implements encoding with a gradient-based approach (restarts of Adam).
         """
-        all_latent = Util.conditional_to_cuda(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
+        all_latent = to_device(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
         loss_f = torch.nn.MSELoss()
         for i in range(img.shape[0]):
             best_loss = np.inf
             for _ in range(no_restarts):
-                latent = Util.optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
+                latent = optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
                 optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)
                 for _ in range(no_steps):
                     optimizer.zero_grad()
@@ -139,7 +141,7 @@ class WGAN(GenerativeModel):
         self.g = GAN()
         self.g.restore_params_from_disk(f"mnist-gan/dumped_weights_{unique_label}.bin")
         # disable computation of gradients that are not required
-        Util.set_param_requires_grad(self.g.generator, False)
+        set_param_requires_grad(self.g.generator, False)
         # since the discriminator is not used, there is no need to warm spectral norms (GAN.warm_spectral_norms)
         super().__init__(28, self.g.latent_dim, unique_label, ds)
 
@@ -190,7 +192,7 @@ class BigGAN(GenerativeModel):
 
         self.create_sample = create_sample
         self.decode_sample = decode_sample
-        main("cuda:0" if Util.using_cuda else "cpu")
+        main(DEVICE)
         self.unique_label = None
         self.builtin_decay = builtin_decay
 
@@ -328,7 +330,7 @@ class PIONEER(GenerativeModel):
         for network in (self.session.generator, self.session.encoder):
             network.eval()
             # disable computation of gradients that are not required
-            Util.set_param_requires_grad(network, False)
+            set_param_requires_grad(network, False)
 
         # "warm" spectral norms in the encoder
         LogUtil.info(f"*** Spectral norm warming with {spectral_norm_warming_no_images} images...")
@@ -377,7 +379,7 @@ class PIONEER(GenerativeModel):
         In a multidimensional space, this is approximately the same as taking an N(0, I)-distributed
         vector and dividing it by sqrt(latent_dim).
         """
-        label = Util.conditional_to_cuda(torch.zeros(latent_code.shape[0], 1, dtype=torch.float32))
+        label = to_device(torch.zeros(latent_code.shape[0], 1, dtype=torch.float32))
         generated = self.session.generator(latent_code, label, self.session.phase, self.session.alpha)
         return self._maybe_detach(generated, detach)
 

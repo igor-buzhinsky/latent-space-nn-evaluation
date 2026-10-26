@@ -5,7 +5,14 @@ from typing import Any
 import torch
 from tensorboardX import SummaryWriter
 
-from latentspace.ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample, Util
+from latentspace.ml_util import Flatten, Lambda, LogUtil, NopLayer, Upsample
+from latentspace.torch_util import (
+    DEVICE,
+    init_weights,
+    number_of_trainable_parameters,
+    set_param_requires_grad,
+    to_device,
+)
 
 
 def init_linear(layer: torch.nn.Linear) -> None:
@@ -190,11 +197,11 @@ class GAN:
         Constructs `GAN`.
         """
         self.latent_dim = 64
-        self.generator = Util.conditional_to_cuda(MNISTGenerator(self.latent_dim))
-        self.discriminator = Util.conditional_to_cuda(MNISTDiscriminator())
+        self.generator = to_device(MNISTGenerator(self.latent_dim))
+        self.discriminator = to_device(MNISTDiscriminator())
         self.params: tuple[dict, dict] | None = None
-        LogUtil.info(f"generator: {Util.number_of_trainable_parameters(self.generator)} trainable parameters")
-        LogUtil.info(f"discriminator: {Util.number_of_trainable_parameters(self.discriminator)} trainable parameters")
+        LogUtil.info(f"generator: {number_of_trainable_parameters(self.generator)} trainable parameters")
+        LogUtil.info(f"discriminator: {number_of_trainable_parameters(self.discriminator)} trainable parameters")
 
     @torch.no_grad()
     def save_params(self) -> None:
@@ -229,7 +236,7 @@ class GAN:
 
         :param filename: Target filename.
         """
-        loc = "cuda:0" if Util.using_cuda else "cpu"
+        loc = DEVICE
         self.params = (
             torch.load(filename + ".generator", map_location=loc),
             torch.load(filename + ".discriminator", map_location=loc),
@@ -241,8 +248,8 @@ class GAN:
         """
         Performs random initialization.
         """
-        self.generator.apply(Util.init_weights)
-        self.discriminator.apply(Util.init_weights)
+        self.generator.apply(init_weights)
+        self.discriminator.apply(init_weights)
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -261,7 +268,7 @@ class GAN:
         :param no_samples: Number of images to generate.
         :return: Batch of generated images.
         """
-        return self.generator(Util.conditional_to_cuda(torch.randn(no_samples, self.latent_dim)))
+        return self.generator(to_device(torch.randn(no_samples, self.latent_dim)))
 
     @torch.no_grad()
     def warm_spectral_norms(self, train_loader_fn: Callable) -> None:
@@ -297,8 +304,8 @@ class GAN:
             step of the generator. In WGANs, it is OK to make it large.
         :param disk_backup_filename: Filename to dump trainable parameters. Dumping is done once per epoch.
         """
-        Util.set_param_requires_grad(self.generator, True)
-        Util.set_param_requires_grad(self.discriminator, True)
+        set_param_requires_grad(self.generator, True)
+        set_param_requires_grad(self.discriminator, True)
         if not self.params:
             self.random_init()
             self.save_params()
@@ -335,7 +342,7 @@ class GAN:
                 d_optimizer.zero_grad()
                 for i in range(n_critic):
                     real_data = real_batches[i]
-                    fake_data = self.generator(Util.conditional_to_cuda(torch.randn(batch_size, self.latent_dim)))
+                    fake_data = self.generator(to_device(torch.randn(batch_size, self.latent_dim)))
                     loss1 = self.discriminator(real_data).mean()
                     loss2 = self.discriminator(fake_data).mean()
                     discriminator_loss = -(loss1 - loss2)
@@ -343,7 +350,7 @@ class GAN:
                     d_optimizer.step()
 
                 g_optimizer.zero_grad()
-                fake_data = self.generator(Util.conditional_to_cuda(torch.randn(batch_size, self.latent_dim)))
+                fake_data = self.generator(to_device(torch.randn(batch_size, self.latent_dim)))
                 generator_loss = -self.discriminator(fake_data).mean()
                 generator_loss.backward()
                 g_optimizer.step()

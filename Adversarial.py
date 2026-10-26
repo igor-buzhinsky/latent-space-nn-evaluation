@@ -8,7 +8,8 @@ import latentspace.datasets as datasets
 import latentspace.generative as generative
 from latentspace.adversarial_generation import AdversarialGenerator, RandomPerturbationStatistician
 from latentspace.evaluation_util import EvaluationUtil
-from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil, NopAdversary, PGDAdversary, Util
+from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil, NopAdversary, PGDAdversary
+from latentspace.runtime import set_memory_limit
 
 # values of --search_mode and the corresponding values of use_generated_images
 SEARCH_MODES = {"reconstruction": [False], "generation": [True], "both": [False, True]}
@@ -152,7 +153,7 @@ def advgen_experiments(
 
 
 def main() -> None:
-    Util.set_memory_limit(10000)
+    set_memory_limit(10000)
     LogUtil.to_pdf()
 
     parser = build_parser()

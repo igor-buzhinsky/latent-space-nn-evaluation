@@ -11,7 +11,7 @@ import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 
-from latentspace.ml_util import Util
+from latentspace.torch_util import to_device
 
 if os.name == "posix":
     import resource
@@ -74,7 +74,7 @@ class DatasetWrapper(ABC):
     base_transform = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.Lambda(Util.conditional_to_cuda),
+            transforms.Lambda(to_device),
             transforms.Normalize((0.5,) * 3, (0.5,) * 3),
         ]
     )
@@ -141,7 +141,7 @@ class DatasetWrapper(ABC):
             labels = [self.get_label(x[1]) for x in xs]
         else:
             labels = [self.unique_label] * len(xs)
-        return torch.stack([x[0] for x in xs]), Util.conditional_to_cuda(torch.tensor(labels))
+        return torch.stack([x[0] for x in xs]), to_device(torch.tensor(labels))
 
     def get_label(self, x):
         """
@@ -243,7 +243,7 @@ class MNISTData(DatasetWrapper):
         """
         size = 28
         base_transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Lambda(Util.conditional_to_cuda), transforms.Normalize((0.5,), (0.5,))]
+            [transforms.ToTensor(), transforms.Lambda(to_device), transforms.Normalize((0.5,), (0.5,))]
         )
         labels = tuple([str(i) for i in range(10)])
         super().__init__(
@@ -478,5 +478,5 @@ class ImageNetData(DatasetWrapper):
             images += [self.test_transform(Image.open(self.img_path / filename).convert("RGB"))]
             labels += [self.val_labels[filename]]
             if len(images) == batch_size:
-                yield torch.stack(images), Util.conditional_to_cuda(torch.tensor(labels, dtype=torch.long))
+                yield torch.stack(images), to_device(torch.tensor(labels, dtype=torch.long))
                 images, labels = [], []
