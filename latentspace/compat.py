@@ -15,7 +15,7 @@ def patch_torchvision_for_robustness() -> None:
     which was removed in newer torchvision versions. This recreates that module, so `robustness` can be imported.
     Call this before importing `robustness`.
     """
-    if importlib.util.find_spec("torchvision.models.utils") is None:
+    if "torchvision.models.utils" not in sys.modules and importlib.util.find_spec("torchvision.models.utils") is None:
         module = types.ModuleType("torchvision.models.utils")
         module.load_state_dict_from_url = torch.hub.load_state_dict_from_url  # pyrefly: ignore[missing-attribute]
         sys.modules["torchvision.models.utils"] = module
