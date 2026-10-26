@@ -12,7 +12,7 @@ def init_linear(layer):
     torch.nn.init.xavier_normal_(layer.weight)
     layer.bias.data.zero_()
 
-    
+
 def init_conv(layer):
     torch.nn.init.kaiming_normal_(layer.weight)
     if layer.bias is not None:
@@ -23,18 +23,18 @@ class SpectralNorm:
     """
     Spectral normalization. Borrowed from https://github.com/heljakka/pioneer/blob/master/src/model.py.
     """
-    
+
     def __init__(self, name):
         self.name = name
 
     def compute_weight(self, module):
-        weight = getattr(module, self.name + '_orig')
-        u = getattr(module, self.name + '_u')
+        weight = getattr(module, self.name + "_orig")
+        u = getattr(module, self.name + "_u")
         size = weight.size()
         weight_mat = weight.contiguous().view(size[0], -1)
         if weight_mat.is_cuda:
-            #u = u.cuda(async=(args.gpu_count>1))
-            u = u.cuda(non_blocking=(args.gpu_count>1))
+            # u = u.cuda(async=(args.gpu_count>1))
+            u = u.cuda(non_blocking=(args.gpu_count > 1))
         v = weight_mat.t() @ u
         v = v / v.norm()
         u = weight_mat @ v
@@ -48,10 +48,10 @@ class SpectralNorm:
         fn = SpectralNorm(name)
         weight = getattr(module, name)
         del module._parameters[name]
-        module.register_parameter(name + '_orig', torch.nn.Parameter(weight.data))
+        module.register_parameter(name + "_orig", torch.nn.Parameter(weight.data))
         input_size = weight.size(0)
         u = torch.autograd.Variable(torch.randn(input_size, 1) * 0.1, requires_grad=False)
-        setattr(module, name + '_u', u)
+        setattr(module, name + "_u", u)
         setattr(module, name, fn.compute_weight(module)[0])
         module.register_forward_pre_hook(fn)
         return fn
@@ -59,10 +59,10 @@ class SpectralNorm:
     def __call__(self, module, input):
         weight_sn, u = self.compute_weight(module)
         setattr(module, self.name, weight_sn)
-        setattr(module, self.name + '_u', u)
+        setattr(module, self.name + "_u", u)
 
 
-def spectral_norm(module, name='weight'):
+def spectral_norm(module, name="weight"):
     SpectralNorm.apply(module, name)
     return module
 
@@ -71,7 +71,7 @@ class SpectralNormConv2d(torch.nn.Module):
     """
     Convolutional layer with spectral normalization.
     """
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         conv = torch.nn.Conv2d(*args, **kwargs)
@@ -86,7 +86,7 @@ class SpectralNormLinear(torch.nn.Module):
     """
     Linear layer with spectral normalization.
     """
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         linear = torch.nn.Linear(*args, **kwargs)
@@ -95,13 +95,13 @@ class SpectralNormLinear(torch.nn.Module):
 
     def forward(self, input):
         return self.linear(input)
-    
+
 
 class GeneratorUnit(torch.nn.Module):
     """
     Basic convolutional block of a generator.
     """
-    
+
     def __init__(self, in_channels: int, out_channels: int, nop_end: bool = False):
         super().__init__()
         self.model = torch.nn.Sequential(
@@ -109,18 +109,18 @@ class GeneratorUnit(torch.nn.Module):
             torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
             torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            NopLayer() if nop_end else torch.nn.ReLU()
+            NopLayer() if nop_end else torch.nn.ReLU(),
         )
 
     def forward(self, x):
         return self.model(x)
-        
+
 
 class MNISTGenerator(torch.nn.Module):
     """
     MNIST generator.
     """
-    
+
     def __init__(self, latent_dim: int):
         super().__init__()
         base_map_num = 8
@@ -138,13 +138,13 @@ class MNISTGenerator(torch.nn.Module):
 
     def forward(self, x):
         return self.model(x)
-    
+
 
 class DiscriminatorUnit(torch.nn.Module):
     """
     Basic convolutional block of a discriminator.
     """
-    
+
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
         self.model = torch.nn.Sequential(
@@ -152,40 +152,40 @@ class DiscriminatorUnit(torch.nn.Module):
             torch.nn.ReLU(),
             SpectralNormConv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
             torch.nn.ReLU(),
-            torch.nn.MaxPool2d(kernel_size=2, padding=0)
+            torch.nn.MaxPool2d(kernel_size=2, padding=0),
         )
 
     def forward(self, x):
         return self.model(x)
-    
+
 
 class MNISTDiscriminator(torch.nn.Module):
     """
     MNIST discriminator.
     """
-    
+
     def __init__(self):
         super().__init__()
         base_map_num = 12
         self.model = torch.nn.Sequential(
             Lambda(lambda x: torch.nn.functional.pad(x, pad=((2,) * 4), mode="constant", value=-1)),
-            DiscriminatorUnit(1,                1 * base_map_num),
+            DiscriminatorUnit(1, 1 * base_map_num),
             DiscriminatorUnit(1 * base_map_num, 2 * base_map_num),
             DiscriminatorUnit(2 * base_map_num, 4 * base_map_num),
             Flatten(),
-            SpectralNormLinear(4 * base_map_num * 4 * 4, 1)
+            SpectralNormLinear(4 * base_map_num * 4 * 4, 1),
         )
 
     def forward(self, x):
         return self.model(x)
-    
+
 
 class GAN:
     """
     Wasserstein GAN (WGAN). Only MNIST is supported. The discriminator is made Lipschitz-continuous
     with spectral normalization.
     """
-    
+
     def __init__(self):
         """
         Constructs GAN.
@@ -196,14 +196,13 @@ class GAN:
         self.params = None
         LogUtil.info(f"generator: {Util.number_of_trainable_parameters(self.generator)} trainable parameters")
         LogUtil.info(f"discriminator: {Util.number_of_trainable_parameters(self.discriminator)} trainable parameters")
-        
+
     @torch.no_grad()
     def save_params(self):
         """
         Saves the trainable parameters of the current WGAN.
         """
-        self.params = (copy.deepcopy(self.generator.state_dict()),
-                       copy.deepcopy(self.discriminator.state_dict()))
+        self.params = (copy.deepcopy(self.generator.state_dict()), copy.deepcopy(self.discriminator.state_dict()))
 
     @torch.no_grad()
     def save_params_to_disk(self, filename: str):
@@ -229,10 +228,12 @@ class GAN:
         :param filename: target filename.
         """
         loc = "cuda:0" if Util.using_cuda else "cpu"
-        self.params = (torch.load(filename + ".generator",     map_location=loc),
-                       torch.load(filename + ".discriminator", map_location=loc))
+        self.params = (
+            torch.load(filename + ".generator", map_location=loc),
+            torch.load(filename + ".discriminator", map_location=loc),
+        )
         self.restore_params()
-        
+
     @torch.no_grad()
     def random_init(self):
         """
@@ -240,7 +241,7 @@ class GAN:
         """
         self.generator.apply(Util.init_weights)
         self.discriminator.apply(Util.init_weights)
-    
+
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """
         Decodes latent vectors into images.
@@ -248,7 +249,7 @@ class GAN:
         :return: batch of generated images.
         """
         return self.generator(x)
-    
+
     @torch.no_grad()
     def generate(self, no_samples: int) -> torch.Tensor:
         """
@@ -257,7 +258,7 @@ class GAN:
         :return: batch of generated images.
         """
         return self.generator(Util.conditional_to_cuda(torch.randn(no_samples, self.latent_dim)))
-    
+
     @torch.no_grad()
     def warm_spectral_norms(self, train_loader_fn: Callable):
         """
@@ -272,9 +273,15 @@ class GAN:
                 self.discriminator(next(data_sampler)[0])
             except StopIteration:
                 break
-        
-    def fit(self, train_loader_fn: Callable, epochs: int = 2, lr: float = 1e-3, n_critic: int = 5,
-            disk_backup_filename: str = "dumped_weights.bin"):
+
+    def fit(
+        self,
+        train_loader_fn: Callable,
+        epochs: int = 2,
+        lr: float = 1e-3,
+        n_critic: int = 5,
+        disk_backup_filename: str = "dumped_weights.bin",
+    ):
         """
         Trains this WGAN.
         :param train_loader_fn: loader-returning function to generate training data.
@@ -292,14 +299,14 @@ class GAN:
             self.save_params_to_disk(disk_backup_filename)
         else:
             self.restore_params()
-        
+
         g_optimizer = torch.optim.RMSprop(self.generator.parameters(), lr=lr)
         d_optimizer = torch.optim.RMSprop(self.discriminator.parameters(), lr=lr)
         self.generator.train()
         self.discriminator.train()
         writer = SummaryWriter("gan_training")
         batch_index = 0
-        
+
         for epoch in range(epochs):
             data_sampler = iter(train_loader_fn())
             while True:
@@ -315,9 +322,9 @@ class GAN:
                 if len(real_batches) != n_critic:
                     # next epoch
                     break
-            
+
                 batch_size = real_batches[0].shape[0]
-            
+
                 # train
                 d_optimizer.zero_grad()
                 for i in range(n_critic):
@@ -328,14 +335,14 @@ class GAN:
                     discriminator_loss = -(loss1 - loss2)
                     discriminator_loss.backward()
                     d_optimizer.step()
-                
+
                 g_optimizer.zero_grad()
                 fake_data = self.generator(Util.conditional_to_cuda(torch.randn(batch_size, self.latent_dim)))
                 generator_loss = -self.discriminator(fake_data).mean()
-                #generator_loss = (fake_data - real_data).abs().mean()
+                # generator_loss = (fake_data - real_data).abs().mean()
                 generator_loss.backward()
                 g_optimizer.step()
-                
+
                 # eval
                 with torch.no_grad():
                     writer.add_scalar("discriminator_loss", discriminator_loss.detach(), batch_index)
@@ -345,4 +352,3 @@ class GAN:
                         writer.add_images("generated_batch", fake_data.detach().clamp(-1, 1), batch_index)
                         writer.add_images("real_batch", real_data.detach(), batch_index)
                 batch_index += 1
-        

@@ -21,22 +21,45 @@ Util.configure(11000)
 LogUtil.to_pdf()
 
 parser = argparse.ArgumentParser(description="Generator of latent adversarial examples for ImageNet.")
-parser.add_argument("--command", type=str, required=True,
-                    help="one of generate_minimum, generate_bounded, measure_accuracy, "
-                         "generate_conventional_from_gan, generate_conventional_from_validation")
-parser.add_argument("--no_images", type=int, required=True,
-                    help="total number of images for adversarial generation or accuracy evaluation")
-parser.add_argument("--bounded_search_rho", type=float, default=0.2,
-                    help="scaled norm bound to check latent adversarial accuracy "
-                         "(command = generate_bounded), default = 0.2")
-parser.add_argument("--noise_epsilon", type=float, required=False, default=1.0,
-                    help="noise magnitude (positive number) for adversarial generation, default = 1.0")
-parser.add_argument("--no_adversary", action="store_true",
-                    help="use an adversary that does nothing - this is useful to just measure latent "
-                         "reconstruction/generation accuracy")
-parser.add_argument("--logdir", type=str, default=None,
-                    help="set a custom logging directory and remove its previous contents (by default, a new "
-                         " name will be generated based on the timestamp)")
+parser.add_argument(
+    "--command",
+    type=str,
+    required=True,
+    help="one of generate_minimum, generate_bounded, measure_accuracy, "
+    "generate_conventional_from_gan, generate_conventional_from_validation",
+)
+parser.add_argument(
+    "--no_images",
+    type=int,
+    required=True,
+    help="total number of images for adversarial generation or accuracy evaluation",
+)
+parser.add_argument(
+    "--bounded_search_rho",
+    type=float,
+    default=0.2,
+    help="scaled norm bound to check latent adversarial accuracy " "(command = generate_bounded), default = 0.2",
+)
+parser.add_argument(
+    "--noise_epsilon",
+    type=float,
+    required=False,
+    default=1.0,
+    help="noise magnitude (positive number) for adversarial generation, default = 1.0",
+)
+parser.add_argument(
+    "--no_adversary",
+    action="store_true",
+    help="use an adversary that does nothing - this is useful to just measure latent "
+    "reconstruction/generation accuracy",
+)
+parser.add_argument(
+    "--logdir",
+    type=str,
+    default=None,
+    help="set a custom logging directory and remove its previous contents (by default, a new "
+    " name will be generated based on the timestamp)",
+)
 args = parser.parse_args()
 
 if args.logdir is not None:
@@ -50,7 +73,7 @@ label_indices = np.arange(NO_LABELS)
 no_classes = len(label_indices)
 classifier_d = "none"
 ds = datasets.ImageNetData()
-gm = generative.BigGAN(ds, 0.25) # set built-in decay factor
+gm = generative.BigGAN(ds, 0.25)  # set built-in decay factor
 
 # load the robust classifier
 dataset = robustness_datasets.ImageNet("./data/ImageNet")
@@ -58,6 +81,7 @@ model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": f"./image
 model, _ = model_utils.make_and_restore_model(**model_kwargs)
 model = model.to("cuda:0" if Util.using_cuda else "cpu")
 model.eval()
+
 
 # normalize input + wrap the robust classifier
 class RobustnessClassifierWrapper(Trainer):
@@ -69,8 +93,10 @@ class RobustnessClassifierWrapper(Trainer):
             model,
             Lambda(lambda x: x[0]),
         )
-        
+
+
 robust_classifiers = [RobustnessClassifierWrapper(model)]
+
 
 # load non-robust classifiers, then normalizae input + wrap
 class ModelZooClassifierWrapper(Trainer):
@@ -83,7 +109,7 @@ class ModelZooClassifierWrapper(Trainer):
         # [-1, 1] -> [0, 1], then normalize
         # https://pytorch.org/docs/stable/torchvision/models.html
         return ModelZooClassifierWrapper.modelzoo_normalize_transform((x[0] + 1) / 2).unsqueeze(0)
-    
+
     def __init__(self, model, side: int):
         super().__init__(classifier_d, ds.get_train_loader, ds.get_test_loader, unit_type=0)
         self.model = torch.nn.Sequential(
@@ -92,12 +118,16 @@ class ModelZooClassifierWrapper(Trainer):
             model,
         )
 
-nonrobust_classifiers = [(models.squeezenet1_0, 256),   # ImageNet top-1 error 41.90
-                         (models.alexnet, 256),         # ImageNet top-1 error 43.45
-                         (models.resnet18, 224),        # ImageNet top-1 error 30.24
-                         (models.resnext50_32x4d, 224)] # ImageNet top-1 error 21.49
-nonrobust_classifiers = [ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side)
-                         for m, side in nonrobust_classifiers]
+
+nonrobust_classifiers = [
+    (models.squeezenet1_0, 256),  # ImageNet top-1 error 41.90
+    (models.alexnet, 256),  # ImageNet top-1 error 43.45
+    (models.resnet18, 224),  # ImageNet top-1 error 30.24
+    (models.resnext50_32x4d, 224),
+]  # ImageNet top-1 error 21.49
+nonrobust_classifiers = [
+    ModelZooClassifierWrapper(Util.conditional_to_cuda(m(pretrained=True)), side) for m, side in nonrobust_classifiers
+]
 
 classifiers = nonrobust_classifiers + robust_classifiers
 
@@ -108,13 +138,14 @@ def get_target_labels(total_images: int) -> np.ndarray:
         return np.repeat(np.arange(NO_LABELS), total_images // NO_LABELS)
     else:
         # use totally random labels
-        return np.random.choice(label_indices, size=total_images) 
+        return np.random.choice(label_indices, size=total_images)
+
 
 def advgen_experiments(adversary: Adversary, total_images: int):
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
     advgen = AdversarialGenerator(None, classifiers, True, decay_factor)
     advgen.set_generative_model(gm)
-    label_array = get_target_labels(total_images)   
+    label_array = get_target_labels(total_images)
     for label in label_array:
         LogUtil.info(f"*** CLASS {label}: {ds.printed_classes[label]} ***")
         gm.configure_label(label)
@@ -147,6 +178,7 @@ elif args.command == "measure_accuracy":
         LogUtil.info(f"Accuracy of classifier {i} on {total} validation images: {acc_str:>6}%")
 elif args.command in ["generate_conventional_from_gan", "generate_conventional_from_validation"]:
     if args.command == "generate_conventional_from_gan":
+
         def loader():
             label_array = get_target_labels(args.no_images)
             images, labels = [], []
@@ -157,18 +189,21 @@ elif args.command in ["generate_conventional_from_gan", "generate_conventional_f
                 if len(images) == datasets.DatasetWrapper.test_batch_size:
                     yield images, labels
                     images, labels = [], []
+
     else:
         loader = Util.fixed_length_loader(args.no_images, ds.get_test_loader, False)
     norms = [
         ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), datasets.OTHER_L2_UPPER_BOUND),
-        ("l_inf",      lambda x: x.abs().max(),                 datasets.OTHER_LINF_UPPER_BOUND)
+        ("l_inf", lambda x: x.abs().max(), datasets.OTHER_LINF_UPPER_BOUND),
     ]
     for norm, norm_fn, bound in norms:
         adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm=norm)
         for i, c in enumerate(classifiers):
             perturb = get_conventional_perturb(c, adversary)
             severity, std, total = c.measure_adversarial_severity(perturb, loader, ds, norm_fn, False)
-            LogUtil.info(f"Adversarial severity of classifier {i} with {norm:>10} norm = {severity:.8f} "
-                         f"(std = {std:.8f}, #images = {total})")
+            LogUtil.info(
+                f"Adversarial severity of classifier {i} with {norm:>10} norm = {severity:.8f} "
+                f"(std = {std:.8f}, #images = {total})"
+            )
 else:
     raise RuntimeError(f"Unknown command {args.command}.")

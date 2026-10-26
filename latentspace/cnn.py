@@ -11,6 +11,7 @@ from tensorboardX import SummaryWriter
 from .ml_util import *
 from .datasets import *
 
+
 class ResBlock(torch.nn.Module):
     def __init__(self, base_map_num: int):
         super().__init__()
@@ -31,7 +32,7 @@ class Unit(torch.nn.Module):
     """
     Basic convolutional block.
     """
-    
+
     def __init__(self, in_channels: int, out_channels: int, p_dropout: float, unit_type: int = 0):
         """
         Constructs Unit.
@@ -80,7 +81,7 @@ class ColoredNet128(torch.nn.Module):
     """
     Simple CNN classifier to process 128x128 images.
     """
-    
+
     def __init__(self, no_classes: int = 2, unit_type: int = 0):
         """
         Constructs ColoredNet128.
@@ -90,13 +91,13 @@ class ColoredNet128(torch.nn.Module):
         super().__init__()
         base_map_num = 8
         self.model = torch.nn.Sequential(
-            Unit(3,                 1 * base_map_num, 0.2,  unit_type),
-            Unit(1 * base_map_num,  2 * base_map_num, 0.25, unit_type),
-            Unit(2 * base_map_num,  4 * base_map_num, 0.25, unit_type),
-            Unit(4 * base_map_num,  8 * base_map_num, 0.3,  unit_type),
-            Unit(8 * base_map_num, 16 * base_map_num, 0.4,  unit_type),
+            Unit(3, 1 * base_map_num, 0.2, unit_type),
+            Unit(1 * base_map_num, 2 * base_map_num, 0.25, unit_type),
+            Unit(2 * base_map_num, 4 * base_map_num, 0.25, unit_type),
+            Unit(4 * base_map_num, 8 * base_map_num, 0.3, unit_type),
+            Unit(8 * base_map_num, 16 * base_map_num, 0.4, unit_type),
             Flatten(),
-            torch.nn.Linear(16 * base_map_num * 4 * 4, no_classes)
+            torch.nn.Linear(16 * base_map_num * 4 * 4, no_classes),
         )
 
     def forward(self, x):
@@ -107,7 +108,7 @@ class MNISTNet(torch.nn.Module):
     """
     Simple CNN classifier for 28x28 MNIST images.
     """
-    
+
     def __init__(self, unit_type: int = 0):
         """
         Constructs MNISTNet.
@@ -117,11 +118,11 @@ class MNISTNet(torch.nn.Module):
         base_map_num = 8
         self.model = torch.nn.Sequential(
             Lambda(lambda x: torch.nn.functional.pad(input=x, pad=((4,) * 4), mode="constant", value=0)),
-            Unit(1,                1 * base_map_num, 0.2, unit_type),
+            Unit(1, 1 * base_map_num, 0.2, unit_type),
             Unit(1 * base_map_num, 2 * base_map_num, 0.3, unit_type),
             Unit(2 * base_map_num, 4 * base_map_num, 0.4, unit_type),
             Flatten(),
-            torch.nn.Linear(4 * base_map_num * 4 * 4, 10)
+            torch.nn.Linear(4 * base_map_num * 4 * 4, 10),
         )
 
     def forward(self, x):
@@ -132,7 +133,7 @@ class EarlyStoppingMonitor:
     """
     Performs early stopping when the supplied validation metric value starts to decrease.
     """
-    
+
     def __init__(self):
         """
         Constructs EarlyStoppingMonitor.
@@ -150,8 +151,10 @@ class EarlyStoppingMonitor:
         :param disk_backup_filename: filename where to save trainable parameters of the classifier if the
             metric still gets better.
         """
-        LogUtil.info(f"*** After E{epoch}, validation accuracy = {new_value:.6f} "
-                     f"vs. {self.total_metric_value:.6f} on the previous epoch.")
+        LogUtil.info(
+            f"*** After E{epoch}, validation accuracy = {new_value:.6f} "
+            f"vs. {self.total_metric_value:.6f} on the previous epoch."
+        )
         if new_value > self.total_metric_value:
             LogUtil.info("*** Saving parameters.")
             trainer.save_params()
@@ -167,7 +170,7 @@ class Trainer:
     """
     Trainable CNN classifier.
     """
-    
+
     def __init__(self, dataset: str, train_loader_fn: Callable, val_loader_fn: Callable, unit_type: int = 0):
         """
         Constructs Trainer.
@@ -186,13 +189,15 @@ class Trainer:
             raise RuntimeError("Supported datasets: celeba-128, lsun-128, mnist, none.")
         if self.model is not None:
             self.model = Util.conditional_to_cuda(self.model)
-            LogUtil.info(f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters")
+            LogUtil.info(
+                f"{dataset} classifier: {Util.number_of_trainable_parameters(self.model)} trainable parameters"
+            )
         self.params = {}
         self.train_loader_fn = train_loader_fn
         self.val_loader_fn = val_loader_fn
         # controls the behavior of predict_with_gradient
         self.misclassification_gradients = True
-    
+
     @torch.no_grad()
     def save_params(self):
         """
@@ -230,12 +235,13 @@ class Trainer:
         be computed w.r.t. the input image only.
         """
         Util.set_param_requires_grad(self.model, False)
-            
+
     @torch.no_grad()
     def random_init(self):
         """
         Performs random initialization.
         """
+
         def init_weights(m: torch.nn.Module):
             if isinstance(m, torch.nn.Conv2d):
                 m.weight.normal_(0, 0.1)
@@ -247,6 +253,7 @@ class Trainer:
                 m.weight.uniform_(-std, std)
                 if m.bias is not None:
                     m.bias.uniform_(0, 0)
+
         self.model.apply(init_weights)
 
     def set_misclassification_gradients(self, value: bool):
@@ -256,8 +263,10 @@ class Trainer:
             perform an untargeted attack. If False, predict_with_gradient returns the gradient of the loss.
         """
         self.misclassification_gradients = value
-        
-    def predict_with_gradient(self, x: torch.Tensor, true_labels: List[int]) -> Tuple[torch.LongTensor, torch.FloatTensor]:
+
+    def predict_with_gradient(
+        self, x: torch.Tensor, true_labels: List[int]
+    ) -> Tuple[torch.LongTensor, torch.FloatTensor]:
         """
         Predicts, computes loss and gradient.
         If self.misclassification_gradients is True, the gradient points in the direction of a
@@ -285,9 +294,11 @@ class Trainer:
             losses += [loss.item()]
             with torch.no_grad():
                 predictions += [torch.argmax(ps).item()]
-        return (Util.conditional_to_cuda(torch.LongTensor(predictions)),
-                Util.conditional_to_cuda(torch.FloatTensor(losses)))
-    
+        return (
+            Util.conditional_to_cuda(torch.LongTensor(predictions)),
+            Util.conditional_to_cuda(torch.FloatTensor(losses)),
+        )
+
     @torch.no_grad()
     def predict(self, x: torch.Tensor) -> torch.LongTensor:
         """
@@ -298,8 +309,9 @@ class Trainer:
         self.model.eval()  # set prediction mode
         # predicting separately for each item
         # otherwise, prediction quality will drop due to the behavior of batch normalization
-        return Util.conditional_to_cuda(torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1)
-                                                          for i in range(x.shape[0])]))
+        return Util.conditional_to_cuda(
+            torch.LongTensor([torch.argmax(self.model(x[i].unsqueeze(0)), 1) for i in range(x.shape[0])])
+        )
 
     @torch.no_grad()
     def predict_probs(self, x: torch.Tensor) -> torch.FloatTensor:
@@ -312,9 +324,16 @@ class Trainer:
         # predicting separately for each item
         # otherwise, prediction quality will drop due to the behavior of batch normalization
         return torch.softmax(torch.cat([self.model(x[i].unsqueeze(0)) for i in range(x.shape[0])]), 1)
-    
-    def fit(self, class_weights: List[float], epochs: int = 2, lr: float = 1e-3, lr_decay: float = 0.1,
-            disk_backup_filename: str = "dumped_weights.bin", noise_sigma: float = 0) -> None:
+
+    def fit(
+        self,
+        class_weights: List[float],
+        epochs: int = 2,
+        lr: float = 1e-3,
+        lr_decay: float = 0.1,
+        disk_backup_filename: str = "dumped_weights.bin",
+        noise_sigma: float = 0,
+    ) -> None:
         """
         Trains the classifier using the cross-entropy loss and RMSProp.
         :param class_weights: weights (importance values) of each image class.
@@ -352,7 +371,7 @@ class Trainer:
 
         infinite_val_stream = Util.leakless_cycle(self.val_loader_fn)
         batch_index = 0
-        
+
         for epoch in range(epochs):
             for images, labels in self.train_loader_fn():
                 # train
@@ -379,7 +398,7 @@ class Trainer:
                         p = EvaluatedPrediction(self, image, label)
                         val_loss_sum += p.loss.item()
                         val_accuracy += p.accuracy
-                writer.add_scalar("validation_loss",     val_loss_sum / no_val, batch_index)
+                writer.add_scalar("validation_loss", val_loss_sum / no_val, batch_index)
                 writer.add_scalar("validation_accuracy", val_accuracy / no_val, batch_index)
                 batch_index += 1
 
@@ -396,9 +415,10 @@ class Trainer:
                 early_stopper.update_metric(self, val_predictions / items, epoch, disk_backup_filename)
                 if early_stopper.should_stop:
                     break
-                    
-    def accuracy(self, data_loader_fn: Callable, noise_sigma: float = 0,
-                 noise_evaluation_multiplier: int = 1) -> Tuple[float, int]:
+
+    def accuracy(
+        self, data_loader_fn: Callable, noise_sigma: float = 0, noise_evaluation_multiplier: int = 1
+    ) -> Tuple[float, int]:
         """
         Measures accuracy on the supplied data loader.
         :param data_loader_fn: a function that returns the data loader to be used.
@@ -418,9 +438,14 @@ class Trainer:
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
         return correct / total, total
-    
-    def measure_robustness(self, perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
-                           data_loader_fn: Callable, ds: DatasetWrapper, show_images: bool = True) -> Tuple[float, int]:
+
+    def measure_robustness(
+        self,
+        perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
+        data_loader_fn: Callable,
+        ds: DatasetWrapper,
+        show_images: bool = True,
+    ) -> Tuple[float, int]:
         """
         Measures robustness on the supplied data loader as accuracy on perturned images.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.
@@ -447,11 +472,15 @@ class Trainer:
             if show_images:
                 Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
         return np.array(all_accuracies).mean(), len(all_accuracies)
-    
-    def measure_adversarial_severity(self, perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
-                                     data_loader_fn: Callable, ds: DatasetWrapper,
-                                     norm_fn: Callable[[torch.FloatTensor], float],
-                                     show_images: bool = True) -> Tuple[float, float, int]:
+
+    def measure_adversarial_severity(
+        self,
+        perturb_fn: Callable[[torch.FloatTensor, int], torch.FloatTensor],
+        data_loader_fn: Callable,
+        ds: DatasetWrapper,
+        norm_fn: Callable[[torch.FloatTensor], float],
+        show_images: bool = True,
+    ) -> Tuple[float, float, int]:
         """
         Measures adversarial severity (mean norm of minimum adversarial perturbations) on the supplied data loader.
         :param perturb_fn: function that accepts an image and its true label and perturbs this image.
@@ -480,4 +509,3 @@ class Trainer:
                 Util.imshow_tensors(*perturbed_images, captions=ds.prediction_indices_to_classes(predictions))
         severities = torch.tensor(severities)
         return severities.mean(), severities.std(), len(severities)
-        

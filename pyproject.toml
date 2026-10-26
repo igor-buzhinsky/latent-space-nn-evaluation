@@ -32,9 +32,26 @@ imagenet = ["robustness"]
 
 [dependency-groups]
 notebooks = ["jupyter", "ipython"]
+dev = [
+    "black (>=26.10.1,<27.0.0)",
+    "pyrefly (>=1.4.0,<2.0.0)"
+]
 
 [tool.poetry]
 packages = [{ include = "latentspace" }]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+# Vendored third-party code is kept as in upstream.
+extend-exclude = "^/(biggan|pioneer)/"
+
+[tool.pyrefly]
+preset = "default"
+project-includes = ["latentspace", "*.py"]
+# Vendored third-party code is kept as in upstream.
+project-excludes = ["biggan/**", "pioneer/**"]
+search-path = [".", "pioneer/src"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

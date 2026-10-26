@@ -24,6 +24,7 @@ DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 
 ### PyTorch utils ###
 
+
 class Lambda(torch.nn.Module):
     def __init__(self, forward):
         super().__init__()
@@ -36,39 +37,39 @@ class Lambda(torch.nn.Module):
 class NopLayer(torch.nn.Module):
     def forward(self, x):
         return x
-    
+
 
 class Flatten(torch.nn.Module):
     def forward(self, x: torch.Tensor):
         return x.view(x.shape[0], -1)
-    
+
 
 class Upsample(torch.nn.Module):
     def forward(self, x: torch.Tensor):
-        return torch.nn.functional.interpolate(x, size=None, scale_factor=2, mode='bilinear', align_corners=False)
+        return torch.nn.functional.interpolate(x, size=None, scale_factor=2, mode="bilinear", align_corners=False)
 
 
 class Resize(torch.nn.Module):
     def __init__(self, side: int):
         super().__init__()
         self.side = side
-    
+
     def forward(self, x: torch.Tensor):
-        return torch.nn.functional.interpolate(x, size=(self.side, self.side),
-                                               mode="bicubic", align_corners=False)
-    
-    
+        return torch.nn.functional.interpolate(x, size=(self.side, self.side), mode="bicubic", align_corners=False)
+
+
 class Adversary(ABC):
     """
     Base class for adversaries. Adversaries can perturb vectors given the gradient pointing to the direction
     of making the prediction worse.
     """
-    
+
     @abstractmethod
-    def perturb(self, initial_vector: torch.Tensor,
-                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
+    def perturb(
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+    ) -> torch.Tensor:
         """
-        Perturb the given vector. 
+        Perturb the given vector.
         :param initial_vector: initial vector. If this is the original image representation, it must be flattened
             prior to the call (more precisely, it must be of size [1, the_rest]).
         :param get_gradient: a get_gradient function. It accepts the current vector and returns a tuple
@@ -77,14 +78,15 @@ class Adversary(ABC):
         """
         pass
 
-    
+
 class NopAdversary(Adversary):
     """
     Dummy adversary that acts like an identity function.
     """
-    
-    def perturb(self, initial_vector: torch.Tensor,
-                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
+
+    def perturb(
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+    ) -> torch.Tensor:
         return initial_vector
 
 
@@ -92,12 +94,22 @@ class PGDAdversary(Adversary):
     """
     Performes Projected Gradient Descent (PGD), or, more precisely, PG ascent according to the provided gradient.
     """
-    
-    def __init__(self, rho: float = 0.1, steps: int = 25, step_size: float = 0.1, random_start: bool = True,
-                 stop_loss: float = 0, verbose: int = 1, norm: str = "scaled_l_2",
-                 n_repeat: int = 1, repeat_mode: str = None, unit_sphere_normalization: bool = False):
+
+    def __init__(
+        self,
+        rho: float = 0.1,
+        steps: int = 25,
+        step_size: float = 0.1,
+        random_start: bool = True,
+        stop_loss: float = 0,
+        verbose: int = 1,
+        norm: str = "scaled_l_2",
+        n_repeat: int = 1,
+        repeat_mode: str = None,
+        unit_sphere_normalization: bool = False,
+    ):
         """
-        Constrauts PGDAdversary. 
+        Constrauts PGDAdversary.
         :param rho > 0: bound on perturbation norm.
         :param steps: number of steps to perform in each run. Less steps can be done if stop_loss is reached.
         :param step_size: step size. Each step will be of magnitude rho * step_size.
@@ -126,21 +138,22 @@ class PGDAdversary(Adversary):
         self.inf_norm = norm == "l_inf"
         # checks on repeated runs
         assert n_repeat >= 1, "n_repeat must be positive"
-        assert not(n_repeat > 1 and repeat_mode is None), "if n_repeat > 1, repeat_mode must be set" 
+        assert not (n_repeat > 1 and repeat_mode is None), "if n_repeat > 1, repeat_mode must be set"
         assert repeat_mode in [None, "any", "min"], "if repeat_mode is set, it must be either 'any' or 'min'"
         self.n_repeat = n_repeat
         self.shrinking_repeats = repeat_mode == "min"
         # optional unit sphere normalization
         self.unit_sphere_normalization = unit_sphere_normalization
-        assert not unit_sphere_normalization or norm == "scaled_l_2",\
-            "unit_sphere_normalization is only compatible with scaled_l_2 norm"
-    
+        assert (
+            not unit_sphere_normalization or norm == "scaled_l_2"
+        ), "unit_sphere_normalization is only compatible with scaled_l_2 norm"
+
     def _norm(self, x: torch.Tensor) -> float:
         """
         (Possibly scaled) norm of x.
         """
         return x.norm(np.inf if self.inf_norm else 2).item() / (np.sqrt(x.numel()) if self.scale_norm else 1)
-    
+
     def _normalize_gradient(self, x: torch.Tensor) -> torch.Tensor:
         """
         Normalizes the vector of gradients.
@@ -148,7 +161,7 @@ class PGDAdversary(Adversary):
         In the L-inf space, this is done by taking the sign of the gradient.
         """
         return x.sign() if self.inf_norm else (x / self._norm(x))
-    
+
     def _project(self, x: torch.Tensor, rho: float) -> torch.Tensor:
         """
         Projects the vector onto the rho-ball.
@@ -156,9 +169,10 @@ class PGDAdversary(Adversary):
         In the L-inf space, this is done by clamping all components independently.
         """
         return x.clamp(-rho, rho) if self.inf_norm else (x / self._norm(x) * rho)
-    
-    def perturb(self, initial_vector: torch.Tensor,
-                get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]) -> torch.Tensor:
+
+    def perturb(
+        self, initial_vector: torch.Tensor, get_gradient: Callable[[torch.Tensor], Tuple[torch.Tensor, float]]
+    ) -> torch.Tensor:
         best_perturbation = None
         best_perturbation_norm = np.inf
         # rho may potentially shrink with repeat_mode == "min":
@@ -192,13 +206,16 @@ class PGDAdversary(Adversary):
             found = False
             for i in range(self.steps):
                 perturbed_vector = x1 + perturbation
-                perturbed_vector, perturbation = self._recompute_with_unit_sphere_normalization(perturbed_vector,
-                                                                                                perturbation)
+                perturbed_vector, perturbation = self._recompute_with_unit_sphere_normalization(
+                    perturbed_vector, perturbation
+                )
                 classification_gradient, classification_loss = get_gradient(perturbed_vector)
                 if self.verbose > 0:
                     if classification_loss > self.stop_loss or i == self.steps - 1 or i % 5 == 0 and self.verbose > 1:
-                        print(f"step {i:3d}: objective = {-classification_loss:+.7f}, "
-                              f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}")
+                        print(
+                            f"step {i:3d}: objective = {-classification_loss:+.7f}, "
+                            f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}"
+                        )
                 if classification_loss > self.stop_loss:
                     found = True
                     break
@@ -209,7 +226,7 @@ class PGDAdversary(Adversary):
                 # projecting on rho-ball around x1
                 if self._norm(perturbation) > rho:
                     perturbation = self._project(perturbation, rho)
-            
+
             # end of run
             if found:
                 if self.shrinking_repeats:
@@ -217,7 +234,7 @@ class PGDAdversary(Adversary):
                         best_perturbation_norm = self._norm(perturbation)
                         best_perturbation = perturbation
                         rho = best_perturbation_norm
-                else: # regular repeats
+                else:  # regular repeats
                     # return immediately
                     return self._optional_normalize(x1 + perturbation)
             if best_perturbation is None:
@@ -226,9 +243,9 @@ class PGDAdversary(Adversary):
                 # heuristic: the last run is always from the center
                 random_start = False
         return self._optional_normalize(x1 + best_perturbation)
-    
+
     ### projections on the unit sphere: ###
-    
+
     def _optional_normalize(self, x: torch.Tensor):
         """
         Optional unit sphere normalization.
@@ -236,7 +253,7 @@ class PGDAdversary(Adversary):
         :return: optionally normalized x.
         """
         return Util.normalize_latent(x) if self.unit_sphere_normalization else x
-    
+
     def _recompute_with_unit_sphere_normalization(self, perturbed_vector: torch.Tensor, perturbation: torch.Tensor):
         """
         If unit sphere normalization is enabled, the perturbed vector is projected on the unit sphere,
@@ -247,7 +264,7 @@ class PGDAdversary(Adversary):
         """
         effective_perturbed_vector = self._optional_normalize(perturbed_vector)
         return effective_perturbed_vector, perturbation + effective_perturbed_vector - perturbed_vector
-    
+
     def _adjust_step_for_unit_sphere(self, perturbation_step: torch.Tensor, previous_perturbed_vector: torch.Tensor):
         """
         If unit sphere normalization is enabled, multiplies perturbation_step by a coefficient that approximately
@@ -260,13 +277,13 @@ class PGDAdversary(Adversary):
         effective_perturbation_step = new_perturbed_vector - previous_perturbed_vector
         coef = perturbation_step.norm() / effective_perturbation_step.norm()
         return perturbation_step * coef
-        
+
 
 class ImageSet:
     """
     Accumulates images and captions. Shows them in blocks of size `max_num'.
     """
-    
+
     def __init__(self, max_num: int):
         """
         Constructs ImageSet.
@@ -274,7 +291,7 @@ class ImageSet:
         """
         self.images, self.captions = [], []
         self.max_num = max_num
-    
+
     def append(self, images: List[torch.Tensor], captions: List[str] = None):
         """
         Appends the given images and captions.
@@ -285,7 +302,7 @@ class ImageSet:
         if captions is None:
             captions = [""] * len(images)
         self.captions += [captions]
-    
+
     def maybe_show(self, force: bool = False, nrow: int = 8):
         """
         Shows the images and their captions if a sufficient number of them has been accumulated.
@@ -298,16 +315,16 @@ class ImageSet:
             self.images.clear()
             self.captions.clear()
 
-            
+
 class Util:
     """
     A convenience static class for everything that does not have its own class.
     """
-    
+
     # if False, will use CPU even if CUDA is available
     cuda_enabled = True
     using_cuda = cuda_enabled and torch.cuda.is_available()
-    
+
     @staticmethod
     def set_memory_limit(mb: int):
         """
@@ -317,7 +334,7 @@ class Util:
             rsrc = resource.RLIMIT_DATA
             soft, hard = resource.getrlimit(rsrc)
             resource.setrlimit(rsrc, (1024 * 1024 * mb, hard))
-    
+
     @staticmethod
     def configure(memory_limit_mb: int):
         """
@@ -326,11 +343,11 @@ class Util:
         Util.set_memory_limit(memory_limit_mb)
         plt.rcParams["font.family"] = "serif"
         plt.rcParams["mathtext.fontset"] = "dejavuserif"
-    
+
     @staticmethod
     def tensor2numpy(x: torch.Tensor) -> np.ndarray:
         return x.detach().cpu().numpy()
-    
+
     @staticmethod
     def imshow(img: torch.Tensor, figsize: Tuple[float, float] = (12, 2)):
         """
@@ -345,10 +362,16 @@ class Util:
         LogUtil.savefig("imshow")
         plt.show()
         plt.close()
-    
+
     @staticmethod
-    def imshow_tensors(*tensors: torch.Tensor, clamp: bool = True, figsize: Tuple[float, float] = (12, 2),
-                       captions: List[str] = None, nrow: int = 8, pad_value: float = 1):       
+    def imshow_tensors(
+        *tensors: torch.Tensor,
+        clamp: bool = True,
+        figsize: Tuple[float, float] = (12, 2),
+        captions: List[str] = None,
+        nrow: int = 8,
+        pad_value: float = 1,
+    ):
         """
         Enhanced torchvision.utils.make_grid(). Supports image captions. Also saves the produced figure.
         :param tensors: images to show.
@@ -366,9 +389,10 @@ class Util:
         if clamp:
             t = torch.clamp(t, -1, 1)
         t = list(t)
-            
-        # adding textual captions if they are given (this involes rescaling)        
+
+        # adding textual captions if they are given (this involes rescaling)
         if captions is not None:
+
             def multiline_puttext(img, caption: str):
                 """
                 cv2.putText does not support line breaks on its own.
@@ -381,6 +405,7 @@ class Util:
                     # green
                     img = cv2.putText(img, text, (0, y), cv2.FONT_HERSHEY_TRIPLEX, scale, (0, 250, 0))
                 return img
+
             default_size = (128,) * 2
             for i in range(len(t)):
                 assert type(captions[i]) == str, "Captions must be str"
@@ -389,9 +414,9 @@ class Util:
                 t[i] = cv2.resize(t[i], default_size, interpolation=cv2.INTER_NEAREST)
                 t[i] = multiline_puttext(t[i], captions[i]) / 255
                 t[i] = torch.FloatTensor(t[i].transpose(2, 0, 1) * 2 - 1)
-            
+
         Util.imshow(torchvision.utils.make_grid(torch.stack(t), nrow=nrow, pad_value=pad_value), figsize)
-        
+
     @staticmethod
     def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Callable:
         """
@@ -401,6 +426,7 @@ class Util:
         :param parent_loader_fn: the loader-returning function to decorate.
         :return: decorated parent_loader_fn.
         """
+
         def loader():
             data_generator = iter(parent_loader_fn())
             result = []
@@ -416,8 +442,9 @@ class Util:
                         result = result[batch_size:]
                 except StopIteration:
                     return
+
         return loader
-    
+
     @staticmethod
     def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
         """
@@ -427,6 +454,7 @@ class Util:
         :param restarts: if False, then just limit the parent loader and do not restart it when the end is reached.
         :return: decorated parent_loader_fn.
         """
+
         def loader():
             generated = 0
             while generated < no_images:
@@ -442,8 +470,9 @@ class Util:
                             return
                     yield items, labels
                     generated += len(items)
+
         return loader
-    
+
     @staticmethod
     def leakless_cycle(iterable_fn: Callable) -> Generator:
         """
@@ -456,7 +485,7 @@ class Util:
                 yield next(iterator)
             except StopIteration:
                 iterator = iter(iterable_fn())
-    
+
     @staticmethod
     def optimizable_clone(x: torch.Tensor) -> torch.Tensor:
         """
@@ -465,7 +494,7 @@ class Util:
         :return: x with enabled gradients.
         """
         return Util.conditional_to_cuda(x.clone().detach()).requires_grad_(True)
-    
+
     @staticmethod
     def set_param_requires_grad(m: torch.nn.Module, value: bool):
         """
@@ -475,7 +504,7 @@ class Util:
         """
         for p in m.parameters():
             p.requires_grad_(value)
-    
+
     @staticmethod
     def conditional_to_cuda(x: Union[torch.Tensor, torch.nn.Module]) -> torch.Tensor:
         """
@@ -484,7 +513,7 @@ class Util:
         :return: x on GPU if there is at least 1 GPU, otherwise just x.
         """
         return x.cuda() if Util.using_cuda else x
-    
+
     @staticmethod
     def number_of_trainable_parameters(model: torch.nn.Module) -> int:
         """
@@ -493,7 +522,7 @@ class Util:
         :return: number of trainable parameters in model.
         """
         return sum([np.prod(p.size()) for p in model.parameters() if p.requires_grad])
-    
+
     @staticmethod
     def set_random_seed(seed: int = None):
         """
@@ -508,7 +537,7 @@ class Util:
         np.random.seed(seed + 1)
         torch.manual_seed(seed + 2)
         torch.cuda.manual_seed_all(seed + 2)
-        
+
     @staticmethod
     def normalize_latent(x: torch.Tensor) -> torch.Tensor:
         """
@@ -519,12 +548,12 @@ class Util:
         norm_vector = (np.sqrt(x.shape[1]) / torch.norm(x, dim=1)).unsqueeze(0)
         norm_vector = norm_vector.expand(x.shape[0], norm_vector.shape[1])
         return norm_vector @ x
-        #return torch.stack([x[i] / torch.norm(x[i]) for i in range(x.shape[0])])
-        
+        # return torch.stack([x[i] / torch.norm(x[i]) for i in range(x.shape[0])])
+
     @staticmethod
     def get_kde_bandwidth(x: np.ndarray) -> float:
         """
-        This fixes a peculiar problem with sns.kdeplot/distplot. Use this to compute the bandwidth and provide it as argument bw. 
+        This fixes a peculiar problem with sns.kdeplot/distplot. Use this to compute the bandwidth and provide it as argument bw.
         https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
         :param x: input (numpy array).
         :return: KDE bandwidth computed by Scott's method.
@@ -536,7 +565,7 @@ class EpsDTransformer:
     """
     Converter between noise magnitude (epsilon) and decay factor (d).
     """
-    
+
     def eps_to_d(self, eps: float) -> float:
         """
         Converts d to epsilon.
@@ -544,48 +573,49 @@ class EpsDTransformer:
         :return: decay factor.
         """
         return 1 - 1 / np.sqrt(1 + eps**2)
-    
+
     def d_to_eps(self, d: float) -> float:
         """
         Converts epsilon to d.
         :param d: decay factor.
         :return: noise magnitude.
         """
-        return np.sqrt((1 / (1 - d))**2 - 1)
-        
+        return np.sqrt((1 / (1 - d)) ** 2 - 1)
+
 
 class TauRhoTransformer:
     """
     Converter between perturbation likelihood (tau) and norm bound (rho).
     """
-    
+
     def __init__(self, n_l: int, eps: float):
         self.n_l = n_l
         self.c1 = n_l * np.log(np.sqrt((1 + eps**2) / (2 * np.pi * eps**2)))
         self.c2 = (1 + eps**2) / (2 * eps**2) * np.sqrt(n_l)
-        
+
     def rho_to_logtau(self, rho: float) -> float:
         """
         Converts rho to the logarithm of tau.
         """
         return self.c1 - (rho**2) * self.n_l * self.c2
-    
+
     def logtau_to_rho(self, tau: float) -> float:
         """
         Converts the logarithm of tau to rho.
         """
         return np.sqrt((self.c1 - tau) / self.c2 / self.n_l)
 
+
 class LogUtil:
     """
     Performs logging of text and images to a new timestamped directory.
     Logs are also printed to stdout. Figures are only shown in notebooks.
     """
-    
+
     _timestamp = lambda: str(int(round(time.time() * 1000)))
     _dirname = "logdir_" + _timestamp()
     _created = False
-    
+
     @staticmethod
     def set_custom_dirname(dirname: str):
         """
@@ -596,7 +626,7 @@ class LogUtil:
         LogUtil.ensure_dir_existence()
         for filename in os.listdir(dirname):
             os.remove(os.path.join(dirname, filename))
-    
+
     @staticmethod
     def ensure_dir_existence():
         """
@@ -605,7 +635,7 @@ class LogUtil:
         if not LogUtil._created:
             LogUtil._created = True
             os.makedirs(LogUtil._dirname, exist_ok=True)
-    
+
     @staticmethod
     def info(msg: str, regular_print: bool = True):
         """
@@ -618,7 +648,7 @@ class LogUtil:
             print(msg)
         with open(os.path.join(LogUtil._dirname, "log.txt"), "a+", encoding="utf-8") as f:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
-    
+
     @staticmethod
     def savefig(prefix: str, pdf: bool = False):
         """
@@ -628,10 +658,12 @@ class LogUtil:
         :param pdf: if True, save as PDF. If False, save as PNG.
         """
         LogUtil.ensure_dir_existence()
-        fname = os.path.join(LogUtil._dirname, "fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png"))
+        fname = os.path.join(
+            LogUtil._dirname, "fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png")
+        )
         plt.savefig(fname, dpi=300, bbox_inches="tight")
         LogUtil.info(f"[produced a figure: {fname}]", False)
-        
+
     @staticmethod
     def metacall(fn: Callable, fn_name: str, *args, **kwargs):
         """
@@ -645,7 +677,7 @@ class LogUtil:
         kwarg_assignments = [f"{kwarg_name}={repr(kwarg_value)}" for kwarg_name, kwarg_value in kwargs.items()]
         LogUtil.info(f"{fn_name}(" + ", ".join(arg_assignments + kwarg_assignments) + ")", False)
         fn(*args, **kwargs)
-        
+
     @staticmethod
     def to_pdf():
         """

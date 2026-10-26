@@ -20,10 +20,11 @@ class EvaluationUtil:
         Util.imshow_tensors(images, captions=ds.prediction_indices_to_printed_classes(labels))
         for i, c in enumerate(classifiers):
             LogUtil.info(f"Predicted {i}: {ds.prediction_indices_to_classes(c.predict(images))}")
-    
+
     @staticmethod
-    def evaluate_accuracy(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int = None,
-                          noise_evaluation_multiplier: int = 1):
+    def evaluate_accuracy(
+        classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int = None, noise_evaluation_multiplier: int = 1
+    ):
         """
         Evaluates the conventional accuracy of the supplied classifiers.
         This is done for clean images and for images corrupted witt Gaussian noise N(0, 0.8^2 I).
@@ -41,11 +42,18 @@ class EvaluationUtil:
             for noise_sigma in [0, 0.8]:
                 accuracy, total = c.accuracy(loader, noise_sigma, noise_evaluation_multiplier)
                 acc_str = f"{accuracy * 100:.2f}"
-                LogUtil.info(f"Accuracy of classifier {i} on {total} validation images (noise {noise_sigma:.1f}): {acc_str:>6}%")
-    
+                LogUtil.info(
+                    f"Accuracy of classifier {i} on {total} validation images (noise {noise_sigma:.1f}): {acc_str:>6}%"
+                )
+
     @staticmethod
-    def evaluate_conventional_robustness(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int,
-                                         l_2_bounds: List[float], l_inf_bounds: List[float]):
+    def evaluate_conventional_robustness(
+        classifiers: List[Trainer],
+        ds: DatasetWrapper,
+        max_imgs: int,
+        l_2_bounds: List[float],
+        l_inf_bounds: List[float],
+    ):
         """
         Evaluates the conventional robustness of the supplied classifiers as accuracy on adversarial perturbations.
         Uses L2 and L-inf norms.
@@ -64,12 +72,15 @@ class EvaluationUtil:
                     perturb = get_conventional_perturb(c, adversary)
                     accuracy, total = c.measure_robustness(perturb, loader, ds, False)
                     acc_str = f"{accuracy * 100:.2f}"
-                    LogUtil.info(f"For classifier {i}, ({norm:>10}) ||dx|| <= {bound:.6f}, "
-                                 f"accuracy on {total} images = {acc_str:>6}%")
-                    
+                    LogUtil.info(
+                        f"For classifier {i}, ({norm:>10}) ||dx|| <= {bound:.6f}, "
+                        f"accuracy on {total} images = {acc_str:>6}%"
+                    )
+
     @staticmethod
-    def evaluate_conventional_adversarial_severity(classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int,
-                                                   l_2_bound: float, l_inf_bound: float):
+    def evaluate_conventional_adversarial_severity(
+        classifiers: List[Trainer], ds: DatasetWrapper, max_imgs: int, l_2_bound: float, l_inf_bound: float
+    ):
         """
         Evaluates the conventional adversarial severity (mean norm of minimum adversarial perturbations)
             of the supplied classifiers. Uses L2 and L-inf norms.
@@ -83,19 +94,31 @@ class EvaluationUtil:
             than the norms of typical perturbations).
         """
         loader = Util.fixed_length_loader(max_imgs, ds.get_test_loader, False)
-        for norm, norm_fn, bound in [("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), l_2_bound),
-                                     ("l_inf",      lambda x: x.abs().max(),                 l_inf_bound)]:
+        for norm, norm_fn, bound in [
+            ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), l_2_bound),
+            ("l_inf", lambda x: x.abs().max(), l_inf_bound),
+        ]:
             adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm=norm)
             for i, c in enumerate(classifiers):
                 perturb = get_conventional_perturb(c, adversary)
                 severity, std, total = c.measure_adversarial_severity(perturb, loader, ds, norm_fn, False)
-                LogUtil.info(f"Adversarial severity of classifier {i} with {norm:>10} norm = {severity:.8f} "
-                             f"(std = {std:.8f}, #images = {total})")
-    
+                LogUtil.info(
+                    f"Adversarial severity of classifier {i} with {norm:>10} norm = {severity:.8f} "
+                    f"(std = {std:.8f}, #images = {total})"
+                )
+
     @staticmethod
-    def generate_images_with_classifier(classifiers: List[Trainer], ds: DatasetWrapper, no_classes: int,
-                                        noise_sigma: float, norm: str, norm_bound: float,
-                                        pairs_in_line: int = 3, estimation_batches: int = 100, nrow: int = 8):
+    def generate_images_with_classifier(
+        classifiers: List[Trainer],
+        ds: DatasetWrapper,
+        no_classes: int,
+        noise_sigma: float,
+        norm: str,
+        norm_bound: float,
+        pairs_in_line: int = 3,
+        estimation_batches: int = 100,
+        nrow: int = 8,
+    ):
         """
         Uses a classifier to generate images of each class. Starts from a mean of a number of actual images
         with added Gaussian noise. For robust classifiers, this procedure should result in images resembling
@@ -110,8 +133,9 @@ class EvaluationUtil:
         :param estimation_batches: number of batches to use to compute the initial mean image.
         :param nrow: nrow to be passed to ImageSet.
         """
-        mean_image = torch.stack([batch.mean(dim=0) for batch, _
-                                  in itertools.islice(ds.get_test_loader(), 0, estimation_batches)]).mean(dim=0)
+        mean_image = torch.stack(
+            [batch.mean(dim=0) for batch, _ in itertools.islice(ds.get_test_loader(), 0, estimation_batches)]
+        ).mean(dim=0)
         image_optimizer = PGDAdversary(norm_bound, 50, 0.05, False, np.inf, verbose=0, norm=norm)
         for i, classifier in enumerate(classifiers):
             LogUtil.info(f"classifier {i}:")
@@ -124,7 +148,7 @@ class EvaluationUtil:
                 s.maybe_show(nrow=nrow)
             s.maybe_show(True, nrow=nrow)
             classifier.set_misclassification_gradients(True)
-            
+
     @staticmethod
     def show_reconstructed_images(gm: GenerativeModel, lines: int, images_in_line: int):
         """
@@ -139,8 +163,8 @@ class EvaluationUtil:
             for i in range(images_in_line):
                 img, _ = next(sampler)
                 images += [img, gm.decode(gm.encode(img), detach=True)]
-            Util.imshow_tensors(*images, nrow=(images_in_line*2))
-    
+            Util.imshow_tensors(*images, nrow=(images_in_line * 2))
+
     @staticmethod
     def show_reconstruction_distance_statistics(gm: GenerativeModel, no_images: int):
         """
@@ -156,16 +180,20 @@ class EvaluationUtil:
             img, _ = next(sampler)
             norms[i] = norm(img)
             distances[i] = norm(img - gm.decode(gm.encode(img)))
-        print(f"Scaled norms of original images:       mean={norms.mean():.4f}, "
-              f"median={np.median(norms):.4f}, std={norms.std():.4f}")
-        print(f"Scaled norms of reconstruction errors: mean={distances.mean():.4f}, "
-              f"median={np.median(distances):.4f}, std={distances.std():.4f}")
-        plt.figure(figsize=(10,3))
+        print(
+            f"Scaled norms of original images:       mean={norms.mean():.4f}, "
+            f"median={np.median(norms):.4f}, std={norms.std():.4f}"
+        )
+        print(
+            f"Scaled norms of reconstruction errors: mean={distances.mean():.4f}, "
+            f"median={np.median(distances):.4f}, std={distances.std():.4f}"
+        )
+        plt.figure(figsize=(10, 3))
         plt.title("Scaled norms of reconstruction errors")
         plt.hist(distances)
         plt.show()
         plt.close()
-    
+
     @staticmethod
     def show_generated_images(gm: GenerativeModel, lines: int, images_in_line: int):
         """
