@@ -1,4 +1,7 @@
 import os
+import shlex
+import subprocess
+import sys
 from typing import Optional
 
 img_in_epoch = 100000
@@ -7,7 +10,7 @@ img_in_epoch = 100000
 unit_types = [0]
 
 # datasets = ["MNIST", "CelebA128Gender", "LSUN128"]
-datasets = ["ImageNetAnimals"]
+datasets = ["MNIST"]
 
 for unit_type in unit_types:
     dirname = f"classifiers_architecture{unit_type}"
@@ -19,14 +22,15 @@ for unit_type in unit_types:
             save_filename = f"{dirname}/{save_prefix}_{dataset}.bin"
             load_cmd = f'--load_filename "{load_filename}"' if load_prefix else ""
             save_cmd = f'--save_filename "{save_filename}"'
-            os.system(
-                f"ipython ClassifierTraining.py -- --dataset {dataset} --command train "
+            args = (
+                f"--dataset {dataset} --command train "
                 f"{load_cmd} {save_cmd} --img_in_epoch {img_in_epoch} "
                 f"--unit_type {unit_type} {more}"
             )
+            subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)])
 
         run(None, "oneepoch", "--no_epochs 1")
-        # run("oneepoch",     "plain",        "--no_epochs 7 --start_lr 0.0003")
+        run("oneepoch", "plain", "--no_epochs 7 --start_lr 0.0003")
         run(None, "conventional", "--conventional_augmentation")
         run("plain", "robust", "--noise_augmentation")
         run("conventional", "both", "--conventional_augmentation --noise_augmentation")
