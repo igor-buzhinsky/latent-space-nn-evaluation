@@ -31,6 +31,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--command",
         required=True,
+        choices=[
+            "generate_minimum",
+            "generate_bounded",
+            "measure_accuracy",
+            "generate_conventional_from_gan",
+            "generate_conventional_from_validation",
+        ],
         help="Command to run: generate_minimum (search for minimum latent adversarial perturbations), "
         "generate_bounded (measure latent adversarial accuracy within the norm bound --bounded_search_rho), "
         "measure_accuracy (accuracy on validation images), generate_conventional_from_gan or "
@@ -204,16 +211,6 @@ def main() -> None:
 
     parser = build_parser()
     args = parser.parse_args()
-    commands = [
-        "generate_minimum",
-        "generate_bounded",
-        "measure_accuracy",
-        "generate_conventional_from_gan",
-        "generate_conventional_from_validation",
-    ]
-    if args.command not in commands:
-        parser.error(f"unknown command {args.command}")
-
     if args.logdir is not None:
         LogUtil.set_custom_dirname(args.logdir)
     LogUtil.info(args)

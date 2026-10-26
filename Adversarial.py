@@ -10,6 +10,9 @@ from latentspace.adversarial_generation import AdversarialGenerator, RandomPertu
 from latentspace.evaluation_util import EvaluationUtil
 from latentspace.ml_util import Adversary, DatasetInfo, EpsDTransformer, LogUtil, NopAdversary, PGDAdversary, Util
 
+# values of --search_mode and the corresponding values of use_generated_images
+SEARCH_MODES = {"reconstruction": [False], "generation": [True], "both": [False, True]}
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -19,12 +22,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--command",
         required=True,
+        choices=["test", "generate_noise", "generate_minimum", "generate_bounded"],
         help="Command to run: test (show reconstructed and generated images and run quick checks), generate_noise "
         "(measure accuracy under random latent noise), generate_minimum (search for minimum latent adversarial "
         "perturbations), or generate_bounded (measure latent adversarial accuracy within the norm bound "
         "--bounded_search_rho).",
     )
-    parser.add_argument("--dataset", required=True, help="Dataset: MNIST, CelebA128Gender, or LSUN128.")
+    parser.add_argument(
+        "--dataset", required=True, choices=["MNIST", "CelebA128Gender", "LSUN128"], help="Dataset to use."
+    )
     parser.add_argument(
         "--no_images",
         type=int,
@@ -35,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--pgd_verbosity",
         type=int,
+        choices=[0, 1, 2],
         default=0,
         help="Verbosity of the PGD search: 0 = silent, 1, or 2 = most verbose (default: %(default)s).",
     )
@@ -59,6 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--search_mode",
+        choices=list(SEARCH_MODES),
         default="both",
         help="Which latent codes to search from: reconstruction (codes of real images obtained by the generative "
         "model's encoder), generation (random codes), or both (commands generate_minimum and generate_bounded, "
@@ -86,6 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--unit_type",
         type=int,
+        choices=[0, 1, 2],
         default=0,
         help="Classifier architecture: 0 = basic, 1 = with residual blocks, 2 = deeper version of 0 "
         "(default: %(default)s).",
@@ -105,7 +114,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 LOCAL_NOISE_EPSILONS = np.linspace(0.25, 1.00, 4)
-SEARCH_MODES = {"reconstruction": [False], "generation": [True], "both": [False, True]}
 
 
 def load_classifier(
@@ -152,22 +160,15 @@ def main() -> None:
     if args.command in ["generate_minimum", "generate_bounded"]:
         if args.noise_epsilon is None:
             parser.error("missing argument --noise_epsilon")
-        if args.search_mode not in SEARCH_MODES:
-            parser.error("argument --search_mode must be one of 'reconstruction', 'generation', 'both'")
     elif args.command == "generate_noise":
         if args.noise_perturbations_per_image is None:
             parser.error("missing argument --noise_perturbations_per_image")
-    elif args.command != "test":
-        parser.error(f"unknown command {args.command}")
 
     if args.logdir is not None:
         LogUtil.set_custom_dirname(args.logdir)
     LogUtil.info(args)
 
-    try:
-        dataset_info = DatasetInfo[args.dataset]
-    except KeyError:
-        parser.error(f"unsupported dataset name {args.dataset}")
+    dataset_info = DatasetInfo[args.dataset]
 
     if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
         no_classes = 2

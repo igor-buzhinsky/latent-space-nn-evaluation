@@ -28,12 +28,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--command",
         required=True,
+        choices=["train", "evaluate", "local_evaluate"],
         help="Command to run: train (train a classifier), evaluate (measure accuracy and robustness to conventional "
         "adversarial perturbations), or local_evaluate (experimental: for individual images, compare the error rate "
         "under Gaussian noise with the distance to the nearest adversarial example, following Ford et al., "
         "'Adversarial examples are a natural consequence of test error in noise', 2019).",
     )
-    parser.add_argument("--dataset", required=True, help="Dataset: MNIST, CelebA128Gender, or LSUN128.")
+    parser.add_argument(
+        "--dataset", required=True, choices=["MNIST", "CelebA128Gender", "LSUN128"], help="Dataset to use."
+    )
     parser.add_argument(
         "--load_filename",
         help="File with classifier weights to load. Required for evaluate and local_evaluate. "
@@ -75,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--unit_type",
         type=int,
+        choices=[0, 1, 2],
         default=0,
         help="Classifier architecture: 0 = basic, 1 = with residual blocks, 2 = deeper version of 0 "
         "(default: %(default)s).",
@@ -167,20 +171,13 @@ def main() -> None:
 
     parser = build_parser()
     args = parser.parse_args()
-    if args.command in ["evaluate", "local_evaluate"]:
-        if args.load_filename is None:
-            parser.error("missing argument --load_filename")
-    elif args.command == "train":
-        if args.save_filename is None:
-            parser.error("missing argument --save_filename")
-    else:
-        parser.error(f"unknown command {args.command}")
+    if args.command in ["evaluate", "local_evaluate"] and args.load_filename is None:
+        parser.error("missing argument --load_filename")
+    if args.command == "train" and args.save_filename is None:
+        parser.error("missing argument --save_filename")
     LogUtil.info(args)
 
-    try:
-        dataset_info = DatasetInfo[args.dataset]
-    except KeyError:
-        parser.error(f"unsupported dataset name {args.dataset}")
+    dataset_info = DatasetInfo[args.dataset]
 
     # evaluation on noise-corrupted images will be done noise_evaluation_multiplier times
     noise_evaluation_multiplier = 1
