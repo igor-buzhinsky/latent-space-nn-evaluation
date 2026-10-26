@@ -39,7 +39,7 @@ class SpectralNorm:
         u = u / u.norm()
         weight_sn = weight_mat / (u.t() @ weight_mat @ v)
         weight_sn = weight_sn.view(*size)
-        return weight_sn, torch.autograd.Variable(u.data)
+        return weight_sn, u.detach()
 
     @staticmethod
     def apply(module, name):
@@ -48,7 +48,7 @@ class SpectralNorm:
         del module._parameters[name]
         module.register_parameter(name + "_orig", torch.nn.Parameter(weight.data))
         input_size = weight.size(0)
-        u = torch.autograd.Variable(torch.randn(input_size, 1) * 0.1, requires_grad=False)
+        u = torch.randn(input_size, 1) * 0.1
         setattr(module, name + "_u", u)
         setattr(module, name, fn.compute_weight(module)[0])
         module.register_forward_pre_hook(fn)

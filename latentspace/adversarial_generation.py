@@ -64,7 +64,7 @@ class RandomPerturbationStatistician:
                 predictions = [c.predict(torch.cat(all_img)) for c in self.classifiers]
                 if self.visualize:
                     classes = [self.gm.ds.prediction_indices_to_printed_classes(p) for p in predictions]
-                    joined = list("\n".join(t) for t in zip(*classes))
+                    joined = list("\n".join(t) for t in zip(*classes, strict=True))
                     Util.imshow_tensors(*all_img, captions=joined)
                 # count statistics
                 for j in range(self.stat_len):

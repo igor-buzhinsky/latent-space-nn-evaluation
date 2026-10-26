@@ -74,7 +74,7 @@ class Unit(torch.nn.Module):
                 *end(),
             )
         else:
-            raise AssertionError(f"Unexpected unit type {unit_type}")
+            raise ValueError(f"Unexpected unit type {unit_type}")
 
     def forward(self, x):
         return self.model(x)
@@ -371,7 +371,7 @@ class Trainer:
                 no_train = len(images)
                 optimizer.zero_grad()
                 loss_sum = 0
-                for image, label in zip(images, labels):
+                for image, label in zip(images, labels, strict=True):
                     p = EvaluatedPrediction(self, image, label)
                     (p.loss / no_train).backward()
                     loss_sum += p.loss.item()
@@ -386,7 +386,7 @@ class Trainer:
                 val_loss_sum = 0
                 val_accuracy = 0
                 with torch.no_grad():
-                    for image, label in zip(images, labels):
+                    for image, label in zip(images, labels, strict=True):
                         p = EvaluatedPrediction(self, image, label)
                         val_loss_sum += p.loss.item()
                         val_accuracy += p.accuracy
@@ -401,7 +401,7 @@ class Trainer:
                 val_predictions = 0
                 items = 0
                 for data in self.val_loader_fn():
-                    for image, label in zip(*data):
+                    for image, label in zip(*data, strict=True):
                         val_predictions += EvaluatedPrediction(self, image, label).accuracy
                         items += 1
                 early_stopper.update_metric(self, val_predictions / items, epoch, disk_backup_filename)
@@ -452,7 +452,7 @@ class Trainer:
         for data in data_loader_fn():
             images, labels = data
             perturbed_images, predictions, accuracies = [], [], []
-            for image, label in zip(images, labels):
+            for image, label in zip(images, labels, strict=True):
                 perturbed_image = perturb_fn(image, label).unsqueeze(0)
                 perturbed_images += [perturbed_image]
                 outputs = self.model(perturbed_image)
@@ -490,7 +490,7 @@ class Trainer:
         for data in data_loader_fn():
             images, labels = data
             perturbed_images, predictions = [], []
-            for image, label in zip(images, labels):
+            for image, label in zip(images, labels, strict=True):
                 perturbed_image = perturb_fn(image, label).unsqueeze(0)
                 perturbed_images += [perturbed_image]
                 outputs = self.model(perturbed_image)

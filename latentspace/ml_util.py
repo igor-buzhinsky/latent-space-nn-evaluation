@@ -434,7 +434,7 @@ class Util:
                     items, labels = next(data_generator)
                     batch_size = len(items)
                     # accumulate only items of target_label
-                    result += [item for item, label in zip(items, labels) if label == target_label]
+                    result += [item for item, label in zip(items, labels, strict=True) if label == target_label]
                     if len(result) >= batch_size:
                         yield torch.stack(result[:batch_size]), [target_label] * batch_size
                         # save the remainder for the next yield
