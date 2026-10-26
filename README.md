@@ -24,11 +24,11 @@ poetry install --extras imagenet  # also install the robustness package for the 
 
 Then run scripts inside the environment, e.g. `poetry run python Adversarial.py --help`, or start the notebooks with `poetry run jupyter notebook`.
 
-For development, code is formatted with [black](https://github.com/psf/black) and type-checked with [pyrefly](https://pyrefly.org/) (both are in the `dev` group; vendored `biggan/` and `pioneer/` are excluded):
+For development, code (including notebooks) is formatted with [black](https://github.com/psf/black), linted with [ruff](https://docs.astral.sh/ruff/) and type-checked with [pyrefly](https://pyrefly.org/). These tools are in the `dev` group; vendored `biggan/` and `pioneer/` are excluded. To run all of them:
 
 ```bash
-poetry run black .
-poetry run pyrefly check
+./lint.sh        # check only
+./lint.sh --fix  # apply formatting and safe fixes, then check
 ```
 
 ## Running: MNIST
