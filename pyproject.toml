@@ -33,7 +33,7 @@ imagenet = ["robustness"]
 [dependency-groups]
 notebooks = ["jupyter", "ipython"]
 dev = [
-    "black (>=26.10.1,<27.0.0)",
+    "black[jupyter] (>=26.10.1,<27.0.0)",
     "pyrefly (>=1.4.0,<2.0.0)"
 ]
 
@@ -48,7 +48,7 @@ extend-exclude = "^/(biggan|pioneer)/"
 
 [tool.pyrefly]
 preset = "default"
-project-includes = ["latentspace", "*.py"]
+project-includes = ["latentspace", "*.py", "*.ipynb"]
 # Vendored third-party code is kept as in upstream.
 project-excludes = ["biggan/**", "pioneer/**"]
 search-path = [".", "pioneer/src"]
