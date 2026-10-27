@@ -2,7 +2,7 @@
 name = "latent-space-nn-evaluation"
 version = "0.1.0"
 description = "Metrics and methods for robustness evaluation of neural network image classifiers with generative models."
-authors = [{ name = "Igor Buzhinsky", email = "igorbuz@gmail.com" }]
+authors = [{ name = "Igor Buzhinsky", email = "igor.buzhinsky@gmail.com" }]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
