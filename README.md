@@ -34,7 +34,7 @@ For development, code (including notebooks) is formatted with [black](https://gi
 Unit tests of the `latentspace` package are in [tests](tests). They use small in-memory data and the bundled MNIST models (no dataset downloads) and take a few seconds. To run them:
 
 ```bash
-./test.sh     # or: ./test.sh -v, ./test.sh -k PGD
+./unit_test.sh     # or: ./unit_test.sh -v, ./unit_test.sh -k PGD
 ```
 
 ## Running: MNIST
