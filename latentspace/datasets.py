@@ -4,7 +4,6 @@ import warnings
 from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -13,6 +12,7 @@ import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 
+from latentspace.paths import DATA_DIR, REPO_ROOT
 from latentspace.torch_util import to_device
 
 if os.name == "posix":
@@ -262,11 +262,15 @@ class MNISTData(DatasetWrapper):
                 ]
             ),
         )
-        self.trainset = torchvision.datasets.MNIST("mnist", train=True, download=True, transform=self.train_transform)
-        self.unaugmented_trainset = torchvision.datasets.MNIST(
-            "mnist", train=True, download=True, transform=self.test_transform
+        self.trainset = torchvision.datasets.MNIST(
+            str(REPO_ROOT / "mnist"), train=True, download=True, transform=self.train_transform
         )
-        self.testset = torchvision.datasets.MNIST("mnist", train=False, download=True, transform=self.test_transform)
+        self.unaugmented_trainset = torchvision.datasets.MNIST(
+            str(REPO_ROOT / "mnist"), train=True, download=True, transform=self.test_transform
+        )
+        self.testset = torchvision.datasets.MNIST(
+            str(REPO_ROOT / "mnist"), train=False, download=True, transform=self.test_transform
+        )
 
 
 class CelebAData(DatasetWrapper):
@@ -341,13 +345,13 @@ class CelebAData(DatasetWrapper):
             DatasetWrapper.augmentation_transform(size),
         )
         self.trainset = torchvision.datasets.CelebA(
-            root="./data", split="train", download=True, transform=self.train_transform
+            root=str(DATA_DIR), split="train", download=True, transform=self.train_transform
         )
         self.unaugmented_trainset = torchvision.datasets.CelebA(
-            root="./data", split="train", download=True, transform=self.test_transform
+            root=str(DATA_DIR), split="train", download=True, transform=self.test_transform
         )
         self.testset = torchvision.datasets.CelebA(
-            root="./data", split="valid", download=True, transform=self.test_transform
+            root=str(DATA_DIR), split="valid", download=True, transform=self.test_transform
         )
 
     def get_label(self, x):
@@ -378,7 +382,7 @@ class LSUNData(DatasetWrapper):
 
         def class_dataset(train: bool, transform: Callable) -> torchvision.datasets.LSUNClass:
             assert unique_label is not None
-            dirname = f"./data/LSUN/{labels[unique_label]}_{'train' if train else 'val'}_lmdb/"
+            dirname = str(DATA_DIR / "LSUN" / f"{labels[unique_label]}_{'train' if train else 'val'}_lmdb")
             return torchvision.datasets.LSUNClass(root=dirname, transform=transform)
 
         if unique_label is None:
@@ -435,7 +439,7 @@ class ImageNetData(DatasetWrapper):
         :param size: Image resolution (`size` == width == height).
         """
         labels = [str(i) for i in range(1000)]
-        self.base_path = Path("./data/ImageNet/")
+        self.base_path = DATA_DIR / "ImageNet"
         self.img_path = self.base_path / "ILSVRC2012_img_val"
         # human-readable labels
         with open(self.base_path / "imagenet-simple-labels.json") as f:
@@ -449,7 +453,7 @@ class ImageNetData(DatasetWrapper):
         )
         self.filenames = np.array(os.listdir(self.img_path))
         self.val_labels = {}
-        with open("./data/ImageNet/ILSVRC2012_validation_ground_truth_corrected.txt") as f:
+        with open(self.base_path / "ILSVRC2012_validation_ground_truth_corrected.txt") as f:
             for line in f.read().splitlines():
                 tokens = line.split(" ")
                 self.val_labels[tokens[0]] = int(tokens[1])

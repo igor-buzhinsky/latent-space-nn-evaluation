@@ -15,6 +15,7 @@ from latentspace.adversaries import NopAdversary, PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import DatasetInfo
 from latentspace.generative import WGAN
+from latentspace.paths import REPO_ROOT
 from latentspace.torch_util import set_random_seed, to_device
 from tests.helpers import number_of_figures, random_mnist_like_dataset, read_log
 
@@ -22,7 +23,7 @@ from tests.helpers import number_of_figures, random_mnist_like_dataset, read_log
 def robust_mnist_classifier() -> Trainer:
     ds = random_mnist_like_dataset()
     classifier = Trainer("mnist", ds.get_train_loader, ds.get_test_loader, unit_type=0)
-    classifier.restore_params_from_disk("classifiers_architecture0/robust_MNIST.bin")
+    classifier.restore_params_from_disk(str(REPO_ROOT / "classifiers_architecture0" / "robust_MNIST.bin"))
     return classifier
 
 

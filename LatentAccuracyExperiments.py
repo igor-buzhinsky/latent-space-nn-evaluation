@@ -1,6 +1,10 @@
 import shlex
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts and relative paths below are relative to the repository root
+REPO_ROOT = Path(__file__).resolve().parent
 
 num_images = 10000
 
@@ -24,5 +28,5 @@ for unit_type in unit_types:
             f"--classifier_filenames {filenames} --search_mode both --unit_type {unit_type} "
             f"--logdir LAT_ACC_LOG_{unit_type}_{dataset} --no_adversary --command generate_minimum"
         )
-        subprocess.run([sys.executable, "Adversarial.py", *shlex.split(args)])
+        subprocess.run([sys.executable, "Adversarial.py", *shlex.split(args)], cwd=REPO_ROOT)
         print()

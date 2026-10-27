@@ -5,6 +5,7 @@ import torch
 from latentspace.cnn import Trainer
 from latentspace.datasets import DatasetInfo
 from latentspace.generative import WGAN
+from latentspace.paths import REPO_ROOT
 from latentspace.torch_util import set_random_seed, to_device
 from tests.helpers import random_mnist_like_dataset
 
@@ -58,7 +59,7 @@ class BundledModelsTest(unittest.TestCase):
         set_random_seed(0)
         ds = random_mnist_like_dataset()
         classifier = Trainer("mnist", ds.get_train_loader, ds.get_test_loader, unit_type=0)
-        classifier.restore_params_from_disk("classifiers_architecture0/robust_MNIST.bin")
+        classifier.restore_params_from_disk(str(REPO_ROOT / "classifiers_architecture0" / "robust_MNIST.bin"))
         for label in range(10):
             with self.subTest(label=label):
                 images = WGAN(DatasetInfo.MNIST, label, ds).generate(20, detach=True)

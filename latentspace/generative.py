@@ -4,7 +4,6 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 from importlib import reload
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -13,6 +12,7 @@ from latentspace.datasets import DatasetInfo, DatasetWrapper
 from latentspace.gan import GAN
 from latentspace.loader_decorators import class_specific_loader
 from latentspace.logging_util import LogUtil
+from latentspace.paths import DATA_DIR, REPO_ROOT
 from latentspace.torch_util import DEVICE, optimizable_clone, set_param_requires_grad, to_device
 
 
@@ -136,7 +136,7 @@ class WGAN(GenerativeModel):
         if dataset_info != DatasetInfo.MNIST:
             raise ValueError("WGAN is only available for MNIST.")
         self.g = GAN()
-        self.g.restore_params_from_disk(f"mnist-gan/dumped_weights_{unique_label}.bin")
+        self.g.restore_params_from_disk(str(REPO_ROOT / "mnist-gan" / f"dumped_weights_{unique_label}.bin"))
         # disable computation of gradients that are not required
         set_param_requires_grad(self.g.generator, False)
         # since the discriminator is not used, there is no need to warm spectral norms (GAN.warm_spectral_norms)
@@ -169,8 +169,7 @@ class BigGAN(GenerativeModel):
         """
         super().__init__(128, 120, 0, ds)
         LogUtil.info("*** Loading BigGAN...")
-        # str.split() on a literal is inferred as list[LiteralString], which is not list[str]
-        sys.argv = (  # pyrefly: ignore[bad-assignment]
+        sys.argv = (
             "sample.py --dataset I128_hdf5 --shuffle --num_workers 0 --batch_size 1 "
             "--num_G_accumulations 8 --num_D_accumulations 8 --num_D_steps 1 --G_lr 1e-4 "
             "--D_lr 4e-4 --D_B2 0.999 --G_B2 0.999 --G_attn 64 --D_attn 64 --G_ch 96 "
@@ -179,8 +178,11 @@ class BigGAN(GenerativeModel):
             "--skip_init --hier --dim_z 120 --shared_dim 128 --ema --ema_start 20000 "
             "--use_multiepoch_sampler --test_every 2000 --save_every 1000 "
             "--num_best_copies 5 --num_save_copies 2 --seed 0 --skip_init --G_batch_size 1 "
-            "--use_ema --G_eval_mode --base_root biggan"
-        ).split(" ")
+            "--use_ema --G_eval_mode"
+        ).split(" ") + ["--base_root", str(REPO_ROOT / "biggan")]
+        # BigGAN's code is the biggan package in the repository root
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.append(str(REPO_ROOT))
         from biggan.sample import create_sample, decode_sample, main
 
         self.create_sample = create_sample
@@ -258,8 +260,8 @@ class PIONEER(GenerativeModel):
         # these numbers are hard-coded and correspond to very concrete models.
         if dataset_info == DatasetInfo.CelebA128Gender:
             pioneer_d = "celeba"
-            save_dir = f"pioneer/CelebA-128-{self.subclass}"
-            test_path = f"data/celeba/img_align_celeba_{self.subclass}"
+            save_dir = REPO_ROOT / "pioneer" / f"CelebA-128-{self.subclass}"
+            test_path = DATA_DIR / "celeba" / f"img_align_celeba_{self.subclass}"
             if self.subclass == "male":
                 start_iteration = 22452000
             elif self.subclass == "female":
@@ -268,8 +270,8 @@ class PIONEER(GenerativeModel):
                 raise RuntimeError()
         elif dataset_info == DatasetInfo.LSUN128:
             pioneer_d = "lsun"
-            save_dir = f"pioneer/LSUN-128-{self.subclass}"
-            test_path = f"data/LSUN/data/LSUN/{self.subclass}_train_lmdb"
+            save_dir = REPO_ROOT / "pioneer" / f"LSUN-128-{self.subclass}"
+            test_path = DATA_DIR / "LSUN" / "data" / "LSUN" / f"{self.subclass}_train_lmdb"
             if self.subclass == "bedroom":
                 start_iteration = 15268000
             elif self.subclass == "church_outdoor":
@@ -279,7 +281,7 @@ class PIONEER(GenerativeModel):
         else:
             raise RuntimeError()
 
-        model_filename = Path(save_dir) / "checkpoint" / f"{start_iteration}_state"
+        model_filename = save_dir / "checkpoint" / f"{start_iteration}_state"
         if not os.path.isfile(model_filename):
             raise RuntimeError(f"PIONEER model file {model_filename} does not exist!")
 
@@ -288,13 +290,26 @@ class PIONEER(GenerativeModel):
         # prepare command line arguments
         # in particular, disable random seed resetting with --manual_seed=-1
         LogUtil.info("*** Loading PIONEER...")
-        sys.argv = (
-            f"train.py -d {pioneer_d} --start_iteration {start_iteration} --save_dir {save_dir} "
-            f"--test_path {test_path} --sample_N=256 --reconstructions_N=0 --interpolate_N=0 "
-            f"--max_phase={max_phase} --testonly --no_TB --manual_seed=-1"
-        ).split(" ")
+        sys.argv = [
+            "train.py",
+            "-d",
+            pioneer_d,
+            "--start_iteration",
+            str(start_iteration),
+            "--save_dir",
+            str(save_dir),
+            "--test_path",
+            str(test_path),
+            "--sample_N=256",
+            "--reconstructions_N=0",
+            "--interpolate_N=0",
+            f"--max_phase={max_phase}",
+            "--testonly",
+            "--no_TB",
+            "--manual_seed=-1",
+        ]
         LogUtil.info(f"PIONEER's command line arguments: {sys.argv}")
-        sys.path.append("./pioneer/src")
+        sys.path.append(str(REPO_ROOT / "pioneer" / "src"))
 
         # PIONEER imports
         import config

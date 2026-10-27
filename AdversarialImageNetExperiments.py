@@ -1,6 +1,10 @@
 import shlex
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts and relative paths below are relative to the repository root
+REPO_ROOT = Path(__file__).resolve().parent
 
 num_images = 600
 noise_epsilons = [0.5, 1.0]
@@ -9,7 +13,7 @@ run_latent_search = False
 
 
 def run(args: str) -> None:
-    subprocess.run([sys.executable, "AdversarialImageNet.py", *shlex.split(args)])
+    subprocess.run([sys.executable, "AdversarialImageNet.py", *shlex.split(args)], cwd=REPO_ROOT)
 
 
 run("--command measure_accuracy --num_images 50000")

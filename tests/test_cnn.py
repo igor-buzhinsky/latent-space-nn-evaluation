@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from latentspace.cnn import ColoredNet128, EarlyStoppingMonitor, MNISTNet, Trainer, Unit
+from latentspace.paths import REPO_ROOT
 from latentspace.torch_util import set_random_seed, to_device
 from tests.helpers import random_mnist_like_dataset
 
@@ -129,7 +130,9 @@ class BundledClassifiersTest(unittest.TestCase):
             for prefix in ["oneepoch", "plain", "conventional", "robust", "both"]:
                 with self.subTest(unit_type=unit_type, prefix=prefix):
                     trainer = mnist_trainer(unit_type)
-                    trainer.restore_params_from_disk(f"classifiers_architecture{unit_type}/{prefix}_MNIST.bin")
+                    trainer.restore_params_from_disk(
+                        str(REPO_ROOT / f"classifiers_architecture{unit_type}" / f"{prefix}_MNIST.bin")
+                    )
 
 
 if __name__ == "__main__":

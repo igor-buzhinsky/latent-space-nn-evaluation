@@ -5,6 +5,7 @@ import unittest
 import torch
 
 from latentspace.gan import GAN, SpectralNormConv2d, SpectralNormLinear
+from latentspace.paths import REPO_ROOT
 from latentspace.torch_util import set_random_seed, to_device
 from tests.helpers import random_mnist_like_dataset
 
@@ -68,7 +69,7 @@ class GANTest(unittest.TestCase):
     def test_bundled_weights_can_be_loaded(self) -> None:
         for label in range(10):
             with self.subTest(label=label):
-                self.gan.restore_params_from_disk(f"mnist-gan/dumped_weights_{label}.bin")
+                self.gan.restore_params_from_disk(str(REPO_ROOT / "mnist-gan" / f"dumped_weights_{label}.bin"))
 
     def test_warm_spectral_norms_runs_over_loader(self) -> None:
         ds = random_mnist_like_dataset(num_images=8)

@@ -1,6 +1,10 @@
 import shlex
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts and relative paths below are relative to the repository root
+REPO_ROOT = Path(__file__).resolve().parent
 
 img_acc = 100000
 img_rob = 600
@@ -13,7 +17,7 @@ datasets = ["MNIST", "CelebA128Gender", "LSUN128"]
 
 
 def run(args: str) -> None:
-    subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)])
+    subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)], cwd=REPO_ROOT)
 
 
 for unit_type in unit_types:

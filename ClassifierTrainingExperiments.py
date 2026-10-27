@@ -2,6 +2,10 @@ import os
 import shlex
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts and relative paths below are relative to the repository root
+REPO_ROOT = Path(__file__).resolve().parent
 
 img_in_epoch = 100000
 
@@ -13,7 +17,7 @@ datasets = ["MNIST"]
 
 for unit_type in unit_types:
     dirname = f"classifiers_architecture{unit_type}"
-    os.makedirs(dirname, exist_ok=True)
+    os.makedirs(REPO_ROOT / dirname, exist_ok=True)
     for dataset in datasets:
 
         def run(load_prefix: str | None, save_prefix: str, more: str) -> None:
@@ -26,7 +30,7 @@ for unit_type in unit_types:
                 f"{load_cmd} {save_cmd} --img_in_epoch {img_in_epoch} "
                 f"--unit_type {unit_type} {more}"
             )
-            subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)])
+            subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)], cwd=REPO_ROOT)
 
         run(None, "oneepoch", "--num_epochs 1")
         run("oneepoch", "plain", "--num_epochs 7 --start_lr 0.0003")

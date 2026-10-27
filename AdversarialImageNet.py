@@ -15,6 +15,7 @@ from latentspace.compat import patch_torchvision_for_robustness
 from latentspace.layers import Lambda, Resize
 from latentspace.loader_decorators import fixed_length_loader
 from latentspace.logging_util import LogUtil
+from latentspace.paths import DATA_DIR, REPO_ROOT
 from latentspace.runtime import configure_runtime
 from latentspace.torch_util import DEVICE, to_device
 
@@ -119,8 +120,12 @@ def load_classifiers(ds: datasets.DatasetWrapper) -> list[Trainer]:
     from robustness import datasets as robustness_datasets
     from robustness import model_utils
 
-    dataset = robustness_datasets.ImageNet("./data/ImageNet")
-    model_kwargs = {"arch": "resnet50", "dataset": dataset, "resume_path": "./imagenet-models/ImageNet.pt"}
+    dataset = robustness_datasets.ImageNet(str(DATA_DIR / "ImageNet"))
+    model_kwargs = {
+        "arch": "resnet50",
+        "dataset": dataset,
+        "resume_path": str(REPO_ROOT / "imagenet-models" / "ImageNet.pt"),
+    }
     model, _ = model_utils.make_and_restore_model(**model_kwargs)
     model = model.to(DEVICE)
     model.eval()

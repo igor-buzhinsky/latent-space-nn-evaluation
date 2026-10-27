@@ -1,6 +1,10 @@
 import shlex
 import subprocess
 import sys
+from pathlib import Path
+
+# scripts and relative paths below are relative to the repository root
+REPO_ROOT = Path(__file__).resolve().parent
 
 num_images = 600
 
@@ -15,7 +19,7 @@ commands = ["generate_minimum"]
 
 
 def run(args: str) -> None:
-    subprocess.run([sys.executable, "Adversarial.py", *shlex.split(args)])
+    subprocess.run([sys.executable, "Adversarial.py", *shlex.split(args)], cwd=REPO_ROOT)
 
 
 for unit_type in unit_types:

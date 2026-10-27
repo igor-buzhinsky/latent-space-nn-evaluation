@@ -1,6 +1,5 @@
 """
-Tests of the latentspace package. Run them with `./unit_test.sh`, or from the repository root (bundled models are loaded
-by relative paths) with:
+Tests of the latentspace package. Run them with `./unit_test.sh` or with:
 
     poetry run python -m unittest discover -b tests
 

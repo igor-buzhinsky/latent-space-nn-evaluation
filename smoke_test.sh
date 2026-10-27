@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# the scripts and the classifier paths below are relative to the repository root
+cd "$(dirname "$0")"
+
 if false; then
     #img_acc=100000
     img_acc=1000

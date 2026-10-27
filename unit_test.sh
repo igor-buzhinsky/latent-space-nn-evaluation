@@ -3,7 +3,7 @@
 # Usage: ./unit_test.sh [unittest options]
 
 set -euo pipefail
-# bundled models are loaded by paths relative to the repository root
+# the tests package is discovered relative to the repository root
 cd "$(dirname "$0")"
 
 poetry run python -m unittest discover -b "$@" tests
