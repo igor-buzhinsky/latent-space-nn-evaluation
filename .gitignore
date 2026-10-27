@@ -16,3 +16,6 @@ cnn_training/
 cnn_training_noise/
 gan_training/
 dumped_weights.bin*
+
+# downloaded PIONEER checkpoints
+pioneer/*/checkpoint/
