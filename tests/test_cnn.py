@@ -1,6 +1,7 @@
-import os
+import contextlib
 import tempfile
 import unittest
+from pathlib import Path
 
 import torch
 
@@ -45,7 +46,7 @@ class TrainerTest(unittest.TestCase):
 
     def test_unknown_dataset_is_rejected(self) -> None:
         with self.assertRaises(RuntimeError):
-            Trainer("cifar", lambda: [], lambda: [])
+            Trainer("cifar", list, list)
 
     def test_predict(self) -> None:
         predictions = self.trainer.predict(mnist_images(5))
@@ -71,7 +72,7 @@ class TrainerTest(unittest.TestCase):
         x = mnist_images(4)
         expected = self.trainer.predict_probs(x)
         with tempfile.TemporaryDirectory() as dirname:
-            filename = os.path.join(dirname, "classifier.bin")
+            filename = str(Path(dirname) / "classifier.bin")
             self.trainer.save_params_to_disk(filename)
             other = mnist_trainer()
             other.restore_params_from_disk(filename)
@@ -96,15 +97,11 @@ class TrainerTest(unittest.TestCase):
         self.assertEqual(total, 24)
 
     def test_fit_saves_parameters(self) -> None:
-        previous_dir = os.getcwd()
-        with tempfile.TemporaryDirectory() as dirname:
-            os.chdir(dirname)  # fit writes TensorBoard logs to the current directory
-            try:
-                backup = os.path.join(dirname, "backup.bin")
-                self.trainer.fit([0.1] * 10, epochs=1, lr=1e-3, disk_backup_filename=backup)
-                self.assertTrue(os.path.isfile(backup))
-            finally:
-                os.chdir(previous_dir)
+        # fit writes TensorBoard logs to the current directory
+        with tempfile.TemporaryDirectory() as dirname, contextlib.chdir(dirname):
+            backup = str(Path(dirname) / "backup.bin")
+            self.trainer.fit([0.1] * 10, epochs=1, lr=1e-3, disk_backup_filename=backup)
+            self.assertTrue(Path(backup).is_file())
 
 
 class EarlyStoppingMonitorTest(unittest.TestCase):
@@ -113,10 +110,10 @@ class EarlyStoppingMonitorTest(unittest.TestCase):
         monitor = EarlyStoppingMonitor()
         x = mnist_images(4)
         with tempfile.TemporaryDirectory() as dirname:
-            backup = os.path.join(dirname, "backup.bin")
+            backup = str(Path(dirname) / "backup.bin")
             monitor.update_metric(trainer, 0.5, 0, backup)
             self.assertFalse(monitor.should_stop)
-            self.assertTrue(os.path.isfile(backup))
+            self.assertTrue(Path(backup).is_file())
             best = trainer.predict_probs(x)
             trainer.random_init()
             monitor.update_metric(trainer, 0.4, 1, backup)

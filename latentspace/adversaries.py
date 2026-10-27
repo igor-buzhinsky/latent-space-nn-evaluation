@@ -158,12 +158,12 @@ class PGDAdversary(Adversary):
                     perturbed_vector, perturbation
                 )
                 classification_gradient, classification_loss = get_gradient(perturbed_vector)
-                if self.verbose > 0:
-                    if classification_loss > self.stop_loss or i == self.steps - 1 or i % 5 == 0 and self.verbose > 1:
-                        LogUtil.info(
-                            f"step {i:3d}: objective = {-classification_loss:+.7f}, "
-                            f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}"
-                        )
+                last_or_found = classification_loss > self.stop_loss or i == self.steps - 1
+                if self.verbose > 0 and (last_or_found or i % 5 == 0 and self.verbose > 1):
+                    LogUtil.info(
+                        f"step {i:3d}: objective = {-classification_loss:+.7f}, "
+                        f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}"
+                    )
                 if classification_loss > self.stop_loss:
                     found = True
                     break

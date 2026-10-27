@@ -1,11 +1,11 @@
 import argparse
-from collections.abc import Iterator
+import functools
 
 import numpy as np
 import scipy.stats
 import torch
 
-from latentspace.adversarial_generation import make_get_gradient
+from latentspace.adversarial_generation import get_conventional_perturb
 from latentspace.adversaries import PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import (
@@ -124,6 +124,9 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
     Experimental check of ratio (1) in [Ford, N., Gilmer, J., Carlini, N., & Cubuk, D. (2019). Adversarial examples are
     a natural consequence of test error in noise].
     """
+    bound = MNIST_L2_UPPER_BOUND if dataset_info == DatasetInfo.MNIST else OTHER_L2_UPPER_BOUND
+    adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm="scaled_l_2")
+    perturb = get_conventional_perturb(c, adversary)
     loader = iter(ds.get_test_loader(batch_size=1))
     for i in range(args.local_eval_num_img):
         image, label = next(loader)
@@ -131,22 +134,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
             print("misclassified, skipping")
             continue
         # measure local robustness
-        bound = MNIST_L2_UPPER_BOUND if dataset_info == DatasetInfo.MNIST else OTHER_L2_UPPER_BOUND
-
-        def single_loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-            def single_loader_() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-                yield image, label
-
-            return single_loader_()
-
-        adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm="scaled_l_2")
-
-        def perturb(image: torch.Tensor, true_label: torch.Tensor) -> torch.Tensor:
-            get_gradient = make_get_gradient(
-                c, true_label, lambda x: x.view(1, *image.shape), lambda x: x, lambda x: x.view(1, -1)
-            )
-            return adversary.perturb(image.view(1, -1), get_gradient).view(*image.shape)
-
+        single_loader = functools.partial(iter, [(image, label)])
         dist = c.measure_adversarial_severity(perturb, single_loader, ds, lambda x: x.norm(), False)[0]
         # measure noise error rate
         for noise_sigma in np.linspace(0.1, 0.9, 9):

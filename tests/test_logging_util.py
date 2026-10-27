@@ -1,6 +1,6 @@
-import os
 import tempfile
 import unittest
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
@@ -21,9 +21,7 @@ class LogUtilTest(unittest.TestCase):
         plt.plot([0, 1], [1, 0])
         LogUtil.savefig("test_prefix")
         plt.close()
-        self.assertTrue(
-            any(f.startswith("fig_test_prefix_") and f.endswith(".png") for f in os.listdir(LogUtil._dirname))
-        )
+        self.assertTrue(any(path.match("fig_test_prefix_*.png") for path in LogUtil._dirname.iterdir()))
 
     def test_metacall_calls_function_and_logs_arguments(self) -> None:
         results = []
@@ -34,12 +32,22 @@ class LogUtilTest(unittest.TestCase):
     def test_set_custom_dirname_clears_directory(self) -> None:
         previous = LogUtil._dirname
         with tempfile.TemporaryDirectory() as dirname:
-            open(os.path.join(dirname, "old.txt"), "w").close()
+            (Path(dirname) / "old.txt").touch()
             LogUtil.set_custom_dirname(dirname)
             try:
-                self.assertEqual(os.listdir(dirname), [])
+                self.assertEqual(list(Path(dirname).iterdir()), [])
                 LogUtil.info("new message", regular_print=False)
                 self.assertIn("new message", read_log())
+            finally:
+                LogUtil.set_custom_dirname(previous)
+
+    def test_set_custom_dirname_creates_missing_directory(self) -> None:
+        previous = LogUtil._dirname
+        with tempfile.TemporaryDirectory() as dirname:
+            LogUtil.set_custom_dirname(Path(dirname) / "new" / "logs")
+            try:
+                LogUtil.info("message in a new directory", regular_print=False)
+                self.assertIn("message in a new directory", read_log())
             finally:
                 LogUtil.set_custom_dirname(previous)
 

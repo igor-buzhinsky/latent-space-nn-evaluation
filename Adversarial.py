@@ -161,12 +161,10 @@ def main() -> None:
 
     parser = build_parser()
     args = parser.parse_args()
-    if args.command in ["generate_minimum", "generate_bounded"]:
-        if args.noise_epsilon is None:
-            parser.error("missing argument --noise_epsilon")
-    elif args.command == "generate_noise":
-        if args.noise_perturbations_per_image is None:
-            parser.error("missing argument --noise_perturbations_per_image")
+    if args.command in ["generate_minimum", "generate_bounded"] and args.noise_epsilon is None:
+        parser.error("missing argument --noise_epsilon")
+    if args.command == "generate_noise" and args.noise_perturbations_per_image is None:
+        parser.error("missing argument --noise_perturbations_per_image")
 
     if args.logdir is not None:
         LogUtil.set_custom_dirname(args.logdir)

@@ -1,5 +1,4 @@
 import gc
-import os.path
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
@@ -169,7 +168,8 @@ class BigGAN(GenerativeModel):
         """
         super().__init__(128, 120, 0, ds)
         LogUtil.info("*** Loading BigGAN...")
-        sys.argv = (
+        # a long list of BigGAN's options is more readable as a string
+        sys.argv = (  # noqa: SIM905
             "sample.py --dataset I128_hdf5 --shuffle --num_workers 0 --batch_size 1 "
             "--num_G_accumulations 8 --num_D_accumulations 8 --num_D_steps 1 --G_lr 1e-4 "
             "--D_lr 4e-4 --D_B2 0.999 --G_B2 0.999 --G_attn 64 --D_attn 64 --G_ch 96 "
@@ -282,7 +282,7 @@ class PIONEER(GenerativeModel):
             raise RuntimeError()
 
         model_filename = save_dir / "checkpoint" / f"{start_iteration}_state"
-        if not os.path.isfile(model_filename):
+        if not model_filename.is_file():
             raise RuntimeError(f"PIONEER model file {model_filename} does not exist!")
 
         max_phase = int(np.round(np.log2(self.resolution))) - 2

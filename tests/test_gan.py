@@ -1,6 +1,7 @@
-import os
+import contextlib
 import tempfile
 import unittest
+from pathlib import Path
 
 import torch
 
@@ -54,10 +55,10 @@ class GANTest(unittest.TestCase):
         latent = to_device(torch.randn(2, self.gan.latent_dim))
         expected = self.gan.decode(latent)
         with tempfile.TemporaryDirectory() as dirname:
-            filename = os.path.join(dirname, "gan.bin")
+            filename = str(Path(dirname) / "gan.bin")
             self.gan.save_params_to_disk(filename)
-            self.assertTrue(os.path.isfile(filename + ".generator"))
-            self.assertTrue(os.path.isfile(filename + ".discriminator"))
+            self.assertTrue(Path(filename + ".generator").is_file())
+            self.assertTrue(Path(filename + ".discriminator").is_file())
             other = GAN()
             other.restore_params_from_disk(filename)
         torch.testing.assert_close(other.decode(latent), expected)
@@ -77,17 +78,11 @@ class GANTest(unittest.TestCase):
 
     def test_fit_saves_parameters(self) -> None:
         ds = random_mnist_like_dataset(num_images=40)
-        previous_dir = os.getcwd()
-        with tempfile.TemporaryDirectory() as dirname:
-            os.chdir(dirname)  # fit writes TensorBoard logs to the current directory
-            try:
-                backup = os.path.join(dirname, "gan.bin")
-                self.gan.fit(
-                    lambda: ds.get_train_loader(batch_size=4), epochs=1, n_critic=2, disk_backup_filename=backup
-                )
-                self.assertTrue(os.path.isfile(backup + ".generator"))
-            finally:
-                os.chdir(previous_dir)
+        # fit writes TensorBoard logs to the current directory
+        with tempfile.TemporaryDirectory() as dirname, contextlib.chdir(dirname):
+            backup = str(Path(dirname) / "gan.bin")
+            self.gan.fit(lambda: ds.get_train_loader(batch_size=4), epochs=1, n_critic=2, disk_backup_filename=backup)
+            self.assertTrue(Path(backup + ".generator").is_file())
 
 
 if __name__ == "__main__":

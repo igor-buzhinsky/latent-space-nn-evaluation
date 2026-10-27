@@ -1,8 +1,8 @@
 """Logging of text and figures."""
 
-import os
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import matplotlib
@@ -18,23 +18,24 @@ class LogUtil:
     def _timestamp() -> str:
         return str(int(round(time.time() * 1000)))
 
-    _dirname = "logdir_" + _timestamp()
+    _dirname = Path("logdir_" + _timestamp())
     _created = False
 
     @staticmethod
-    def set_custom_dirname(dirname: str) -> None:
+    def set_custom_dirname(dirname: str | Path) -> None:
         """Sets the custom name for a logging directory. The previous contents of the directory will be deleted!"""
-        LogUtil._dirname = dirname
-        LogUtil.ensure_dir_existence()
-        for filename in os.listdir(dirname):
-            os.remove(os.path.join(dirname, filename))
+        LogUtil._dirname = Path(dirname)
+        LogUtil._dirname.mkdir(parents=True, exist_ok=True)
+        LogUtil._created = True
+        for path in LogUtil._dirname.iterdir():
+            path.unlink()
 
     @staticmethod
     def ensure_dir_existence() -> None:
         """Creates the directory for logging if it hasn't been created yet."""
         if not LogUtil._created:
             LogUtil._created = True
-            os.makedirs(LogUtil._dirname, exist_ok=True)
+            LogUtil._dirname.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def info(msg: Any, regular_print: bool = True) -> None:
@@ -47,7 +48,7 @@ class LogUtil:
         LogUtil.ensure_dir_existence()
         if regular_print:
             print(msg)
-        with open(os.path.join(LogUtil._dirname, "log.txt"), "a+", encoding="utf-8") as f:
+        with open(LogUtil._dirname / "log.txt", "a+", encoding="utf-8") as f:
             f.write(f"[time_ms={round(time.time() * 1000)}] {msg}\n")
 
     @staticmethod
@@ -60,9 +61,7 @@ class LogUtil:
         :param pdf: If `True`, save as PDF. If `False`, save as PNG.
         """
         LogUtil.ensure_dir_existence()
-        fname = os.path.join(
-            LogUtil._dirname, "fig_" + prefix + "_" + LogUtil._timestamp() + (".pdf" if pdf else ".png")
-        )
+        fname = LogUtil._dirname / f"fig_{prefix}_{LogUtil._timestamp()}{'.pdf' if pdf else '.png'}"
         plt.savefig(fname, dpi=300, bbox_inches="tight")
         LogUtil.info(f"[produced a figure: {fname}]", False)
 

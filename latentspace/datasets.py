@@ -1,5 +1,4 @@
 import json
-import os
 import warnings
 from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -145,10 +144,7 @@ class DatasetWrapper(ABC):
         :param xs: Batch.
         :return: Transformed `xs`.
         """
-        if self.unique_label is None:
-            labels = [self.get_label(x[1]) for x in xs]
-        else:
-            labels = [self.unique_label] * len(xs)
+        labels = [self.get_label(x[1]) for x in xs] if self.unique_label is None else [self.unique_label] * len(xs)
         return torch.stack([x[0] for x in xs]), to_device(torch.tensor(labels))
 
     def get_label(self, x):
@@ -455,7 +451,7 @@ class ImageNetData(DatasetWrapper):
             DatasetWrapper.resize_crop_transform(size),
             DatasetWrapper.augmentation_transform(size),
         )
-        self.filenames = np.array(os.listdir(self.img_path))
+        self.filenames = np.array([path.name for path in self.img_path.iterdir()])
         self.val_labels = {}
         with open(self.base_path / "ILSVRC2012_validation_ground_truth_corrected.txt") as f:
             for line in f.read().splitlines():

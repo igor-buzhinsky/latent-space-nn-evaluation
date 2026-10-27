@@ -54,8 +54,17 @@ target-version = "py311"
 extend-exclude = ["biggan", "pioneer"]
 
 [tool.ruff.lint]
-# pyflakes, basic pycodestyle errors, import sorting, modern type hint syntax (PEP 585/604), absolute imports
-select = ["E4", "E7", "E9", "F", "I", "UP006", "UP007", "UP035", "UP045", "TID252"]
+select = [
+    "E4", "E7", "E9", "F",  # pyflakes and basic pycodestyle errors
+    "I",  # import sorting
+    "UP006", "UP007", "UP035", "UP045",  # modern type hint syntax (PEP 585/604)
+    "TID252",  # absolute imports
+    "B",  # flake8-bugbear: likely bugs
+    "SIM", "RET", "PIE", "C4",  # simplifications
+    "PTH",  # pathlib instead of os.path
+]
+# open() works with Path objects and is idiomatic
+ignore = ["PTH123"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # use absolute imports (latentspace.module) instead of relative ones (.module)

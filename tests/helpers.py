@@ -1,7 +1,5 @@
 """Shared helpers for the tests."""
 
-import os
-
 import torch
 from torch.utils.data import TensorDataset
 
@@ -35,10 +33,9 @@ def random_mnist_like_dataset(num_images: int = 64) -> TensorDatasetWrapper:
 
 def read_log() -> str:
     """Contents of the current log file."""
-    with open(os.path.join(LogUtil._dirname, "log.txt"), encoding="utf-8") as f:
-        return f.read()
+    return (LogUtil._dirname / "log.txt").read_text(encoding="utf-8")
 
 
 def number_of_figures(prefix: str = "") -> int:
     """Number of figures in the current log directory, optionally only with the given prefix."""
-    return sum(f.startswith("fig_" + prefix) for f in os.listdir(LogUtil._dirname))
+    return sum(path.name.startswith("fig_" + prefix) for path in LogUtil._dirname.iterdir())
