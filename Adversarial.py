@@ -9,7 +9,7 @@ import latentspace.generative as generative
 from latentspace.adversarial_generation import AdversarialGenerator, EpsDTransformer, RandomPerturbationStatistician
 from latentspace.adversaries import Adversary, NopAdversary, PGDAdversary
 from latentspace.datasets import DatasetInfo
-from latentspace.evaluation_util import EvaluationUtil
+from latentspace.evaluation_util import show_generated_images, show_reconstructed_images
 from latentspace.logging_util import LogUtil
 from latentspace.runtime import set_memory_limit
 
@@ -207,8 +207,8 @@ def main() -> None:
         for i in range(num_classes):
             LogUtil.info(f"*** {classifier_d.upper()}, CLASS {i} ***")
             gm = gm_loader(i)
-            EvaluationUtil.show_reconstructed_images(gm, 1, 5)
-            EvaluationUtil.show_generated_images(gm, 1, 10)
+            show_reconstructed_images(gm, 1, 5)
+            show_generated_images(gm, 1, 10)
             # add perturbations and see classification outcomes + calculate classification accuracy
             RandomPerturbationStatistician(gm, classifiers, args.num_images, 2, True, LOCAL_NOISE_EPSILONS).process()
             # produce "class mean" vector

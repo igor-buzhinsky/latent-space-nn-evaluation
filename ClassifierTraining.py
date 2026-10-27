@@ -19,7 +19,7 @@ from latentspace.datasets import (
     LSUNData,
     MNISTData,
 )
-from latentspace.evaluation_util import EvaluationUtil
+from latentspace.evaluation_util import evaluate_accuracy, evaluate_conventional_adversarial_severity
 from latentspace.loader_decorators import fixed_length_loader
 from latentspace.logging_util import LogUtil
 from latentspace.runtime import configure_runtime
@@ -225,11 +225,9 @@ def main() -> None:
         else:
             l_2_bound, l_inf_bound = OTHER_L2_UPPER_BOUND, OTHER_LINF_UPPER_BOUND
         if args.img_accuracy > 0:
-            EvaluationUtil.evaluate_accuracy([c], ds, args.img_accuracy, noise_evaluation_multiplier)
+            evaluate_accuracy([c], ds, args.img_accuracy, noise_evaluation_multiplier)
         if args.img_robustness > 0:
-            EvaluationUtil.evaluate_conventional_adversarial_severity(
-                [c], ds, args.img_robustness, l_2_bound, l_inf_bound
-            )
+            evaluate_conventional_adversarial_severity([c], ds, args.img_robustness, l_2_bound, l_inf_bound)
     elif args.command == "local_evaluate":
         c.restore_params_from_disk(args.load_filename)
         local_evaluate(args, c, ds, dataset_info)
