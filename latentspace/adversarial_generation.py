@@ -23,7 +23,7 @@ class RandomPerturbationStatistician:
         self,
         gm: GenerativeModel,
         classifiers: Sequence[Trainer],
-        no_images: int,
+        num_images: int,
         perturbations_per_image: int,
         visualize: bool,
         epsilons: Sequence[float] | np.ndarray,
@@ -33,14 +33,14 @@ class RandomPerturbationStatistician:
 
         :param gm: Generative model to use.
         :param classifiers: List of classifiers for which to perform evaluation.
-        :param no_images: Number of images for which to perform local evaluation.
+        :param num_images: Number of images for which to perform local evaluation.
         :param perturbations_per_image: Number of perturbations to perform for each image and epsilon.
         :param visualize: If `True`, produce images of original and perturbed images.
         :param epsilons: List of noise magnitudes (non-negative numbers). Evaluation will be performed for each of them.
         """
         self.gm = gm
         self.classifiers = classifiers
-        self.no_images = no_images
+        self.num_images = num_images
         self.perturbations_per_image = perturbations_per_image
         self.epsilons = epsilons
         self.visualize = visualize
@@ -50,7 +50,7 @@ class RandomPerturbationStatistician:
     def process(self) -> None:
         """Does actual processing."""
         dataset = self.gm.get_sampler()
-        for _ in range(self.no_images):
+        for _ in range(self.num_images):
             orig_img, labels = next(dataset)
             latent = self.gm.encode(orig_img)
             reconstr_img = self.gm.decode(latent)
@@ -274,7 +274,7 @@ class AdversarialGenerator:
     def generate(
         self,
         adversary: Adversary,
-        no_images: int,
+        num_images: int,
         show_perturbations: bool = False,
         clear_stat: bool = True,
         produce_images: bool = True,
@@ -283,7 +283,7 @@ class AdversarialGenerator:
         Does actual processing.
 
         :param adversary: `Adversary` to be used (e.g., `PGDAdversary`).
-        :param no_images: The number of images for which to perform adversarial search.
+        :param num_images: The number of images for which to perform adversarial search.
         :param show_perturbations: If `True`, shows not only adversarial examples, but also the corresponding
             perturbations in the original image space.
         :param clear_stat: Whether to clear statistics prior to adversarial search.
@@ -301,7 +301,7 @@ class AdversarialGenerator:
         else:
             dataset = self.gm.get_sampler(batch_size=1)
 
-        for _ in range(no_images):
+        for _ in range(num_images):
             label = self.gm.unique_label
             assert label is not None
             with torch.no_grad():

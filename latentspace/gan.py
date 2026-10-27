@@ -240,14 +240,14 @@ class GAN:
         return self.generator(x)
 
     @torch.no_grad()
-    def generate(self, no_samples: int) -> torch.Tensor:
+    def generate(self, num_samples: int) -> torch.Tensor:
         """
         Generates new images.
 
-        :param no_samples: Number of images to generate.
+        :param num_samples: Number of images to generate.
         :return: Batch of generated images.
         """
-        return self.generator(to_device(torch.randn(no_samples, self.latent_dim)))
+        return self.generator(to_device(torch.randn(num_samples, self.latent_dim)))
 
     @torch.no_grad()
     def warm_spectral_norms(self, train_loader_fn: Callable) -> None:

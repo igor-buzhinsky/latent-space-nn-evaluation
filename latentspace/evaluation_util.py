@@ -126,7 +126,7 @@ class EvaluationUtil:
     def generate_images_with_classifier(
         classifiers: list[Trainer],
         ds: DatasetWrapper,
-        no_classes: int,
+        num_classes: int,
         noise_sigma: float,
         norm: str,
         norm_bound: float,
@@ -141,7 +141,7 @@ class EvaluationUtil:
 
         :param classifiers: List of classifiers.
         :param ds: `DatasetWrapper` from which test images will be taken.
-        :param no_classes: The number of classes in the dataset.
+        :param num_classes: The number of classes in the dataset.
         :param noise_sigma: Noise of magnitude N(0, noise_sigma^2 I) will be added to initial images.
         :param norm: A string specifying a norm as accepted by `PGDAdversary`.
         :param norm_bound: Norm bound for `PGDAdversary`.
@@ -157,7 +157,7 @@ class EvaluationUtil:
             LogUtil.info(f"classifier {i}:")
             classifier.set_misclassification_gradients(False)
             s = ImageSet(pairs_in_line)
-            for target_label in range(no_classes):
+            for target_label in range(num_classes):
                 image = mean_image + to_device(torch.randn(*mean_image.shape)) * noise_sigma
                 perturb = get_conventional_perturb(classifier, image_optimizer)
                 s.append([image.unsqueeze(0), perturb(image, target_label).unsqueeze(0)])
@@ -183,21 +183,21 @@ class EvaluationUtil:
             imshow_tensors(*images, nrow=(images_in_line * 2))
 
     @staticmethod
-    def show_reconstruction_distance_statistics(gm: GenerativeModel, no_images: int) -> None:
+    def show_reconstruction_distance_statistics(gm: GenerativeModel, num_images: int) -> None:
         """
         Shows statistics on the distance of reconstructed images (based on the supplied generative model) from the
         original ones.
 
         :param gm: Generative model to use.
-        :param no_images: Number of images to construct statistics for.
+        :param num_images: Number of images to construct statistics for.
         """
         sampler = gm.get_sampler()
-        norms, distances = np.empty(no_images), np.empty(no_images)
+        norms, distances = np.empty(num_images), np.empty(num_images)
 
         def norm(x: torch.Tensor) -> torch.Tensor:
             return x.flatten().norm() / np.sqrt(x.numel())
 
-        for i in range(no_images):
+        for i in range(num_images):
             img, _ = next(sampler)
             norms[i] = norm(img)
             distances[i] = norm(img - gm.decode(gm.encode(img)))

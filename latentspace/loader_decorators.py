@@ -33,11 +33,11 @@ def class_specific_loader(target_label: int, parent_loader_fn: Callable) -> Call
     return loader
 
 
-def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
+def fixed_length_loader(num_images: int, parent_loader_fn: Callable, restarts: bool = True) -> Callable:
     """
     Restarts or limits the parent loader so that the desired number of images is produced.
 
-    :param no_images: Desired number of images (the effective number will be a multiple of batch size).
+    :param num_images: Desired number of images (the effective number will be a multiple of batch size).
     :param parent_loader_fn: The loader-returning function to decorate.
     :param restarts: If `False`, then just limit the parent loader and do not restart it when the end is reached.
     :return: Decorated `parent_loader_fn`.
@@ -45,9 +45,9 @@ def fixed_length_loader(no_images: int, parent_loader_fn: Callable, restarts: bo
 
     def loader() -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
         generated = 0
-        while generated < no_images:
+        while generated < num_images:
             data_generator = iter(parent_loader_fn())
-            while generated < no_images:
+            while generated < num_images:
                 try:
                     items, labels = next(data_generator)
                 except StopIteration:

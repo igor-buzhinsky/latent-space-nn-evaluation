@@ -91,11 +91,11 @@ class Unit(torch.nn.Module):
 class ColoredNet128(torch.nn.Module):
     """Simple CNN classifier to process 128x128 images."""
 
-    def __init__(self, no_classes: int = 2, unit_type: int = 0) -> None:
+    def __init__(self, num_classes: int = 2, unit_type: int = 0) -> None:
         """
         Constructs `ColoredNet128`.
 
-        :param no_classes: Number of output classes.
+        :param num_classes: Number of output classes.
         :param unit_type: 0 (basic choice), 1 (with ResBlocks) or 2 (deeper version of 0).
         """
         super().__init__()
@@ -107,7 +107,7 @@ class ColoredNet128(torch.nn.Module):
             Unit(4 * base_map_num, 8 * base_map_num, 0.3, unit_type),
             Unit(8 * base_map_num, 16 * base_map_num, 0.4, unit_type),
             Flatten(),
-            torch.nn.Linear(16 * base_map_num * 4 * 4, no_classes),
+            torch.nn.Linear(16 * base_map_num * 4 * 4, num_classes),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -370,21 +370,21 @@ class Trainer:
             for images, labels in self.train_loader_fn():
                 # train
                 self.model.train()
-                no_train = len(images)
+                num_train = len(images)
                 optimizer.zero_grad()
                 loss_sum = 0
                 for image, label in zip(images, labels, strict=True):
                     p = EvaluatedPrediction(self, image, label)
-                    (p.loss / no_train).backward()
+                    (p.loss / num_train).backward()
                     loss_sum += p.loss.item()
                 writer.add_scalar("epoch", epoch, batch_index)
-                writer.add_scalar("training_loss", loss_sum / no_train, batch_index)
+                writer.add_scalar("training_loss", loss_sum / num_train, batch_index)
                 optimizer.step()
 
                 # validate
                 self.model.eval()
                 images, labels = next(infinite_val_stream)
-                no_val = len(images)
+                num_val = len(images)
                 val_loss_sum = 0
                 val_accuracy = 0
                 with torch.no_grad():
@@ -392,8 +392,8 @@ class Trainer:
                         p = EvaluatedPrediction(self, image, label)
                         val_loss_sum += p.loss.item()
                         val_accuracy += p.accuracy
-                writer.add_scalar("validation_loss", val_loss_sum / no_val, batch_index)
-                writer.add_scalar("validation_accuracy", val_accuracy / no_val, batch_index)
+                writer.add_scalar("validation_loss", val_loss_sum / num_val, batch_index)
+                writer.add_scalar("validation_accuracy", val_accuracy / num_val, batch_index)
                 batch_index += 1
 
             # end of epoch

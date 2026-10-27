@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--dataset", required=True, choices=["MNIST", "CelebA128Gender", "LSUN128"], help="Dataset to use."
     )
     parser.add_argument(
-        "--no_images",
+        "--num_images",
         type=int,
         required=True,
         help="Number of images to process. For generate_minimum and generate_bounded, this is the total number, split "
@@ -136,11 +136,11 @@ def advgen_experiments(
     classifier_d: str,
 ) -> None:
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
-    no_classes = len(class_proportions)
+    num_classes = len(class_proportions)
     for use_generated_images in SEARCH_MODES[args.search_mode]:
         advgen = AdversarialGenerator(None, classifiers, use_generated_images, decay_factor)
-        no_images = np.round(class_proportions * args.no_images)
-        for i in range(no_classes):
+        num_images = np.round(class_proportions * args.num_images)
+        for i in range(num_classes):
             LogUtil.info(
                 f"*** {classifier_d.upper()}, CLASS {i}, "
                 f"{'GENERATED' if use_generated_images else 'RECONSTRUCTED'} ***"
@@ -148,7 +148,7 @@ def advgen_experiments(
             LogUtil.info(f"noise_epsilon = {args.noise_epsilon:.5f}, decay_factor = {decay_factor:.5f}")
             gm = gm_loader(i)
             advgen.set_generative_model(gm)
-            advgen.generate(adversary, int(no_images[i]), True, i == 0, not args.no_adversary)
+            advgen.generate(adversary, int(num_images[i]), True, i == 0, not args.no_adversary)
             gm.destroy()
         LogUtil.info("*** STATISTICS ***")
         advgen.print_stats(plot=(not args.no_adversary), print_norm_statistics=(not args.no_adversary))
@@ -174,7 +174,7 @@ def main() -> None:
     dataset_info = DatasetInfo[args.dataset]
 
     if dataset_info in [DatasetInfo.CelebA128Gender, DatasetInfo.LSUN128]:
-        no_classes = 2
+        num_classes = 2
         if dataset_info == DatasetInfo.CelebA128Gender:
             ds = datasets.CelebAData(20)
             classifier_d = "celeba-128"
@@ -182,16 +182,16 @@ def main() -> None:
         else:
             ds = datasets.LSUNData()
             classifier_d = "lsun-128"
-            class_proportions = np.repeat(1 / no_classes, no_classes)
+            class_proportions = np.repeat(1 / num_classes, num_classes)
 
         def gm_loader(label: int) -> generative.GenerativeModel:
-            return generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_no_images=25)
+            return generative.PIONEER(dataset_info, label, ds, spectral_norm_warming_num_images=25)
 
     elif dataset_info == DatasetInfo.MNIST:
-        no_classes = 10
+        num_classes = 10
         ds = datasets.MNISTData()
         classifier_d = "mnist"
-        class_proportions = np.repeat(1 / no_classes, no_classes)
+        class_proportions = np.repeat(1 / num_classes, num_classes)
 
         def gm_loader(label: int) -> generative.GenerativeModel:
             return generative.WGAN(dataset_info, label, ds)
@@ -204,24 +204,24 @@ def main() -> None:
     ]
 
     if args.command == "test":
-        for i in range(no_classes):
+        for i in range(num_classes):
             LogUtil.info(f"*** {classifier_d.upper()}, CLASS {i} ***")
             gm = gm_loader(i)
             EvaluationUtil.show_reconstructed_images(gm, 1, 5)
             EvaluationUtil.show_generated_images(gm, 1, 10)
             # add perturbations and see classification outcomes + calculate classification accuracy
-            RandomPerturbationStatistician(gm, classifiers, args.no_images, 2, True, LOCAL_NOISE_EPSILONS).process()
+            RandomPerturbationStatistician(gm, classifiers, args.num_images, 2, True, LOCAL_NOISE_EPSILONS).process()
             # produce "class mean" vector
             advgen = AdversarialGenerator(gm, classifiers, True, 1.0)
             advgen.generate(PGDAdversary(0.01, 1, 0.1, False, 0, verbose=args.pgd_verbosity), 1, True, False)
             gm.destroy()
     elif args.command == "generate_noise":
         # measure resistance to noise
-        for i in range(no_classes):
+        for i in range(num_classes):
             LogUtil.info(f"*** {classifier_d.upper()}, CLASS {i} ***")
             gm = gm_loader(i)
             RandomPerturbationStatistician(
-                gm, classifiers, args.no_images, args.noise_perturbations_per_image, True, LOCAL_NOISE_EPSILONS
+                gm, classifiers, args.num_images, args.noise_perturbations_per_image, True, LOCAL_NOISE_EPSILONS
             ).process()
             gm.destroy()
     elif args.command == "generate_minimum":

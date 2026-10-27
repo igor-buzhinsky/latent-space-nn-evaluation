@@ -14,8 +14,8 @@ def mnist_trainer(unit_type: int = 0) -> Trainer:
     return Trainer("mnist", ds.get_train_loader, ds.get_test_loader, unit_type)
 
 
-def mnist_images(no_images: int) -> torch.Tensor:
-    return to_device(torch.rand(no_images, 1, 28, 28) * 2 - 1)
+def mnist_images(num_images: int) -> torch.Tensor:
+    return to_device(torch.rand(num_images, 1, 28, 28) * 2 - 1)
 
 
 class NetworkTest(unittest.TestCase):
@@ -83,14 +83,14 @@ class TrainerTest(unittest.TestCase):
         self.assertTrue(any(not torch.equal(b, a) for b, a in zip(before, after, strict=True)))
 
     def test_accuracy_counts_full_batches(self) -> None:
-        ds = random_mnist_like_dataset(no_images=10)
+        ds = random_mnist_like_dataset(num_images=10)
         accuracy, total = self.trainer.accuracy(lambda: ds.get_test_loader(batch_size=4))
         self.assertEqual(total, 8)
         self.assertGreaterEqual(accuracy, 0)
         self.assertLessEqual(accuracy, 1)
 
     def test_accuracy_with_noise_multiplier(self) -> None:
-        ds = random_mnist_like_dataset(no_images=8)
+        ds = random_mnist_like_dataset(num_images=8)
         _, total = self.trainer.accuracy(lambda: ds.get_test_loader(batch_size=4), 0.5, 3)
         self.assertEqual(total, 24)
 

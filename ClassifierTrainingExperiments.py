@@ -28,8 +28,8 @@ for unit_type in unit_types:
             )
             subprocess.run([sys.executable, "ClassifierTraining.py", *shlex.split(args)])
 
-        run(None, "oneepoch", "--no_epochs 1")
-        run("oneepoch", "plain", "--no_epochs 7 --start_lr 0.0003")
+        run(None, "oneepoch", "--num_epochs 1")
+        run("oneepoch", "plain", "--num_epochs 7 --start_lr 0.0003")
         run(None, "conventional", "--conventional_augmentation")
         run("plain", "robust", "--noise_augmentation")
         run("conventional", "both", "--conventional_augmentation --noise_augmentation")

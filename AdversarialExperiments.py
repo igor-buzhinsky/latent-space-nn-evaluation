@@ -2,7 +2,7 @@ import shlex
 import subprocess
 import sys
 
-no_images = 600
+num_images = 600
 
 # unit_types = [0, 1, 2]
 unit_types = [2]
@@ -28,7 +28,7 @@ for unit_type in unit_types:
                 search_mode = "both"
                 run(
                     f"--dataset {dataset} --command {command} "
-                    f"--no_images {no_images} --noise_epsilon {noise_epsilon} "
+                    f"--num_images {num_images} --noise_epsilon {noise_epsilon} "
                     f'--classifier_filenames "{dirname}/oneepoch_{dataset}.bin" '
                     f'"{dirname}/plain_{dataset}.bin" "{dirname}/conventional_{dataset}.bin" '
                     f'"{dirname}/robust_{dataset}.bin" "{dirname}/both_{dataset}.bin" '

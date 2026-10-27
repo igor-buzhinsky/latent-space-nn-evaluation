@@ -15,9 +15,9 @@ class DatasetInfoTest(unittest.TestCase):
 
 class MergeLoadersTest(unittest.TestCase):
     @staticmethod
-    def constant_loader(label: int, no_batches: int):
+    def constant_loader(label: int, num_batches: int):
         def loader(batch_size: int, shuffle: bool) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
-            for _ in range(no_batches):
+            for _ in range(num_batches):
                 yield torch.full((batch_size, 1), float(label)), torch.full((batch_size,), label)
 
         return loader

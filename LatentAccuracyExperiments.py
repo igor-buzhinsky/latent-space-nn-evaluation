@@ -2,7 +2,7 @@ import shlex
 import subprocess
 import sys
 
-no_images = 10000
+num_images = 10000
 
 # unit_types = [0, 1, 2]
 unit_types = [1, 2]
@@ -20,7 +20,7 @@ for unit_type in unit_types:
         )
         print(f"*** unit_type={unit_type}, dataset={dataset}")
         args = (
-            f"--dataset {dataset} --no_images {no_images} "
+            f"--dataset {dataset} --num_images {num_images} "
             f"--classifier_filenames {filenames} --search_mode both --unit_type {unit_type} "
             f"--logdir LAT_ACC_LOG_{unit_type}_{dataset} --no_adversary --command generate_minimum"
         )

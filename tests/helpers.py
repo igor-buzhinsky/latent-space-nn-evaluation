@@ -26,10 +26,10 @@ class TensorDatasetWrapper(DatasetWrapper):
         self.trainset = self.unaugmented_trainset = self.testset = dataset
 
 
-def random_mnist_like_dataset(no_images: int = 64) -> TensorDatasetWrapper:
+def random_mnist_like_dataset(num_images: int = 64) -> TensorDatasetWrapper:
     """Random images in [-1, 1] of MNIST size with random labels 0..9."""
-    images = torch.rand(no_images, 1, 28, 28) * 2 - 1
-    labels = torch.randint(0, 10, (no_images,))
+    images = torch.rand(num_images, 1, 28, 28) * 2 - 1
+    labels = torch.randint(0, 10, (num_images,))
     return TensorDatasetWrapper(images, labels, [str(i) for i in range(10)])
 
 

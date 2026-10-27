@@ -78,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of training images per epoch (command train, default: %(default)s).",
     )
     parser.add_argument(
-        "--no_epochs", type=int, default=8, help="Number of epochs (command train, default: %(default)s)."
+        "--num_epochs", type=int, default=8, help="Number of epochs (command train, default: %(default)s)."
     )
     parser.add_argument(
         "--unit_type",
@@ -105,13 +105,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # local evaluation: checking noise / adversarial distance relationship
     parser.add_argument(
-        "--local_eval_no_img",
+        "--local_eval_num_img",
         type=int,
         default=10,
         help="Number of test images to evaluate (command local_evaluate, default: %(default)s).",
     )
     parser.add_argument(
-        "--local_eval_no_corruptions",
+        "--local_eval_num_corruptions",
         type=int,
         default=2000,
         help="Number of noise corruptions per image and noise level (command local_evaluate, default: %(default)s).",
@@ -125,7 +125,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
     a natural consequence of test error in noise].
     """
     loader = iter(ds.get_test_loader(batch_size=1))
-    for i in range(args.local_eval_no_img):
+    for i in range(args.local_eval_num_img):
         image, label = next(loader)
         if c.predict(image) != label:
             print("misclassified, skipping")
@@ -150,15 +150,15 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
         dist = c.measure_adversarial_severity(perturb, single_loader, ds, lambda x: x.norm(), False)[0]
         # measure noise error rate
         for noise_sigma in np.linspace(0.1, 0.9, 9):
-            no_corruptions = args.local_eval_no_corruptions
+            num_corruptions = args.local_eval_num_corruptions
             error = (
                 sum(
                     (
                         (c.predict(image + to_device(torch.randn(*image.shape)) * noise_sigma) != label).item()
-                        for _ in range(no_corruptions)
+                        for _ in range(num_corruptions)
                     )
                 )
-                / no_corruptions
+                / num_corruptions
             )
             if error >= 0.5 or np.isclose(error, 0):
                 continue
@@ -188,21 +188,21 @@ def main() -> None:
     if dataset_info == DatasetInfo.MNIST:
         trainer_name = "mnist"
         ds = MNISTData()
-        no_classes = 10
+        num_classes = 10
     elif dataset_info == DatasetInfo.CelebA128Gender:
         trainer_name = "celeba-128"
         ds = CelebAData(20)
-        no_classes = 2
+        num_classes = 2
     elif dataset_info == DatasetInfo.LSUN128:
         trainer_name = "lsun-128"
         ds = LSUNData()
-        no_classes = 2
+        num_classes = 2
         # partially overcoming the problem of small (600) validation set:
         noise_evaluation_multiplier = 20
     else:
         parser.error(f"dataset {args.dataset} is not supported by this script")
 
-    class_weights = [1 / no_classes] * no_classes
+    class_weights = [1 / num_classes] * num_classes
     train_loader = ds.get_train_loader if args.conventional_augmentation else ds.get_unaugmented_train_loader
     train_loader = fixed_length_loader(args.img_in_epoch, train_loader)
     c = Trainer(trainer_name, train_loader, ds.get_test_loader, args.unit_type)
@@ -213,7 +213,7 @@ def main() -> None:
         c.fit(
             class_weights,
             lr=args.start_lr,
-            epochs=args.no_epochs,
+            epochs=args.num_epochs,
             lr_decay=args.lr_decay,
             noise_sigma=(0.8 if args.noise_augmentation else 0),
         )

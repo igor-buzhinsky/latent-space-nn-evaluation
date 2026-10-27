@@ -56,11 +56,11 @@ class GenerativeModel(ABC):
         return x.detach() if detach else x
 
     @abstractmethod
-    def generate(self, no_img: int, detach: bool = False) -> torch.Tensor:
+    def generate(self, num_img: int, detach: bool = False) -> torch.Tensor:
         """
         Generates random images.
 
-        :param no_img: Number of images to generate.
+        :param num_img: Number of images to generate.
         :param detach: Whether to `.detach()` the result.
         :return: Batch of generated random images.
         """
@@ -100,17 +100,17 @@ class GenerativeModel(ABC):
 
     @torch.enable_grad()
     def encode_with_gradient_search(
-        self, img: torch.Tensor, no_restarts: int, no_steps: int, lr: float
+        self, img: torch.Tensor, num_restarts: int, num_steps: int, lr: float
     ) -> torch.Tensor:
         """Implements encoding with a gradient-based approach (restarts of Adam)."""
         all_latent = to_device(torch.empty((img.shape[0], self.latent_dim), dtype=torch.float32))
         loss_f = torch.nn.MSELoss()
         for i in range(img.shape[0]):
             best_loss = np.inf
-            for _ in range(no_restarts):
+            for _ in range(num_restarts):
                 latent = optimizable_clone(torch.randn((1, self.latent_dim), dtype=torch.float32))
                 optimizer = torch.optim.Adam([latent], weight_decay=0, lr=lr)
-                for _ in range(no_steps):
+                for _ in range(num_steps):
                     optimizer.zero_grad()
                     reconstructed = self.decode(latent, False)
                     loss = loss_f(reconstructed[0], img[i])
@@ -141,8 +141,8 @@ class WGAN(GenerativeModel):
         # since the discriminator is not used, there is no need to warm spectral norms (GAN.warm_spectral_norms)
         super().__init__(28, self.g.latent_dim, unique_label, ds)
 
-    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
-        return self._maybe_detach(self.g.generate(no_img), detach)
+    def generate(self, num_img: int = 1, detach: bool = False) -> torch.Tensor:
+        return self._maybe_detach(self.g.generate(num_img), detach)
 
     def encode(self, img: torch.Tensor) -> torch.Tensor:
         """Implements `WGAN.encode` with a gradient-based approach (4 restarts of Adam)."""
@@ -196,11 +196,11 @@ class BigGAN(GenerativeModel):
         """
         self.unique_label = unique_label
 
-    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+    def generate(self, num_img: int = 1, detach: bool = False) -> torch.Tensor:
         assert self.unique_label is not None, "Call configure_label() first."
         tensors = [
             self._maybe_detach(self.create_sample([self.unique_label], self.builtin_decay)[0], detach)
-            for _ in range(no_img)
+            for _ in range(num_img)
         ]
         return torch.cat(tensors)
 
@@ -237,7 +237,7 @@ class PIONEER(GenerativeModel):
         dataset_info: DatasetInfo,
         unique_label: int,
         ds: DatasetWrapper,
-        spectral_norm_warming_no_images: int = 50,
+        spectral_norm_warming_num_images: int = 50,
     ) -> None:
         """
         Constructs `PIONEER`. This call is memory-intensive.
@@ -245,7 +245,7 @@ class PIONEER(GenerativeModel):
         :param dataset_info: `DatasetInfo`.
         :param unique_label: Label of the data class for which the PIONEER model is created.
         :param ds: `DatasetWrapper`.
-        :param spectral_norm_warming_no_images: Number of images for spectral norm warming. See
+        :param spectral_norm_warming_num_images: Number of images for spectral norm warming. See
             `GAN.warm_spectral_norms`.
         """
 
@@ -323,10 +323,10 @@ class PIONEER(GenerativeModel):
             set_param_requires_grad(network, False)
 
         # "warm" spectral norms in the encoder
-        LogUtil.info(f"*** Spectral norm warming with {spectral_norm_warming_no_images} images...")
+        LogUtil.info(f"*** Spectral norm warming with {spectral_norm_warming_num_images} images...")
         with torch.no_grad():
             dataset = self.get_sampler()
-            for _ in range(spectral_norm_warming_no_images):
+            for _ in range(spectral_norm_warming_num_images):
                 self.encode_plain(next(dataset)[0])[0]
 
         LogUtil.info("*** Done!")
@@ -340,16 +340,16 @@ class PIONEER(GenerativeModel):
         del self.config, self.evaluate, self.model, self.data, self.utils, self.train, self.session
         gc.collect()
 
-    def generate_plain(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
+    def generate_plain(self, num_img: int = 1, detach: bool = False) -> torch.Tensor:
         """
         Originally, PIONEER generates images from normalized (divided by L2 norm) latent vectors. In a multidimensional
         space, this is approximately the same as taking an N(0, I)-distributed vector and dividing it by
         sqrt(latent_dim).
         """
-        return self.decode_plain(self.utils.normalize(torch.randn(no_img, self.latent_dim)), detach)
+        return self.decode_plain(self.utils.normalize(torch.randn(num_img, self.latent_dim)), detach)
 
-    def generate(self, no_img: int = 1, detach: bool = False) -> torch.Tensor:
-        return self.generate_plain(no_img, detach)
+    def generate(self, num_img: int = 1, detach: bool = False) -> torch.Tensor:
+        return self.generate_plain(num_img, detach)
 
     def encode_plain(self, img: torch.Tensor) -> torch.Tensor:
         """

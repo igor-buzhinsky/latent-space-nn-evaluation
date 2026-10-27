@@ -71,11 +71,11 @@ class GANTest(unittest.TestCase):
                 self.gan.restore_params_from_disk(f"mnist-gan/dumped_weights_{label}.bin")
 
     def test_warm_spectral_norms_runs_over_loader(self) -> None:
-        ds = random_mnist_like_dataset(no_images=8)
+        ds = random_mnist_like_dataset(num_images=8)
         self.gan.warm_spectral_norms(lambda: ds.get_test_loader(batch_size=4))
 
     def test_fit_saves_parameters(self) -> None:
-        ds = random_mnist_like_dataset(no_images=40)
+        ds = random_mnist_like_dataset(num_images=40)
         previous_dir = os.getcwd()
         with tempfile.TemporaryDirectory() as dirname:
             os.chdir(dirname)  # fit writes TensorBoard logs to the current directory

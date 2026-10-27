@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
         "BigGAN-generated or validation images).",
     )
     parser.add_argument(
-        "--no_images",
+        "--num_images",
         type=int,
         required=True,
         help="Total number of images to process. For BigGAN-generated images, if this is a multiple of 1000, "
@@ -158,7 +158,7 @@ def advgen_experiments(
     decay_factor = EpsDTransformer().eps_to_d(args.noise_epsilon)
     advgen = AdversarialGenerator(None, classifiers, True, decay_factor)
     advgen.set_generative_model(gm)
-    label_array = get_target_labels(args.no_images)
+    label_array = get_target_labels(args.num_images)
     for label in label_array:
         LogUtil.info(f"*** CLASS {label}: {ds.printed_classes[label]} ***")
         gm.configure_label(label)
@@ -173,7 +173,7 @@ def conventional_experiments(
     if args.command == "generate_conventional_from_gan":
 
         def loader() -> Iterator[tuple[list[torch.Tensor], list[int]]]:
-            label_array = get_target_labels(args.no_images)
+            label_array = get_target_labels(args.num_images)
             images, labels = [], []
             for label in label_array:
                 gm.configure_label(label)
@@ -184,7 +184,7 @@ def conventional_experiments(
                     images, labels = [], []
 
     else:
-        loader = fixed_length_loader(args.no_images, ds.get_test_loader, False)
+        loader = fixed_length_loader(args.num_images, ds.get_test_loader, False)
     norms = [
         ("scaled_l_2", lambda x: x.norm() / np.sqrt(x.numel()), datasets.OTHER_L2_UPPER_BOUND),
         ("l_inf", lambda x: x.abs().max(), datasets.OTHER_LINF_UPPER_BOUND),
@@ -232,7 +232,7 @@ def main() -> None:
             adversary = PGDAdversary(rho, 50, 0.05, True, 0, verbose=0, n_repeat=12, repeat_mode="any")
         advgen_experiments(args, adversary, classifiers, gm, ds)
     elif args.command == "measure_accuracy":
-        loader = fixed_length_loader(args.no_images, ds.get_test_loader, False)
+        loader = fixed_length_loader(args.num_images, ds.get_test_loader, False)
         for i, c in enumerate(classifiers):
             accuracy, total = c.accuracy(loader, 0, 1)
             acc_str = f"{accuracy * 100:.2f}"
