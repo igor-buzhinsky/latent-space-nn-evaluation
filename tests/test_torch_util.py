@@ -93,6 +93,10 @@ class SetRandomSeedTest(unittest.TestCase):
         set_random_seed(123)
         self.assertEqual(draw(), first)
 
+    def test_negative_seed_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            set_random_seed(-1)
+
 
 class NormalizeLatentTest(unittest.TestCase):
     def test_each_vector_gets_unit_scaled_norm(self) -> None:

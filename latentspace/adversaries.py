@@ -6,6 +6,7 @@ from collections.abc import Callable
 import numpy as np
 import torch
 
+from latentspace.logging_util import LogUtil
 from latentspace.torch_util import normalize_latent, to_device
 
 
@@ -81,20 +82,23 @@ class PGDAdversary(Adversary):
         self.stop_loss = stop_loss
         self.verbose = verbose
         # checks on norms
-        assert norm in ["scaled_l_2", "l_2", "l_inf"], "norm must be either 'scaled_l_2', 'l_2' or 'l_inf'"
+        if norm not in ["scaled_l_2", "l_2", "l_inf"]:
+            raise ValueError("norm must be either 'scaled_l_2', 'l_2' or 'l_inf'")
         self.scale_norm = norm == "scaled_l_2"
         self.inf_norm = norm == "l_inf"
         # checks on repeated runs
-        assert n_repeat >= 1, "n_repeat must be positive"
-        assert not (n_repeat > 1 and repeat_mode is None), "if n_repeat > 1, repeat_mode must be set"
-        assert repeat_mode in [None, "any", "min"], "if repeat_mode is set, it must be either 'any' or 'min'"
+        if n_repeat < 1:
+            raise ValueError("n_repeat must be positive")
+        if n_repeat > 1 and repeat_mode is None:
+            raise ValueError("if n_repeat > 1, repeat_mode must be set")
+        if repeat_mode not in [None, "any", "min"]:
+            raise ValueError("if repeat_mode is set, it must be either 'any' or 'min'")
         self.n_repeat = n_repeat
         self.shrinking_repeats = repeat_mode == "min"
         # optional unit sphere normalization
         self.unit_sphere_normalization = unit_sphere_normalization
-        assert (
-            not unit_sphere_normalization or norm == "scaled_l_2"
-        ), "unit_sphere_normalization is only compatible with scaled_l_2 norm"
+        if unit_sphere_normalization and norm != "scaled_l_2":
+            raise ValueError("unit_sphere_normalization is only compatible with scaled_l_2 norm")
 
     def _norm(self, x: torch.Tensor) -> float:
         """(Possibly scaled) norm of `x`."""
@@ -145,7 +149,7 @@ class PGDAdversary(Adversary):
                 perturbation = to_device(perturbation)
 
             if self.verbose > 0:
-                print(f">> #run = {run_n}, ║x1║ = {self._norm(x1):.5f}, ρ = {rho:.5f}")
+                LogUtil.info(f">> #run = {run_n}, ║x1║ = {self._norm(x1):.5f}, ρ = {rho:.5f}")
 
             found = False
             for i in range(self.steps):
@@ -156,7 +160,7 @@ class PGDAdversary(Adversary):
                 classification_gradient, classification_loss = get_gradient(perturbed_vector)
                 if self.verbose > 0:
                     if classification_loss > self.stop_loss or i == self.steps - 1 or i % 5 == 0 and self.verbose > 1:
-                        print(
+                        LogUtil.info(
                             f"step {i:3d}: objective = {-classification_loss:+.7f}, "
                             f"║Δx║ = {self._norm(perturbation):.5f}, ║x║ = {self._norm(perturbed_vector):.5f}"
                         )

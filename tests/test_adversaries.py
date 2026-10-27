@@ -84,12 +84,16 @@ class PGDAdversaryTest(unittest.TestCase):
         self.assertAlmostEqual(scaled_norm(adversary.perturb(x, get_gradient)), 1.0, places=5)
 
     def test_invalid_arguments_are_rejected(self) -> None:
-        with self.assertRaises(AssertionError):
-            PGDAdversary(norm="l_1")
-        with self.assertRaises(AssertionError):
-            PGDAdversary(n_repeat=3)
-        with self.assertRaises(AssertionError):
-            PGDAdversary(norm="l_inf", unit_sphere_normalization=True)
+        constructors = {
+            "unknown norm": lambda: PGDAdversary(norm="l_1"),
+            "no runs": lambda: PGDAdversary(n_repeat=0),
+            "repeats without mode": lambda: PGDAdversary(n_repeat=3),
+            "unknown repeat mode": lambda: PGDAdversary(n_repeat=3, repeat_mode="all"),
+            "unit sphere with l_inf": lambda: PGDAdversary(norm="l_inf", unit_sphere_normalization=True),
+        }
+        for case, constructor in constructors.items():
+            with self.subTest(case), self.assertRaises(ValueError):
+                constructor()
 
 
 if __name__ == "__main__":

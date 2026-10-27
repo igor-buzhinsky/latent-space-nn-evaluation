@@ -62,7 +62,7 @@ class GANTest(unittest.TestCase):
         torch.testing.assert_close(other.decode(latent), expected)
 
     def test_restore_params_without_saved_params_fails(self) -> None:
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(RuntimeError):
             self.gan.restore_params()
 
     def test_bundled_weights_can_be_loaded(self) -> None:

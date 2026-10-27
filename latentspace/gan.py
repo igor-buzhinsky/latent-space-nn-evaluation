@@ -206,7 +206,8 @@ class GAN:
     @torch.no_grad()
     def restore_params(self) -> None:
         """Restores previously saved trainable parameters of the WGAN."""
-        assert self.params is not None, "No saved parameters to restore."
+        if self.params is None:
+            raise RuntimeError("No saved parameters to restore.")
         self.generator.load_state_dict(self.params[0])
         self.discriminator.load_state_dict(self.params[1])
 

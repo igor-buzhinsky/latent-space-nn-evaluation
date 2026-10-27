@@ -133,7 +133,8 @@ class WGAN(GenerativeModel):
         :param unique_label: Label of the data class for which the WGAN is created.
         :param ds: `DatasetWrapper`.
         """
-        assert dataset_info == DatasetInfo.MNIST
+        if dataset_info != DatasetInfo.MNIST:
+            raise ValueError("WGAN is only available for MNIST.")
         self.g = GAN()
         self.g.restore_params_from_disk(f"mnist-gan/dumped_weights_{unique_label}.bin")
         # disable computation of gradients that are not required
@@ -197,7 +198,8 @@ class BigGAN(GenerativeModel):
         self.unique_label = unique_label
 
     def generate(self, num_img: int = 1, detach: bool = False) -> torch.Tensor:
-        assert self.unique_label is not None, "Call configure_label() first."
+        if self.unique_label is None:
+            raise RuntimeError("Call configure_label() first.")
         tensors = [
             self._maybe_detach(self.create_sample([self.unique_label], self.builtin_decay)[0], detach)
             for _ in range(num_img)
@@ -210,7 +212,8 @@ class BigGAN(GenerativeModel):
 
     def decode(self, latent_code: torch.Tensor, detach: bool = True) -> torch.Tensor:
         unique_label = self.unique_label
-        assert unique_label is not None, "Call configure_label() first."
+        if unique_label is None:
+            raise RuntimeError("Call configure_label() first.")
         return torch.cat(
             [
                 self._maybe_detach(

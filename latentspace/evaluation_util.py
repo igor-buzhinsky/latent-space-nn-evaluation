@@ -201,11 +201,11 @@ def show_reconstruction_distance_statistics(gm: GenerativeModel, num_images: int
         img, _ = next(sampler)
         norms[i] = norm(img)
         distances[i] = norm(img - gm.decode(gm.encode(img)))
-    print(
+    LogUtil.info(
         f"Scaled norms of original images:       mean={norms.mean():.4f}, "
         f"median={np.median(norms):.4f}, std={norms.std():.4f}"
     )
-    print(
+    LogUtil.info(
         f"Scaled norms of reconstruction errors: mean={distances.mean():.4f}, "
         f"median={np.median(distances):.4f}, std={distances.std():.4f}"
     )

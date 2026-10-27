@@ -1,5 +1,6 @@
 import json
 import os
+import warnings
 from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from enum import Enum
@@ -180,7 +181,8 @@ class DatasetWrapper(ABC):
         :param shuffle: Whether to shuffle.
         :return: `torch.utils.data.DataLoader`.
         """
-        assert torchvision_dataset is not None, "This part of the dataset is not available."
+        if torchvision_dataset is None:
+            raise RuntimeError("This part of the dataset is not available.")
         return torch.utils.data.DataLoader(
             torchvision_dataset,
             batch_size=batch_size,
@@ -454,7 +456,7 @@ class ImageNetData(DatasetWrapper):
         self.trainset, self.unaugmented_trainset = [None] * 2
 
     def get_unaugmented_train_loader(self, *args: Any, **kwargs: Any) -> Iterable[tuple[torch.Tensor, torch.Tensor]]:
-        print("Warning: loading validation data while training data was requested.")
+        warnings.warn("Loading validation data while training data was requested.", stacklevel=2)
         return self.get_test_loader(*args, **kwargs)
 
     def get_train_loader(

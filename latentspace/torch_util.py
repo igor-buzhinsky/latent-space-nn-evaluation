@@ -94,8 +94,8 @@ def set_random_seed(seed: int | None = None) -> None:
     """
     if seed is None:
         seed = int(time.time())
-    else:
-        assert seed >= 0
+    elif seed < 0:
+        raise ValueError("seed must be non-negative")
     random.seed(seed)
     np.random.seed(seed + 1)
     torch.manual_seed(seed + 2)

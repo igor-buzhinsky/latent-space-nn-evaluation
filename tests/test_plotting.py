@@ -23,8 +23,12 @@ class ImshowTest(unittest.TestCase):
         self.assertEqual(number_of_figures(), before + 1)
 
     def test_imshow_tensors_rejects_non_string_captions(self) -> None:
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(TypeError):
             imshow_tensors(torch.rand(1, 3, 8, 8), captions=[1])  # pyrefly: ignore[bad-argument-type]
+
+    def test_imshow_tensors_rejects_non_image_tensors(self) -> None:
+        with self.assertRaises(ValueError):
+            imshow_tensors(torch.rand(3, 8, 8))
 
 
 class ImageSetTest(unittest.TestCase):

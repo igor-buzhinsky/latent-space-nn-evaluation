@@ -48,7 +48,8 @@ def imshow_tensors(
     :param pad_value: `pad_value` to be passed to `torchvision.utils.make_grid`.
     """
     t = torch.cat(tensors)
-    assert len(t.shape) == 4, f"Invalid shape of tensors {t.shape}"
+    if len(t.shape) != 4:
+        raise ValueError(f"Invalid shape of tensors {t.shape}")
     # handling 1D images
     if t.shape[1] == 1:
         t = t.repeat(1, 3, 1, 1)
@@ -72,7 +73,8 @@ def imshow_tensors(
 
         default_size = (128,) * 2
         for i in range(len(images)):
-            assert isinstance(captions[i], str), "Captions must be str"
+            if not isinstance(captions[i], str):
+                raise TypeError("Captions must be str")
             images[i] = (to_numpy(images[i]).transpose(1, 2, 0) / 2 + 0.5) * 255
             # shape = H*W*3
             images[i] = cv2.resize(images[i], default_size, interpolation=cv2.INTER_NEAREST)

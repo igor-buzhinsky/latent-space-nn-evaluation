@@ -49,7 +49,7 @@ class WGANTest(unittest.TestCase):
         self.assertFalse(hasattr(self.gm, "g"))
 
     def test_only_mnist_is_supported(self) -> None:
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             WGAN(DatasetInfo.LSUN128, 0, self.ds)
 
 

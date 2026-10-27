@@ -73,7 +73,7 @@ class DatasetWrapperTest(unittest.TestCase):
 
     def test_missing_dataset_part_is_reported(self) -> None:
         self.ds.testset = None
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(RuntimeError):
             self.ds.get_test_loader()
 
 
