@@ -135,7 +135,7 @@ Unit tests of the `latentspace` package are in [tests](tests). They use small in
 ./unit_test.sh     # or: ./unit_test.sh -v, ./unit_test.sh -k PGD
 ```
 
-Both run on every push in [GitHub Actions](.github/workflows/ci.yml). [smoke_test.sh](smoke_test.sh) runs the command-line scripts on real datasets (edit the dataset lists and classifier paths in it first).
+Both run on every push in [GitHub Actions](.github/workflows/ci.yml). [smoke_test_classifier.py](smoke_test_classifier.py) and [smoke_test_adversarial.py](smoke_test_adversarial.py) run the command-line scripts with the bundled classifiers on real datasets, using few images (CelebA by default; see `--help` for other datasets and architectures).
 
 ## Citation
 

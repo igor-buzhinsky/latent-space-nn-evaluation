@@ -21,6 +21,7 @@ dependencies = [
     "opencv-python (<5)",
     "python-dateutil",
     "lmdb",
+    "gdown (>=6.4.2,<7.0.0)",
 ]
 
 [project.urls]
