@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 # Downloads the pretrained PIONEER checkpoints (~670 MB each) needed for the CelebA and LSUN experiments.
-# Checkpoints that already exist are skipped. Files are hosted on Google Drive and downloaded with gdown
-# (taken from PATH, or run via uvx if uv is installed).
+# Checkpoints that already exist are skipped. Files are hosted on Google Drive and downloaded with gdown, which is
+# installed into the project environment by poetry install.
 # Usage: ./download_pioneer_checkpoints.sh
 
 set -euo pipefail
 cd "$(dirname "$0")"
-
-if command -v gdown > /dev/null; then
-    gdown=(gdown)
-elif command -v uvx > /dev/null; then
-    gdown=(uvx gdown)
-else
-    echo "gdown is required: install it (e.g., pip install gdown) or install uv to run it via uvx." >&2
-    exit 1
-fi
 
 # destination path and Google Drive file ID of each checkpoint
 checkpoints=(
@@ -32,6 +23,6 @@ for entry in "${checkpoints[@]}"; do
     fi
     mkdir -p "$(dirname "$path")"
     # download to a temporary name so that an interrupted download is not mistaken for a complete checkpoint
-    "${gdown[@]}" "https://drive.google.com/uc?id=$file_id" -O "$path.part"
+    poetry run gdown "https://drive.google.com/uc?id=$file_id" -O "$path.part"
     mv "$path.part" "$path"
 done
