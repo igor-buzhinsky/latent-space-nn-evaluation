@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry==2.4.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: poetry
+
+      - name: Install dependencies
+        # all extras: notebooks import robustness, which pyrefly checks
+        run: poetry install --all-extras --with dev
+
+      - name: Lint (black, ruff, pyrefly)
+        run: ./lint.sh
+
+      - name: Unit tests
+        run: ./unit_test.sh -v
