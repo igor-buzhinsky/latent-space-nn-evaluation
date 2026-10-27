@@ -1,0 +1,6 @@
+# GitHub language statistics (Linguist)
+# notebooks are demos with large embedded outputs; do not count them as code
+*.ipynb linguist-documentation
+# third-party code copied into the repository
+biggan/** linguist-vendored
+pioneer/** linguist-vendored
