@@ -15,12 +15,6 @@ from PIL import Image
 from latentspace.paths import DATA_DIR, REPO_ROOT
 from latentspace.torch_util import to_device
 
-if os.name == "posix":
-    import resource
-
-    # this may prevent an error in DataLoader with num_workers > 0
-    resource.setrlimit(resource.RLIMIT_NOFILE, (2048 * 2, resource.getrlimit(resource.RLIMIT_NOFILE)[1]))
-
 # An enumeration of all supported datasets.
 DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
 

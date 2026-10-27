@@ -21,6 +21,31 @@ class SetMemoryLimitTest(unittest.TestCase):
         self.assertEqual(int(output), 20000 * 1024 * 1024)
 
 
+@unittest.skipUnless(os.name == "posix", "open file limits are only supported on POSIX systems")
+class RaiseOpenFileLimitTest(unittest.TestCase):
+    def test_raises_soft_limit_up_to_hard_limit(self) -> None:
+        output = run_python(
+            "import resource\n"
+            "from latentspace.runtime import raise_open_file_limit\n"
+            "soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)\n"
+            "resource.setrlimit(resource.RLIMIT_NOFILE, (min(256, soft), hard))\n"
+            "raise_open_file_limit(1024)\n"
+            "new_soft = resource.getrlimit(resource.RLIMIT_NOFILE)[0]\n"
+            "print(new_soft == (1024 if hard == resource.RLIM_INFINITY else min(1024, hard)))"
+        )
+        self.assertEqual(output, "True")
+
+    def test_does_not_lower_the_limit(self) -> None:
+        output = run_python(
+            "import resource\n"
+            "from latentspace.runtime import raise_open_file_limit\n"
+            "before = resource.getrlimit(resource.RLIMIT_NOFILE)[0]\n"
+            "raise_open_file_limit(1)\n"
+            "print(resource.getrlimit(resource.RLIMIT_NOFILE)[0] == before)"
+        )
+        self.assertEqual(output, "True")
+
+
 class ConfigureRuntimeTest(unittest.TestCase):
     def test_configures_matplotlib_fonts(self) -> None:
         output = run_python(

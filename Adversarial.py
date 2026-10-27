@@ -11,7 +11,7 @@ from latentspace.adversaries import Adversary, NopAdversary, PGDAdversary
 from latentspace.datasets import DatasetInfo
 from latentspace.evaluation_util import show_generated_images, show_reconstructed_images
 from latentspace.logging_util import LogUtil
-from latentspace.runtime import set_memory_limit
+from latentspace.runtime import raise_open_file_limit, set_memory_limit
 
 # values of --search_mode and the corresponding values of use_generated_images
 SEARCH_MODES = {"reconstruction": [False], "generation": [True], "both": [False, True]}
@@ -156,6 +156,7 @@ def advgen_experiments(
 
 def main() -> None:
     set_memory_limit(10000)
+    raise_open_file_limit()
     LogUtil.to_pdf()
 
     parser = build_parser()
