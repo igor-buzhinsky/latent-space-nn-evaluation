@@ -127,6 +127,30 @@ def load_classifier(
     return c
 
 
+def images_per_class(class_proportions: np.ndarray, total_images: int) -> np.ndarray:
+    """
+    Splits the total number of images across classes in proportion to class frequencies.
+
+    :param class_proportions: Class frequencies that sum to 1.
+    :param total_images: Total number of images.
+    :return: Integer array with the number of images for each class.
+    """
+    return np.round(class_proportions * total_images).astype(int)
+
+
+def min_total_images(class_proportions: np.ndarray) -> int:
+    """
+    Finds the smallest total number of images for which `images_per_class` gives at least one image to each class.
+
+    :param class_proportions: Class frequencies that sum to 1.
+    :return: Smallest valid total number of images.
+    """
+    total_images = 1
+    while images_per_class(class_proportions, total_images).min() < 1:
+        total_images += 1
+    return total_images
+
+
 def advgen_experiments(
     args: argparse.Namespace,
     adversary: Adversary,
@@ -139,7 +163,7 @@ def advgen_experiments(
     num_classes = len(class_proportions)
     for use_generated_images in SEARCH_MODES[args.search_mode]:
         advgen = AdversarialGenerator(None, classifiers, use_generated_images, decay_factor)
-        num_images = np.round(class_proportions * args.num_images)
+        num_images = images_per_class(class_proportions, args.num_images)
         for i in range(num_classes):
             LogUtil.info(
                 f"*** {classifier_d.upper()}, CLASS {i}, "
@@ -165,6 +189,8 @@ def main() -> None:
         parser.error("missing argument --noise_epsilon")
     if args.command == "generate_noise" and args.noise_perturbations_per_image is None:
         parser.error("missing argument --noise_perturbations_per_image")
+    if args.num_images < 1:
+        parser.error("--num_images must be positive")
 
     if args.logdir is not None:
         LogUtil.set_custom_dirname(args.logdir)
@@ -197,6 +223,15 @@ def main() -> None:
 
     else:
         parser.error(f"dataset {args.dataset} is not supported by this script")
+
+    if args.command in ["generate_minimum", "generate_bounded"]:
+        min_num_images = min_total_images(class_proportions)
+        if args.num_images < min_num_images:
+            parser.error(
+                f"--num_images {args.num_images} is too small for {args.command} on {args.dataset}: the images are "
+                f"split across {num_classes} classes, and at least {min_num_images} images are needed for each class "
+                "to get at least one"
+            )
 
     classifiers = [
         load_classifier(filename, classifier_d, ds, args.unit_type) for filename in args.classifier_filenames

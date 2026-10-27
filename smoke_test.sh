@@ -26,7 +26,7 @@ fi
 
 if false; then
     #num_images=600
-    num_images=3
+    num_images=10
     for unit_type in $unit_types; do
         cdir=classifiers_architecture$unit_type
         for noise_epsilon in 0.5 1.0; do
