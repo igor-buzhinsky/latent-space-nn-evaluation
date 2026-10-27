@@ -24,7 +24,8 @@ dependencies = [
 ]
 
 [project.urls]
-Paper = "https://arxiv.org/abs/2003.01993"
+Paper = "https://link.springer.com/article/10.1007/s10994-021-05994-9"
+Preprint = "https://arxiv.org/abs/2003.01993"
 
 [project.optional-dependencies]
 # Needed only for the robust ImageNet classifier (AdversarialImageNet.py/.ipynb).

@@ -8,9 +8,9 @@ Measure how robust image classifiers are by searching for adversarial perturbati
 
 ## Overview
 
-This toolset implements a framework to measure the performance of feed-forward artificial neural network classifiers with generative models. The implementation concerns image classification. The framework is described in the following arXiv preprint:
+This toolset implements a framework to measure the performance of feed-forward artificial neural network classifiers with generative models. The implementation concerns image classification. The framework is described in the following paper:
 
-* [Igor Buzhinsky, Arseny Nerinovsky, Stavros Tripakis. Metrics and methods for robustness evaluation of neural networks with generative models. arXiv preprint arXiv:2003.01993 (2020)](https://arxiv.org/abs/2003.01993)
+* [Igor Buzhinsky, Arseny Nerinovsky, Stavros Tripakis. Metrics and methods for robustness evaluation of neural networks with generative models. Machine Learning 112, 3977–4012 (2023)](https://link.springer.com/article/10.1007/s10994-021-05994-9) ([arXiv preprint](https://arxiv.org/abs/2003.01993))
 
 Datasets with built-in support: [MNIST](http://yann.lecun.com/exdb/mnist/), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) (gender classification), [LSUN](https://github.com/fyu/lsun) (scene type classification: bedrooms vs. church outdoors), [ImageNet-1k](https://image-net.org/challenges/LSVRC/2012/).
 
@@ -142,10 +142,14 @@ Both run on every push in [GitHub Actions](.github/workflows/ci.yml). [smoke_tes
 If you use this code, please cite:
 
 ```bibtex
-@article{buzhinsky2020metrics,
+@article{buzhinsky2023metrics,
   title   = {Metrics and methods for robustness evaluation of neural networks with generative models},
   author  = {Buzhinsky, Igor and Nerinovsky, Arseny and Tripakis, Stavros},
-  journal = {arXiv preprint arXiv:2003.01993},
-  year    = {2020}
+  journal = {Machine Learning},
+  volume  = {112},
+  number  = {10},
+  pages   = {3977--4012},
+  year    = {2023},
+  doi     = {10.1007/s10994-021-05994-9}
 }
 ```
