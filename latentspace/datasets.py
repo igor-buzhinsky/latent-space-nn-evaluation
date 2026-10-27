@@ -3,7 +3,7 @@ import os
 import warnings
 from abc import ABC
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from enum import Enum
+from enum import Enum, auto
 from typing import Any
 
 import numpy as np
@@ -15,8 +15,18 @@ from PIL import Image
 from latentspace.paths import DATA_DIR, REPO_ROOT
 from latentspace.torch_util import to_device
 
-# An enumeration of all supported datasets.
-DatasetInfo = Enum("DatasetInfo", "MNIST CelebA128Gender LSUN128 ImageNet")
+
+class DatasetInfo(Enum):
+    """Supported datasets."""
+
+    MNIST = auto()
+    # CelebA, gender classification, 128x128 images
+    CelebA128Gender = auto()
+    # LSUN, bedrooms vs. church outdoors, 128x128 images
+    LSUN128 = auto()
+    # ImageNet-1k
+    ImageNet = auto()
+
 
 # norm bounds for conventional robustness evaluation
 MNIST_L2_UPPER_BOUND = 0.6
