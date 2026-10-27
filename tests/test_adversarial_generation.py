@@ -9,7 +9,7 @@ from latentspace.adversarial_generation import (
     RandomPerturbationStatistician,
     TauRhoTransformer,
     get_conventional_perturb,
-    get_get_gradient,
+    make_get_gradient,
 )
 from latentspace.adversaries import NopAdversary, PGDAdversary
 from latentspace.cnn import Trainer
@@ -53,8 +53,8 @@ class GradientFunctionsTest(unittest.TestCase):
         self.classifier = robust_mnist_classifier()
         self.image = to_device(torch.rand(1, 28, 28) * 2 - 1)
 
-    def test_get_get_gradient_in_image_space(self) -> None:
-        get_gradient = get_get_gradient(
+    def test_make_get_gradient_in_image_space(self) -> None:
+        get_gradient = make_get_gradient(
             self.classifier, 3, lambda x: x.view(1, 1, 28, 28), lambda x: x, lambda x: x.view(1, -1)
         )
         gradient, loss = get_gradient(self.image.view(1, -1))

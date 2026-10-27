@@ -81,29 +81,33 @@ class RandomPerturbationStatistician:
                 LogUtil.info(s)
 
 
-def get_get_gradient(
+def make_get_gradient(
     classifier: Trainer,
     label: int | torch.Tensor,
-    vector_transform_1: Callable,
-    vector_transform_2: Callable,
-    grad_transform: Callable,
+    to_variable: Callable,
+    to_image: Callable,
+    gradient_to_vector: Callable,
 ) -> Callable[[torch.Tensor], tuple[torch.Tensor, float]]:
     """
-    Produces custom `get_gradient` functions that are accepted by adversaries. (This is not an example of good
-    object-oriented design.)
+    Produces a `get_gradient` function, as accepted by `Adversary.perturb`. Adversaries search in the space of flat
+    vectors, while the gradient of the classifier's loss is computed with respect to an intermediate variable: the
+    image itself (conventional perturbations) or a latent code (latent perturbations, where the image is decoded by a
+    generative model).
 
-    :param classifier: Classifier for which to get the gradient function.
+    :param classifier: Classifier whose misclassification loss is used.
     :param label: True label of the current image.
-    :param vector_transform_1: Vector transformation used to parameterize `get_gradient` (see the code below).
-    :param vector_transform_2: Vector transformation used to parameterize `get_gradient` (see the code below).
-    :param grad_transform: Gradient transformation used to parameterize `get_gradient` (see the code below).
+    :param to_variable: Maps the searched vector to the variable with respect to which the gradient is computed (e.g.,
+        reshapes a flat vector to an image).
+    :param to_image: Maps this variable to the classifier input (e.g., identity, or decoding with a generative model).
+    :param gradient_to_vector: Maps the gradient with respect to the variable back to the shape of the searched vector.
+    :return: Function that accepts a searched vector and returns (gradient, loss value).
     """
 
     def get_gradient(vector: torch.Tensor) -> tuple[torch.Tensor, float]:
-        vector_g = optimizable_clone(vector_transform_1(vector))
-        image = vector_transform_2(vector_g)
+        variable = optimizable_clone(to_variable(vector))
+        image = to_image(variable)
         _, loss = classifier.predict_with_gradient(image, [label])
-        return grad_transform(vector_g.grad), loss.item()
+        return gradient_to_vector(variable.grad), loss.item()
 
     return get_gradient
 
@@ -119,7 +123,7 @@ def get_conventional_perturb(classifier: Trainer, adversary: Adversary) -> Calla
     """
 
     def perturb(image: torch.Tensor, true_label: int) -> torch.Tensor:
-        get_gradient = get_get_gradient(
+        get_gradient = make_get_gradient(
             classifier, true_label, lambda x: x.view(1, *image.shape), lambda x: x, lambda x: x.view(1, -1)
         )
         return adversary.perturb(image.view(1, -1), get_gradient).view(*image.shape)
@@ -333,7 +337,7 @@ class AdversarialGenerator:
                 self.recorded_clean_successes[i] += [predictions[0][i] == label]
                 self.recorded_reconstructed_successes[i] += [predictions[1][i] == label]
                 self.recorded_decayed_successes[i] += [predictions[2][i] == label]
-                get_gradient = get_get_gradient(c, label, lambda x: x, lambda x: self.gm.decode(x, False), lambda x: x)
+                get_gradient = make_get_gradient(c, label, lambda x: x, lambda x: self.gm.decode(x, False), lambda x: x)
                 perturbed_latent_code = adversary.perturb(latent_code, get_gradient)
 
                 # record statistics

@@ -5,7 +5,7 @@ import numpy as np
 import scipy.stats
 import torch
 
-from latentspace.adversarial_generation import get_get_gradient
+from latentspace.adversarial_generation import make_get_gradient
 from latentspace.adversaries import PGDAdversary
 from latentspace.cnn import Trainer
 from latentspace.datasets import (
@@ -142,7 +142,7 @@ def local_evaluate(args: argparse.Namespace, c: Trainer, ds: DatasetWrapper, dat
         adversary = PGDAdversary(bound, 50, 0.05, True, 0, verbose=0, n_repeat=15, repeat_mode="min", norm="scaled_l_2")
 
         def perturb(image: torch.Tensor, true_label: torch.Tensor) -> torch.Tensor:
-            get_gradient = get_get_gradient(
+            get_gradient = make_get_gradient(
                 c, true_label, lambda x: x.view(1, *image.shape), lambda x: x, lambda x: x.view(1, -1)
             )
             return adversary.perturb(image.view(1, -1), get_gradient).view(*image.shape)
