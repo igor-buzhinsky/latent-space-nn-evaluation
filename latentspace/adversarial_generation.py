@@ -262,6 +262,7 @@ class AdversarialGenerator:
                 LogUtil.metacall(axarr[i].title.set_text, f"axarr[{i}].title.set_text", plot_str)
                 for j in range(len(self.classifiers)):
                     norms = torch.tensor(norm_list[j])
+                    bw_method = get_kde_bandwidth(norms.numpy()) / norms.numpy().std(ddof=1)
                     LogUtil.metacall(
                         sns.distplot,
                         "sns.distplot",
@@ -269,7 +270,7 @@ class AdversarialGenerator:
                         hist=False,
                         kde=True,
                         ax=axarr[i],
-                        kde_kws={"bw": get_kde_bandwidth(norms.numpy())},
+                        kde_kws={"bw_method": bw_method},
                     )
             LogUtil.savefig("advgen_stats", True)
             plt.show()

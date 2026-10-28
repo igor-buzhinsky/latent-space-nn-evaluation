@@ -86,8 +86,9 @@ def imshow_tensors(
 
 def get_kde_bandwidth(x: np.ndarray) -> float:
     """
-    This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth and provide it as
-    argument `bw`.
+    This fixes a peculiar problem with `sns.kdeplot`/`sns.distplot`. Use this to compute the bandwidth. Seaborn (via
+    SciPy) expects a factor that multiplies the standard deviation of the data, so provide it as argument
+    `bw_method=get_kde_bandwidth(x) / x.std(ddof=1)`.
     https://stackoverflow.com/questions/61440184/who-is-scott-valueerror-in-seaborn-pairplot-could-not-convert-string-to-floa
 
     :param x: Input (NumPy array).
